@@ -1,0 +1,277 @@
+/* Element Plus 深色主题覆盖 */
+
+/* 浅色模式 Element Plus 样式 */
+:root {
+  --el-bg-color: var(--bg-primary);
+  --el-bg-color-page: var(--bg-secondary);
+  --el-bg-color-overlay: var(--bg-overlay);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-light);
+  --el-color-primary: var(--primary-color);
+  --el-color-primary-light-3: var(--primary-hover);
+  --el-color-primary-light-5: var(--primary-active);
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow-dark: var(--shadow-lg);
+}
+
+/* 深色模式 Element Plus 样式 */
+.dark {
+  --el-bg-color: var(--bg-primary);
+  --el-bg-color-page: var(--bg-secondary);
+  --el-bg-color-overlay: var(--bg-overlay);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-light);
+  --el-color-primary: var(--primary-color);
+  --el-color-primary-light-3: var(--primary-hover);
+  --el-color-primary-light-5: var(--primary-active);
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow-dark: var(--shadow-lg);
+}
+
+/* 下拉菜单深色模式样式 */
+.dark .el-dropdown-menu {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .el-dropdown-menu__item {
+  color: var(--text-primary);
+}
+
+.dark .el-dropdown-menu__item:hover {
+  background-color: var(--sidebar-item-hover);
+  color: var(--primary-color);
+}
+
+/* 按钮深色模式样式 */
+.dark .el-button {
+  background-color: var(--btn-secondary-bg);
+  border-color: var(--border-color);
+  color: var(--btn-secondary-text);
+}
+
+.dark .el-button:hover {
+  background-color: var(--btn-secondary-hover);
+}
+
+.dark .el-button--primary {
+  background-color: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+
+.dark .el-button--primary:hover {
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+}
+
+/* 输入框深色模式样式 */
+.dark .el-input__wrapper {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+}
+
+.dark .el-input__inner {
+  background-color: transparent;
+  color: var(--text-primary);
+}
+
+.dark .el-input__wrapper:focus {
+  border-color: var(--input-focus);
+}
+
+/* 卡片深色模式样式 */
+.dark .el-card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.dark .el-card__header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* 对话框深色模式样式 */
+.dark .el-dialog {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .el-dialog__header {
+  color: var(--text-primary);
+}
+
+.dark .el-dialog__body {
+  color: var(--text-secondary);
+}
+
+/* 表格深色模式样式 */
+.dark .el-table {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.dark .el-table th.el-table__cell {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.dark .el-table td.el-table__cell {
+  border-bottom-color: var(--border-light);
+}
+
+.dark .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: var(--bg-secondary);
+}
+
+/* 消息提示深色模式样式 */
+.dark .el-message {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .el-message--success {
+  background-color: var(--success-color);
+  color: var(--text-inverse);
+}
+
+.dark .el-message--warning {
+  background-color: var(--warning-color);
+  color: var(--text-inverse);
+}
+
+.dark .el-message--error {
+  background-color: var(--danger-color);
+  color: var(--text-inverse);
+}
+
+.dark .el-message--info {
+  background-color: var(--info-color);
+  color: var(--text-inverse);
+}
+
+/* 菜单深色模式样式 */
+.dark .el-menu {
+  background-color: var(--sidebar-bg);
+  border-right-color: var(--border-color);
+}
+
+.dark .el-menu-item {
+  color: var(--sidebar-text-secondary);
+}
+
+.dark .el-menu-item:hover {
+  background-color: var(--sidebar-item-hover);
+  color: var(--sidebar-text);
+}
+
+.dark .el-menu-item.is-active {
+  background-color: var(--sidebar-item-hover);
+  color: var(--sidebar-item-active);
+}
+
+/* 分页深色模式样式 */
+.dark .el-pagination {
+  color: var(--text-primary);
+}
+
+.dark .el-pagination button {
+  background-color: var(--btn-secondary-bg);
+  border-color: var(--border-color);
+  color: var(--btn-secondary-text);
+}
+
+.dark .el-pagination button:hover {
+  background-color: var(--btn-secondary-hover);
+}
+
+.dark .el-pagination .btn-next,
+.dark .el-pagination .btn-prev {
+  background-color: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+}
+
+/* 选择器深色模式样式 */
+.dark .el-select .el-input__wrapper {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+}
+
+.dark .el-select-dropdown {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .el-select-dropdown__item {
+  color: var(--text-primary);
+}
+
+.dark .el-select-dropdown__item:hover {
+  background-color: var(--sidebar-item-hover);
+}
+
+.dark .el-select-dropdown__item.selected {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+/* 加载深色模式样式 */
+.dark .el-loading-mask {
+  background-color: var(--bg-overlay);
+}
+
+.dark .el-loading-spinner {
+  color: var(--primary-color);
+}
+
+/* Tooltip 深色模式样式 */
+.dark .el-tooltip__popper {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .el-tooltip__popper .el-tooltip__arrow::before {
+  border-top-color: var(--card-bg);
+}
+
+/* 步骤条深色模式样式 */
+.dark .el-steps {
+  color: var(--text-primary);
+}
+
+.dark .el-step__icon {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.dark .el-step__icon.is-text {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+.dark .el-step__title {
+  color: var(--text-primary);
+}
+
+.dark .el-step__description {
+  color: var(--text-secondary);
+}

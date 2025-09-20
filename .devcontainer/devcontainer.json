@@ -1,0 +1,100 @@
+{
+  "name": "低空交通系统开发环境",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.dev.yml"
+  ],
+  "service": "dev-environment",
+  "workspaceFolder": "/workspace",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Vue.js 前端开发
+        "Vue.volar",
+        "Vue.vscode-typescript-vue-plugin",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+
+        // C++ 后端开发
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+
+        // 数据库
+        "ms-mssql.mssql",
+        "formulahendry.auto-rename-tag",
+
+        // 通用开发工具
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode.hexdump",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.vscode-typescript-next",
+
+        // Git 和版本控制
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+
+        // Docker 支持
+        "ms-azuretools.vscode-docker"
+      ],
+
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true
+        },
+        "files.associations": {
+          "*.vue": "vue"
+        },
+        "emmet.includeLanguages": {
+          "vue": "html"
+        },
+        "prettier.requireConfig": true,
+        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+        "cmake.configureOnOpen": true
+      }
+    }
+  },
+
+  "forwardPorts": [
+    5173,  // 前端开发服务器
+    8080,  // 后端API服务器
+    3306   // MySQL数据库
+  ],
+
+  "portsAttributes": {
+    "5173": {
+      "label": "前端开发服务器",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "后端API服务器",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL数据库",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "remoteUser": "developer",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  }
+}

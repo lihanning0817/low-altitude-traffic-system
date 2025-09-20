@@ -1,0 +1,158 @@
+/* 浅色模式 - 默认主题 */
+:root {
+  /* 苹果风格主色 */
+  --primary-color: #007aff;
+  --primary-hover: #0056b3;
+  --primary-active: #004085;
+  --secondary-color: #8e8e93;
+  --accent-color: #5856d6;
+
+  /* 状态颜色 */
+  --success-color: #30d158;
+  --warning-color: #ff9f0a;
+  --danger-color: #ff453a;
+  --info-color: #64d2ff;
+
+  /* 文字颜色 */
+  --text-primary: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #a1a1a6;
+  --text-inverse: #ffffff;
+
+  /* 背景颜色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f2f2f7;
+  --bg-tertiary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+
+  /* 侧边栏 */
+  --sidebar-bg: #f2f2f7;
+  --sidebar-item-hover: rgba(0, 122, 255, 0.1);
+  --sidebar-item-active: #007aff;
+  --sidebar-text: #1d1d1f;
+  --sidebar-text-secondary: #86868b;
+
+  /* 头部导航 */
+  --header-bg: #ffffff;
+  --header-border: #d1d1d6;
+  --header-text: #1d1d1f;
+
+  /* 卡片 */
+  --card-bg: #ffffff;
+  --card-border: #d1d1d6;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* 按钮 */
+  --btn-primary-bg: #007aff;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #0056b3;
+  --btn-secondary-bg: #f2f2f7;
+  --btn-secondary-text: #1d1d1f;
+  --btn-secondary-hover: #e5e5ea;
+
+  /* 边框 */
+  --border-color: #d1d1d6;
+  --border-light: #e5e5ea;
+
+  /* 输入框 */
+  --input-bg: #ffffff;
+  --input-border: #d1d1d6;
+  --input-focus: #007aff;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* 圆角 */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+
+  /* 动画 */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.25s ease-out;
+  --transition-slow: 0.4s ease-out;
+  --transition-theme: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 深色模式 */
+.dark {
+  /* 苹果风格主色 - 深色模式调整 */
+  --primary-color: #0a84ff;
+  --primary-hover: #409cff;
+  --primary-active: #66b3ff;
+  --secondary-color: #98989d;
+  --accent-color: #6c6ce6;
+
+  /* 状态颜色 - 深色模式优化 */
+  --success-color: #32d74b;
+  --warning-color: #ff9f0a;
+  --danger-color: #ff453a;
+  --info-color: #64d2ff;
+
+  /* 文字颜色 */
+  --text-primary: #ffffff;
+  --text-secondary: #98989d;
+  --text-tertiary: #636366;
+  --text-inverse: #1d1d1f;
+
+  /* 背景颜色 */
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --bg-tertiary: #2c2c2e;
+  --bg-card: #1c1c1e;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+
+  /* 侧边栏 */
+  --sidebar-bg: #1c1c1e;
+  --sidebar-item-hover: rgba(10, 132, 255, 0.15);
+  --sidebar-item-active: #0a84ff;
+  --sidebar-text: #ffffff;
+  --sidebar-text-secondary: #98989d;
+
+  /* 头部导航 */
+  --header-bg: #1c1c1e;
+  --header-border: #38383a;
+  --header-text: #ffffff;
+
+  /* 卡片 */
+  --card-bg: #1c1c1e;
+  --card-border: #38383a;
+  --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+
+  /* 按钮 */
+  --btn-primary-bg: #0a84ff;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #409cff;
+  --btn-secondary-bg: #2c2c2e;
+  --btn-secondary-text: #ffffff;
+  --btn-secondary-hover: #3a3a3c;
+
+  /* 边框 */
+  --border-color: #38383a;
+  --border-light: #2c2c2e;
+
+  /* 输入框 */
+  --input-bg: #1c1c1e;
+  --input-border: #38383a;
+  --input-focus: #0a84ff;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+}

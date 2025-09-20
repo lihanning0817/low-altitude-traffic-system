@@ -1,0 +1,58 @@
+cmake_minimum_required(VERSION 3.16)
+project(low_altitude_traffic_system_backend)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 设置vcpkg工具链
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
+
+# 查找必要的包
+find_package(Threads REQUIRED)
+find_package(httplib CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(unofficial-libmysql CONFIG REQUIRED)
+
+# 设置包含目录
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/controllers
+    ${CMAKE_SOURCE_DIR}/models
+    ${CMAKE_SOURCE_DIR}/services
+    ${CMAKE_SOURCE_DIR}/utils
+    ${CMAKE_SOURCE_DIR}/config
+)
+
+# 最小源文件集合用于测试（暂时排除有问题的文件）
+set(SOURCES
+    "main.cpp"
+    "server.cpp"
+    "config/database.cpp"
+    "services/amap_route_service.cpp"
+)
+
+# 创建可执行文件
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# 链接库
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+    httplib::httplib
+    nlohmann_json::nlohmann_json
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    unofficial::libmysql::libmysql
+    Threads::Threads
+)
+
+# 编译选项
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /utf-8)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _SILENCE_CXX20_CISO646_REMOVED_WARNING)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
+endif()

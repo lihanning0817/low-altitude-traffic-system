@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库服务
+  mysql:
+    build:
+      context: .
+      dockerfile: ./docker/mysql/Dockerfile
+    container_name: low-altitude-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: low_altitude_traffic
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+    networks:
+      - low-altitude-network
+
+  # 后端 API 服务
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    container_name: low-altitude-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=low_altitude_traffic
+      - DB_USER=appuser
+      - DB_PASSWORD=apppassword
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    networks:
+      - low-altitude-network
+
+  # 前端 Web 服务
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend/Dockerfile
+    container_name: low-altitude-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - low-altitude-network
+
+# 数据卷定义
+volumes:
+  mysql_data:
+
+# 网络定义
+networks:
+  low-altitude-network:
+    driver: bridge

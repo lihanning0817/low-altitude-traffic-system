@@ -1,0 +1,80 @@
+{
+  // Git 配置
+  "git.ignoreLimitWarning": true,
+  "git.enableSmartCommit": true,
+  "git.autofetch": true,
+
+  // 编辑器设置
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+
+  // 文件关联
+  "files.associations": {
+    "*.vue": "vue",
+    "*.h": "cpp",
+    "*.cpp": "cpp"
+  },
+
+  // Vue.js 支持
+  "emmet.includeLanguages": {
+    "vue": "html"
+  },
+
+  // Prettier 配置
+  "prettier.requireConfig": true,
+  "prettier.tabWidth": 2,
+  "prettier.semi": true,
+  "prettier.singleQuote": true,
+
+  // ESLint 配置
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "vue"
+  ],
+
+  // C++ 配置
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "C_Cpp.default.cStandard": "c17",
+  "C_Cpp.default.cppStandard": "c++17",
+
+  // CMake 配置
+  "cmake.configureOnOpen": true,
+  "cmake.buildDirectory": "${workspaceFolder}/backend/build",
+  "cmake.sourceDirectory": "${workspaceFolder}/backend",
+  "cmake.generator": "Unix Makefiles",
+  "cmake.configureSettings": {
+    "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+    "CMAKE_BUILD_TYPE": "Debug"
+  },
+
+  // 终端配置
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.cwd": "${workspaceFolder}",
+
+  // 搜索排除
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/vcpkg": true,
+    "**/.git": true
+  },
+
+  // 文件监视排除
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/build/**": true,
+    "**/dist/**": true,
+    "**/vcpkg/**": true
+  },
+
+  // 工作区推荐
+  "extensions.showRecommendationsOnlyOnDemand": false
+}

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run serve:*)",
+      "WebSearch",
+      "Bash(mkdir -p src/utils src/services)",
+      "Bash(taskkill /f /im node.exe)",
+      "Bash(mkdir -p backend/{controllers,models,services,utils,config,tests})",
+      "Bash(tasklist)",
+      "Bash(xxd)",
+      "Bash(npm run lint)",
+      "Bash(cmake:*)",
+      "Bash(vcpkg list:*)",
+      "Bash(vcpkg search:*)",
+      "Bash(vcpkg install:*)",
+      "Bash(where vcpkg)",
+      "Bash(find:*)",
+      "Bash(./low_altitude_traffic_system_backend.exe)",
+      "Bash(curl:*)",
+      "Bash(npm i:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(C:/Windows/System32/taskkill.exe /F /IM low_altitude_traffic_system_backend.exe)",
+      "Bash(./Debug/low_altitude_traffic_system_backend.exe:*)",
+      "Bash(sc query:*)",
+      "Bash(make:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

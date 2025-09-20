@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # 开发环境容器
+  dev-environment:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.dev
+    container_name: low-altitude-dev
+    working_dir: /workspace
+    volumes:
+      # 挂载整个项目目录到容器中
+      - ..:/workspace:cached
+      # 持久化Node.js模块缓存
+      - node_modules_cache:/workspace/node_modules
+      # 持久化vcpkg缓存
+      - vcpkg_cache:/workspace/vcpkg
+      # 持久化CMake构建缓存
+      - cmake_cache:/workspace/backend/build
+    ports:
+      - "5173:5173"  # Vue.js 开发服务器
+      - "8080:8080"  # 后端开发服务器
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=low_altitude_traffic
+      - DB_USER=appuser
+      - DB_PASSWORD=apppassword
+      - VCPKG_ROOT=/opt/vcpkg
+    depends_on:
+      - mysql
+    networks:
+      - low-altitude-network
+    # 保持容器运行
+    command: sleep infinity
+    # 启用特权模式以支持调试
+    privileged: true
+    # 添加capabilities以支持开发工具
+    cap_add:
+      - SYS_PTRACE
+
+  # MySQL数据库（继承自主docker-compose.yml，这里可以覆盖开发环境的特定配置）
+  mysql:
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=low_altitude_traffic
+      - MYSQL_USER=appuser
+      - MYSQL_PASSWORD=apppassword
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "3306:3306"
+
+volumes:
+  node_modules_cache:
+  vcpkg_cache:
+  cmake_cache:
+  mysql_dev_data:
+
+networks:
+  low-altitude-network:
+    driver: bridge

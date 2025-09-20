@@ -1,11 +1,19 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
-    <title><%= htmlWebpackPlugin.options.title %></title>
+    <title>智能低空交通系统</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- 高德地图 API v2.0 -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=1872806f332dab32a1a3dc895b0ad542&plugin=AMap.Driving,AMap.Walking,AMap.Transfer,AMap.ToolBar,AMap.Scale,AMap.OverView,AMap.MapType,AMap.Geolocation"></script>
+    <!-- 高德地图 UI 组件库 -->
+    <script src="https://webapi.amap.com/ui/1.1/main.js"></script>
   </head>
   <body>
     <noscript>
