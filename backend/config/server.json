@@ -1,0 +1,61 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8081,
+    "threads": 4,
+    "timeout": 30
+  },
+  "database": {
+    "host": "localhost",
+    "port": 33060,
+    "database": "low_altitude_traffic_system",
+    "username": "root",
+    "password": "Aabc123456+",
+    "connection_pool_size": 10,
+    "connection_timeout": 10
+  },
+  "security": {
+    "jwt_secret": "bYOW/u5Q]Gl=kS^ZxBgb;-{.M1ZdUUYZqT!pH=#B(amEnZ#uf-F]62DjYJ+aAC(B",
+    "jwt_issuer": "low-altitude-traffic-system",
+    "jwt_access_token_expiry": 900,
+    "jwt_refresh_token_expiry": 604800,
+    "jwt_algorithm": "HS256",
+    "password_min_length": 8,
+    "max_login_attempts": 5,
+    "lockout_duration": 1800
+  },
+  "flight": {
+    "max_altitude": 300,
+    "min_altitude": 50,
+    "max_speed": 80,
+    "default_speed": 50
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/server.log",
+    "max_size": "10MB",
+    "max_files": 10
+  },
+  "external_apis": {
+    "amap": {
+      "key": "1872806f332dab32a1a3dc895b0ad542",
+      "base_url": "https://restapi.amap.com",
+      "timeout": 5000
+    },
+    "weather": {
+      "key": "c058fd1794cbc0dd8e3e8215e9bd37a3",
+      "base_url": "http://api.openweathermap.org",
+      "timeout": 5000
+    }
+  },
+  "cors": {
+    "enabled": true,
+    "origins": "*",
+    "methods": "GET,POST,PUT,DELETE,OPTIONS",
+    "headers": "Content-Type,Authorization"
+  },
+  "system": {
+    "name": "城市智能低空交通系统",
+    "version": "1.0.0"
+  }
+}

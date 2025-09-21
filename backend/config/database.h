@@ -6,7 +6,7 @@
 namespace config {
     struct DatabaseConfig {
         std::string host = "localhost";
-        int port = 3306;
+        int port = 33060;
         std::string username = "root";
         std::string password = "password";
         std::string database = "low_altitude_traffic_system";

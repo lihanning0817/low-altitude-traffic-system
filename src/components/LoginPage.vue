@@ -1,85 +1,109 @@
 <template>
-  <div class="login-container">
-    <div class="login-content">
-      <div class="login-card">
-        <div class="logo-section">
-          <div class="logo-icon">
-            <img :src="`/logo.png?v=${Date.now()}`" alt="智能低空交通系统" class="logo-image" />
-          </div>
+  <!-- 使用公共的 AuthLayout 组件 -->
+  <AuthLayout>
+    <!-- 自定义标题 -->
+    <template #title>
+      <h1 class="auth-title">智能低空交通系统</h1>
+    </template>
+
+    <!-- 登录表单 -->
+    <template #form>
+      <form class="login-form" @submit.prevent="handleLogin">
+        <div class="form-group">
+          <input
+            v-model="loginData.username"
+            type="text"
+            placeholder="用户名"
+            class="form-input"
+            required
+          />
         </div>
 
-        <form class="login-form" @submit.prevent="handleLogin">
-          <div class="form-group">
-            <input
-              v-model="loginData.username"
-              type="text"
-              placeholder="用户名"
-              class="form-input"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <input
-              v-model="loginData.password"
-              type="password"
-              placeholder="密码"
-              class="form-input"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <select
-              v-model="loginData.role"
-              class="form-select"
-              required
-            >
-              <option value="" disabled>选择角色</option>
-              <option value="admin">管理员</option>
-              <option value="operator">操作员</option>
-              <option value="viewer">观察员</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            class="login-button"
-            :disabled="loading"
-          >
-            <span v-if="!loading">登录</span>
-            <span v-else>登录中...</span>
-          </button>
-        </form>
-
-        <div class="test-accounts">
-          <p class="test-title">测试账号</p>
-          <div class="test-account-list">
-            <div class="test-account">
-              <strong>管理员:</strong> admin / 123456 / 管理员
-            </div>
-            <div class="test-account">
-              <strong>操作员:</strong> operator / 123456 / 操作员
-            </div>
-            <div class="test-account">
-              <strong>观察员:</strong> viewer / 123456 / 观察员
-            </div>
-          </div>
+        <div class="form-group">
+          <input
+            v-model="loginData.password"
+            type="password"
+            placeholder="密码"
+            class="form-input"
+            required
+          />
         </div>
 
-        <div class="register-link">
-          <span>还没有账号？</span>
-          <button
-            type="button"
-            class="register-button"
-            @click="$router.push('/register')"
+        <div class="form-group" v-if="showRoleSelect">
+          <select
+            v-model="loginData.role"
+            class="form-select"
           >
-            立即注册
-          </button>
+            <option value="">选择角色（可选）</option>
+            <option value="admin">管理员</option>
+            <option value="operator">操作员</option>
+            <option value="viewer">观察员</option>
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          class="login-button"
+          :disabled="loading"
+        >
+          <div class="button-content">
+            <!-- Loading 图标 -->
+            <div v-if="loading" class="loading-spinner">
+              <svg
+                class="spinner-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-dasharray="31.416"
+                  stroke-dashoffset="31.416"
+                />
+              </svg>
+            </div>
+            <!-- 按钮文字 -->
+            <span class="button-text">{{ loading ? '登录中...' : '登录' }}</span>
+          </div>
+        </button>
+      </form>
+    </template>
+
+    <!-- 测试账号信息 -->
+    <template #extra>
+      <div class="test-accounts">
+        <p class="test-title">测试账号</p>
+        <div class="test-account-list">
+          <div class="test-account">
+            <strong>管理员:</strong> admin / 123456 / 管理员
+          </div>
+          <div class="test-account">
+            <strong>操作员:</strong> operator / 123456 / 操作员
+          </div>
+          <div class="test-account">
+            <strong>观察员:</strong> viewer / 123456 / 观察员
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+
+    <!-- 底部注册链接 -->
+    <template #bottomLink>
+      <span>还没有账号？</span>
+      <button
+        type="button"
+        class="register-link-button"
+        @click="$router.push('/register')"
+      >
+        立即注册
+      </button>
+    </template>
+  </AuthLayout>
 </template>
 
 <script setup>
@@ -87,6 +111,8 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
+import authApi from '@/services/authApi'
+import AuthLayout from './AuthLayout.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -100,6 +126,9 @@ const loginData = reactive({
   password: '',
   role: ''
 })
+
+// 控制是否显示角色选择
+const showRoleSelect = ref(true)
 
 const rules = {
   username: [
@@ -117,8 +146,8 @@ const rules = {
 
 const handleLogin = async () => {
   // Basic validation
-  if (!loginData.username || !loginData.password || !loginData.role) {
-    ElMessage.error('请填写完整的登录信息')
+  if (!loginData.username || !loginData.password) {
+    ElMessage.error('请填写用户名和密码')
     return
   }
 
@@ -142,9 +171,10 @@ const handleLogin = async () => {
       'viewer': { password: '123456', role: 'viewer', username: 'viewer' }
     }
 
-    // 检查是否是测试账号
+    // 检查是否是测试账号（如果有选择角色的话）
     const testAccount = testAccounts[loginData.username]
-    if (testAccount && testAccount.password === loginData.password && testAccount.role === loginData.role) {
+    if (testAccount && testAccount.password === loginData.password &&
+        (!loginData.role || testAccount.role === loginData.role)) {
       // 使用测试账号登录
       const mockUser = {
         id: Date.now(),
@@ -163,15 +193,29 @@ const handleLogin = async () => {
       return
     }
 
-    // 如果不是测试账号，调用真实API
-    await store.dispatch('login', loginData)
+    // 调用真实的后端API
+    const response = await authApi.login({
+      username: loginData.username,
+      password: loginData.password
+    })
 
-    // 登录成功后重定向
-    const redirect = route.query.redirect || '/dashboard'
-    router.push(redirect)
+    if (response.success) {
+      // 保存用户信息到store
+      const user = response.data.user
+      await store.dispatch('setUser', user)
+
+      ElMessage.success('登录成功！')
+
+      // 登录成功后重定向
+      const redirect = route.query.redirect || '/dashboard'
+      router.push(redirect)
+    } else {
+      ElMessage.error(response.message || '登录失败')
+    }
 
   } catch (error) {
-    ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+    console.error('登录错误:', error)
+    // 错误信息已由 authApi 拦截器统一处理，这里不需要再次显示
   } finally {
     loading.value = false
   }
@@ -179,69 +223,15 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-/* Apple-style minimal login page */
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-  padding: 20px;
-  position: relative;
-  z-index: 1;
+/* Apple-style form styling - 与注册页面完全一致 */
+.auth-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
-
-.login-content {
-  width: 100%;
-  max-width: 380px;
-}
-
-.login-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 48px 40px 40px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.02),
-    0 8px 24px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.login-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.03),
-    0 16px 48px rgba(0, 0, 0, 0.06);
-}
-
-.logo-section {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-}
-
-.logo-icon:hover {
-  transform: scale(1.05);
-}
-
-.logo-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 12px;
-}
-
 
 .login-form {
   margin-bottom: 24px;
@@ -309,6 +299,55 @@ const handleLogin = async () => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   letter-spacing: -0.1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 按钮内容容器 */
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* Loading 动画容器 */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+/* Loading 图标 */
+.spinner-icon {
+  width: 100%;
+  height: 100%;
+  color: white;
+  animation: spin 1s linear infinite;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+    stroke-dashoffset: 31.416;
+  }
+  50% {
+    stroke-dashoffset: 15.708;
+  }
+  to {
+    transform: rotate(360deg);
+    stroke-dashoffset: 31.416;
+  }
+}
+
+/* 按钮文字 */
+.button-text {
+  transition: opacity 0.2s ease;
 }
 
 .login-button:hover:not(:disabled) {
@@ -327,6 +366,7 @@ const handleLogin = async () => {
   cursor: not-allowed;
 }
 
+/* 测试账号样式 */
 .test-accounts {
   background: rgba(0, 113, 227, 0.05);
   border: 1px solid rgba(0, 113, 227, 0.1);
@@ -360,14 +400,7 @@ const handleLogin = async () => {
   color: #0071e3;
 }
 
-.register-link {
-  text-align: center;
-  font-size: 14px;
-  color: #86868b;
-  margin-top: 24px;
-}
-
-.register-button {
+.register-link-button {
   background: none;
   border: none;
   color: #0071e3;
@@ -380,41 +413,30 @@ const handleLogin = async () => {
   text-decoration: none;
 }
 
-.register-button:hover {
+.register-link-button:hover {
   color: #0056b3;
   text-decoration: underline;
 }
 
 /* Responsive design */
 @media (max-width: 480px) {
-  .login-container {
-    padding: 16px;
-  }
-
-  .login-card {
-    padding: 40px 24px 32px;
-  }
-
-
   .form-input,
   .form-select,
   .login-button {
     height: 48px;
     font-size: 16px; /* Prevent zoom on iOS */
   }
+
+  .auth-title {
+    font-size: 22px;
+  }
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-  .login-container {
-    background: linear-gradient(180deg, #1c1c1e 0%, #000000 100%);
+  .auth-title {
+    color: #f2f2f7;
   }
-
-  .login-card {
-    background: rgba(44, 44, 46, 0.9);
-    border: 1px solid rgba(84, 84, 88, 0.6);
-  }
-
 
   .form-input,
   .form-select {
@@ -443,15 +465,11 @@ const handleLogin = async () => {
     background: #0056cc;
   }
 
-  .register-link {
-    color: #98989d;
-  }
-
-  .register-button {
+  .register-link-button {
     color: #0a84ff;
   }
 
-  .register-button:hover {
+  .register-link-button:hover {
     color: #0056cc;
   }
 
@@ -470,6 +488,11 @@ const handleLogin = async () => {
 
   .test-account strong {
     color: #0a84ff;
+  }
+
+  .form-select option {
+    color: #f2f2f7;
+    background: #2c2c2e;
   }
 }
 </style>

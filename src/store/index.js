@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 
 import aMapRoutePlanner from '@/services/aMapRoutePlanner'
 import apiService from '@/services/api'
+import authApi from '@/services/authApi'
 
 // 本地存储工具
 const storage = {
@@ -353,30 +354,36 @@ export default createStore({
       try {
         commit('SET_LOADING', true)
 
-        // 调用API登录
-        const response = await apiService.login(userData)
-        const user = response.data.user
-        const token = response.data.token
+        // 调用认证API登录
+        const response = await authApi.login(userData)
 
-        // 设置API token
-        apiService.setToken(token)
+        if (response.success) {
+          const user = response.data.user
+          const accessToken = response.data.access_token
 
-        commit('SET_USER', user)
-        dispatch('addNotification', {
-          type: 'success',
-          title: '登录成功',
-          message: `欢迎回来，${user.username}！`
-        })
+          // 设置API token
+          apiService.setToken(accessToken)
 
-        // 登录成功后加载用户相关数据
-        await dispatch('fetchUserData')
+          commit('SET_USER', user)
+          dispatch('addNotification', {
+            type: 'success',
+            title: '登录成功',
+            message: `欢迎回来，${user.username}！`
+          })
 
-        return user
+          // 登录成功后加载用户相关数据
+          await dispatch('fetchUserData')
+
+          return user
+        } else {
+          throw new Error(response.message || '登录失败')
+        }
       } catch (error) {
+        const errorMessage = error.message || error.error_code || '用户名或密码错误'
         dispatch('addNotification', {
           type: 'error',
           title: '登录失败',
-          message: error.message || '用户名或密码错误'
+          message: errorMessage
         })
         throw error
       } finally {
@@ -388,22 +395,28 @@ export default createStore({
       try {
         commit('SET_LOADING', true)
 
-        // 调用API注册
-        const response = await apiService.register(userData)
-        const user = response.data.user
+        // 调用认证API注册
+        const response = await authApi.register(userData)
 
-        dispatch('addNotification', {
-          type: 'success',
-          title: '注册成功',
-          message: '账户创建成功，请登录'
-        })
+        if (response.success) {
+          const user = response.data.user
 
-        return user
+          dispatch('addNotification', {
+            type: 'success',
+            title: '注册成功',
+            message: '账户创建成功，请登录'
+          })
+
+          return user
+        } else {
+          throw new Error(response.message || '注册失败')
+        }
       } catch (error) {
+        const errorMessage = error.message || error.error_code || '注册过程中出现错误'
         dispatch('addNotification', {
           type: 'error',
           title: '注册失败',
-          message: error.message || '注册过程中出现错误'
+          message: errorMessage
         })
         throw error
       } finally {
@@ -411,7 +424,16 @@ export default createStore({
       }
     },
 
-    logout({ commit, dispatch }) {
+    async logout({ commit, dispatch }) {
+      try {
+        // 调用后端登出API
+        await authApi.logout()
+      } catch (error) {
+        console.warn('后端登出失败:', error)
+        // 即使后端登出失败也继续本地清除
+      }
+
+      // 清除本地状态
       commit('SET_USER', null)
       commit('SET_FLIGHT_TASKS', [])
       commit('SET_DEVICES', [])
@@ -425,6 +447,60 @@ export default createStore({
         title: '退出登录',
         message: '您已安全退出系统'
       })
+    },
+
+    // 设置用户信息（用于登录后保存用户状态）
+    setUser({ commit }, user) {
+      commit('SET_USER', user)
+    },
+
+    // 获取当前用户信息
+    async getCurrentUser({ commit, dispatch }) {
+      try {
+        const response = await authApi.getCurrentUser()
+
+        if (response.success) {
+          const user = response.data
+          commit('SET_USER', user)
+          return user
+        } else {
+          throw new Error(response.message || '获取用户信息失败')
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+        // 如果token无效，清除用户状态
+        if (error.status === 401) {
+          commit('SET_USER', null)
+          authApi.clearTokens()
+        }
+        throw error
+      }
+    },
+
+    // 修改密码
+    async changePassword({ dispatch }, passwordData) {
+      try {
+        const response = await authApi.changePassword(passwordData)
+
+        if (response.success) {
+          dispatch('addNotification', {
+            type: 'success',
+            title: '密码修改成功',
+            message: '您的密码已成功修改'
+          })
+          return response
+        } else {
+          throw new Error(response.message || '密码修改失败')
+        }
+      } catch (error) {
+        const errorMessage = error.message || error.error_code || '密码修改失败'
+        dispatch('addNotification', {
+          type: 'error',
+          title: '密码修改失败',
+          message: errorMessage
+        })
+        throw error
+      }
     },
 
     // 数据获取

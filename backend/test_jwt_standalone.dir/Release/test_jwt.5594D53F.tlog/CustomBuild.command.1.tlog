@@ -1,0 +1,10 @@
+^C:\USERS\PC\LOW-ALTITUDE-TRAFFIC-SYSTEM\BACKEND\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/pc/low-altitude-traffic-system/backend -BC:/Users/pc/low-altitude-traffic-system/backend --check-stamp-file C:/Users/pc/low-altitude-traffic-system/backend/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -45,11 +45,8 @@ backend/build/
 backend/Debug/
 backend/Release/
 
-# vcpkg 缓存
-vcpkg/buildtrees/
-vcpkg/downloads/
-vcpkg/packages/
-vcpkg_installed/
+# vcpkg 缓存和整个目录
+vcpkg/
 
 # 数据库相关
 *.db

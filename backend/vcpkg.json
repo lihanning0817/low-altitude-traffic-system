@@ -1,0 +1,19 @@
+{
+  "name": "low-altitude-traffic-system-backend",
+  "version": "1.0.0",
+  "description": "城市智能低空交通系统 - C++后端服务",
+  "homepage": "https://github.com/your-org/low-altitude-traffic-system",
+  "dependencies": [
+    "boost-beast",
+    "boost-json",
+    "boost-uuid",
+    "boost-algorithm",
+    "boost-thread",
+    "nlohmann-json",
+    "mysql-connector-cpp",
+    "openssl",
+    "curl",
+    "spdlog",
+    "gtest"
+  ]
+}

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import store from '@/store'
 import HomePage from '@/views/HomePage.vue'
 import LoginPage from '@/views/LoginPage.vue'
 import HomeDashboard from '@/views/HomeDashboard.vue'
@@ -115,19 +116,32 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('user') !== null
-  const isAdmin = localStorage.getItem('user') && JSON.parse(localStorage.getItem('user')).role === 'admin'
+  const isAuthenticated = store.getters.isLoggedIn
+  const userRole = store.getters.userRole
+  const isAdmin = userRole === 'admin'
 
   // 无需认证的页面
-  const publicPages = ['home', 'login', 'register']
+  const publicPages = ['home', 'login', 'register', 'admin-login']
 
+  // 检查是否需要管理员权限
   if (to.meta.requiresAdmin && !isAdmin) {
-    next('/login')
-  } else if (!isAuthenticated && !publicPages.includes(to.name)) {
-    next('/login')
-  } else {
-    next()
+    next('/login?redirect=' + encodeURIComponent(to.fullPath))
+    return
   }
+
+  // 检查是否需要认证
+  if (!isAuthenticated && !publicPages.includes(to.name)) {
+    next('/login?redirect=' + encodeURIComponent(to.fullPath))
+    return
+  }
+
+  // 如果已登录用户访问登录页，重定向到仪表板
+  if (isAuthenticated && (to.name === 'login' || to.name === 'register')) {
+    next('/dashboard')
+    return
+  }
+
+  next()
 })
 
 export default router

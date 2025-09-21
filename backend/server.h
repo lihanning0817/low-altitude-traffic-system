@@ -74,7 +74,7 @@ public:
     std::string dbUser = "lat_user";
     std::string dbPassword = "lat_password";
     std::string dbName = "low_altitude_traffic";
-    int dbPort = 3306;
+    int dbPort = 33060;
     
     /**
      * @brief 从环境变量加载数据库配置
