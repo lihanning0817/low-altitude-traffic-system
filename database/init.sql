@@ -45,7 +45,7 @@ CREATE TABLE flight_tasks (
     aircraft_id VARCHAR(50) COMMENT '飞机标识',
     task_type ENUM('survey', 'transport', 'patrol', 'emergency', 'training') NOT NULL COMMENT '任务类型',
     priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium' COMMENT '优先级',
-    status ENUM('pending', 'approved', 'in_progress', 'completed', 'cancelled', 'failed') DEFAULT 'pending' COMMENT '任务状态',
+    status ENUM('pending', 'approved', 'executing', 'completed', 'cancelled', 'failed') DEFAULT 'pending' COMMENT '任务状态',
     planned_start_time DATETIME NOT NULL COMMENT '计划开始时间',
     planned_end_time DATETIME NOT NULL COMMENT '计划结束时间',
     actual_start_time DATETIME NULL COMMENT '实际开始时间',

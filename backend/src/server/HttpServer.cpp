@@ -195,24 +195,66 @@ void HttpServer::applyCors(
     const http::request<http::string_body>& req,
     http::response<http::string_body>& res) {
 
-    boost::ignore_unused(req);
     auto& config = config::Config::getInstance();
 
     if (config.getBool("cors.enabled", true)) {
-        // Access-Control-Allow-Origin
-        auto origins = config.getString("cors.origins", "*");
-        res.set(http::field::access_control_allow_origin, origins);
+        // 获取请求的Origin头
+        std::string requestOrigin;
+        auto originHeader = req.find(http::field::origin);
+        if (originHeader != req.end()) {
+            requestOrigin = std::string(originHeader->value());
+        }
+
+        // Access-Control-Allow-Origin - 支持动态Origin
+        auto configOrigins = config.getString("cors.origins", "*");
+        if (configOrigins == "*") {
+            res.set(http::field::access_control_allow_origin, "*");
+        } else if (!requestOrigin.empty()) {
+            // 检查是否在允许的origin列表中
+            std::vector<std::string> allowedOrigins;
+            std::stringstream ss(configOrigins);
+            std::string origin;
+            while (std::getline(ss, origin, ',')) {
+                // 去除空格
+                origin.erase(0, origin.find_first_not_of(" \t"));
+                origin.erase(origin.find_last_not_of(" \t") + 1);
+                allowedOrigins.push_back(origin);
+            }
+
+            bool originAllowed = false;
+            for (const auto& allowed : allowedOrigins) {
+                if (requestOrigin == allowed) {
+                    originAllowed = true;
+                    break;
+                }
+            }
+
+            if (originAllowed) {
+                res.set(http::field::access_control_allow_origin, requestOrigin);
+                res.set(http::field::access_control_allow_credentials, "true");
+            }
+        }
 
         // Access-Control-Allow-Methods
-        auto methods = config.getString("cors.methods", "GET,POST,PUT,DELETE,OPTIONS");
+        auto methods = config.getString("cors.methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
         res.set(http::field::access_control_allow_methods, methods);
 
-        // Access-Control-Allow-Headers
-        auto headers = config.getString("cors.headers", "Content-Type,Authorization");
+        // Access-Control-Allow-Headers - 支持更多常用头
+        auto headers = config.getString("cors.headers",
+            "Accept,Authorization,Cache-Control,Content-Type,DNT,If-Modified-Since,Keep-Alive,Origin,User-Agent,X-Requested-With");
         res.set(http::field::access_control_allow_headers, headers);
 
-        // Access-Control-Max-Age
-        res.set("Access-Control-Max-Age", "86400");
+        // Access-Control-Expose-Headers - 允许前端访问的响应头
+        auto exposeHeaders = config.getString("cors.expose_headers", "Content-Length,Content-Range");
+        if (!exposeHeaders.empty()) {
+            res.set(http::field::access_control_expose_headers, exposeHeaders);
+        }
+
+        // Access-Control-Max-Age - 预检缓存时间
+        auto maxAge = config.getString("cors.max_age", "86400");
+        res.set("Access-Control-Max-Age", maxAge);
+
+        spdlog::debug("CORS headers applied for origin: {}", requestOrigin.empty() ? "none" : requestOrigin);
     }
 }
 

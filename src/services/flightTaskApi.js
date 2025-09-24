@@ -268,9 +268,12 @@ class FlightTaskApiService {
    */
   getStatusText(status) {
     const statusMap = {
-      'pending': '待执行',
-      'ongoing': '进行中',
-      'completed': '已完成'
+      'pending': '待审批',
+      'approved': '已批准',
+      'executing': '执行中',
+      'completed': '已完成',
+      'cancelled': '已取消',
+      'failed': '已失败'
     }
     return statusMap[status] || status
   }
@@ -281,9 +284,12 @@ class FlightTaskApiService {
    */
   getStatusColor(status) {
     const colorMap = {
-      'pending': '#909399',
-      'ongoing': '#E6A23C',
-      'completed': '#67C23A'
+      'pending': '#909399',    // 灰色 - 待审批
+      'approved': '#409EFF',   // 蓝色 - 已批准
+      'executing': '#E6A23C',  // 橙色 - 执行中
+      'completed': '#67C23A',  // 绿色 - 已完成
+      'cancelled': '#C0C4CC',  // 浅灰色 - 已取消
+      'failed': '#F56C6C'      // 红色 - 已失败
     }
     return colorMap[status] || '#909399'
   }
@@ -324,7 +330,7 @@ class FlightTaskApiService {
       }
     }
 
-    if (taskData.status && !['pending', 'ongoing', 'completed'].includes(taskData.status)) {
+    if (taskData.status && !['pending', 'approved', 'executing', 'completed', 'cancelled', 'failed'].includes(taskData.status)) {
       errors.push('任务状态值不正确')
     }
 
@@ -332,6 +338,56 @@ class FlightTaskApiService {
       isValid: errors.length === 0,
       errors
     }
+  }
+
+  /**
+   * 获取所有可用状态
+   */
+  getAllStatuses() {
+    return [
+      { value: 'pending', label: '待审批', color: '#909399' },
+      { value: 'approved', label: '已批准', color: '#409EFF' },
+      { value: 'executing', label: '执行中', color: '#E6A23C' },
+      { value: 'completed', label: '已完成', color: '#67C23A' },
+      { value: 'cancelled', label: '已取消', color: '#C0C4CC' },
+      { value: 'failed', label: '已失败', color: '#F56C6C' }
+    ]
+  }
+
+  /**
+   * 获取状态转换规则
+   */
+  getStatusTransitions() {
+    return {
+      'pending': ['approved', 'cancelled'],
+      'approved': ['executing', 'cancelled'],
+      'executing': ['completed', 'failed', 'cancelled'],
+      'completed': [], // 完成状态不能转换
+      'cancelled': [], // 取消状态不能转换
+      'failed': ['pending'] // 失败状态可以重新提交
+    }
+  }
+
+  /**
+   * 检查状态转换是否有效
+   * @param {string} fromStatus - 当前状态
+   * @param {string} toStatus - 目标状态
+   */
+  isValidStatusTransition(fromStatus, toStatus) {
+    const transitions = this.getStatusTransitions()
+    return transitions[fromStatus]?.includes(toStatus) || false
+  }
+
+  /**
+   * 获取可转换的下一状态
+   * @param {string} currentStatus - 当前状态
+   */
+  getNextValidStatuses(currentStatus) {
+    const transitions = this.getStatusTransitions()
+    const validStatuses = transitions[currentStatus] || []
+    const allStatuses = this.getAllStatuses()
+
+    return allStatuses.filter(status => validStatuses.includes(status.value))
   }
 }
 
