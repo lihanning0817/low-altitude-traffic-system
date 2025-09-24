@@ -81,7 +81,8 @@
       "Bash(export:*)",
       "Read(///**)",
       "Read(//c/Program Files/**)",
-      "Bash(C:/Windows/System32/taskkill.exe /F /PID 13248)"
+      "Bash(C:/Windows/System32/taskkill.exe /F /PID 13248)",
+      "Bash(git remote set-url:*)"
     ],
     "deny": [],
     "ask": []

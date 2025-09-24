@@ -69,8 +69,10 @@ vcpkg/
 *.temp
 *.bak
 
-# 敏感信息
+# 敏感信息和配置文件
 config/secrets/
+config.json
+server.json
 *.key
 *.pem
 *.p12
