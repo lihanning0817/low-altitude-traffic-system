@@ -8,8 +8,12 @@
 #include "server/HttpServer.h"
 #include "database/DatabaseManager.h"
 #include "repositories/UserRepository.h"
+#include "repositories/FlightTaskRepository.h"
 #include "controllers/AuthController.h"
+#include "controllers/FlightTaskController.h"
+#include "controllers/SystemMonitorController.h"
 #include "auth/JwtService.h"
+#include "services/RouteService.h"
 
 // 全局服务器实例，用于信号处理
 std::unique_ptr<server::HttpServer> g_server = nullptr;
@@ -76,10 +80,20 @@ void initLogging() {
  * @brief 设置API路由
  */
 void setupRoutes(server::HttpServer& server) {
+    // 初始化服务器启动时间（用于系统监控）
+    controllers::SystemMonitorController::initializeStartTime();
+
     // 初始化认证控制器
     auto userRepo = std::make_shared<repositories::UserRepository>();
     auto jwtService = std::make_shared<auth::JwtService>(auth::JwtService::fromConfig());
     auto authController = std::make_shared<controllers::AuthController>(userRepo, jwtService);
+
+    // 初始化飞行任务控制器
+    auto taskRepo = std::make_shared<repositories::FlightTaskRepository>();
+    auto taskController = std::make_shared<controllers::FlightTaskController>(taskRepo, jwtService);
+
+    // 初始化系统监控控制器
+    auto systemMonitorController = std::make_shared<controllers::SystemMonitorController>(jwtService, userRepo);
 
     // ========== 认证相关API ==========
 
@@ -119,146 +133,34 @@ void setupRoutes(server::HttpServer& server) {
         res = std::move(response);
     });
 
-    // ========== 系统API ==========
+    // ========== 系统监控API ==========
 
-    // 健康检查端点
-    server.get("/api/v1/health", [](const auto& req, auto& res) {
-        nlohmann::json response = {
-            {"success", true},
-            {"message", "Service is healthy"},
-            {"timestamp", std::time(nullptr)},
-            {"data", {
-                {"status", "ok"},
-                {"service", "low-altitude-traffic-system"},
-                {"version", "1.0.0"}
-            }}
-        };
-
-        res.result(boost::beast::http::status::ok);
-        res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
-        res.body() = response.dump();
-        res.prepare_payload();
+    // 健康检查端点（无需认证）
+    server.get("/api/v1/health", [systemMonitorController](const auto& req, auto& res) {
+        auto response = systemMonitorController->healthCheck(req);
+        res = std::move(response);
     });
 
-    // 系统信息端点
-    server.get("/api/v1/info", [](const auto& req, auto& res) {
-        auto& config = config::Config::getInstance();
-
-        nlohmann::json response = {
-            {"success", true},
-            {"message", "System information retrieved"},
-            {"timestamp", std::time(nullptr)},
-            {"data", {
-                {"name", config.getString("system.name", "城市智能低空交通系统")},
-                {"version", config.getString("system.version", "1.0.0")},
-                {"server_time", std::time(nullptr)},
-                {"environment", "development"}
-            }}
-        };
-
-        res.result(boost::beast::http::status::ok);
-        res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
-        res.body() = response.dump();
-        res.prepare_payload();
+    // 系统信息端点（无需认证）
+    server.get("/api/v1/info", [systemMonitorController](const auto& req, auto& res) {
+        auto response = systemMonitorController->getSystemInfo(req);
+        res = std::move(response);
     });
 
-    // 用户相关API（使用真实的UserRepository）
-    server.get("/api/v1/users", [](const auto& req, auto& res) {
-        try {
-            repositories::UserRepository userRepo;
-
-            // 解析查询参数
-            // 这里简化处理，实际应该从请求URL中解析参数
-            int offset = 0;
-            int limit = 50;
-
-            auto users = userRepo.getUsers(offset, limit);
-            int total = userRepo.getUserCount();
-
-            // 将用户对象转换为JSON（不包含敏感信息）
-            nlohmann::json usersJson = nlohmann::json::array();
-            for (const auto& user : users) {
-                usersJson.push_back(user.toJson(false)); // false表示不包含密码哈希
-            }
-
-            nlohmann::json response = {
-                {"success", true},
-                {"message", "Users retrieved successfully"},
-                {"timestamp", std::time(nullptr)},
-                {"data", {
-                    {"users", usersJson},
-                    {"pagination", {
-                        {"total", total},
-                        {"offset", offset},
-                        {"limit", limit},
-                        {"count", users.size()}
-                    }}
-                }}
-            };
-
-            res.result(boost::beast::http::status::ok);
-            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
-            res.body() = response.dump();
-            res.prepare_payload();
-
-        } catch (const std::exception& e) {
-            spdlog::error("Error retrieving users: {}", e.what());
-
-            nlohmann::json error_response = {
-                {"success", false},
-                {"error", "Failed to retrieve users"},
-                {"timestamp", std::time(nullptr)}
-            };
-
-            res.result(boost::beast::http::status::internal_server_error);
-            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
-            res.body() = error_response.dump();
-            res.prepare_payload();
-        }
+    // 获取无人机列表（需要认证）
+    server.get("/api/v1/drones", [systemMonitorController](const auto& req, auto& res) {
+        auto response = systemMonitorController->getDronesList(req);
+        res = std::move(response);
     });
 
-    // 无人机列表API
-    server.get("/api/v1/drones", [](const auto& req, auto& res) {
-        nlohmann::json response = {
-            {"success", true},
-            {"message", "Drones retrieved successfully"},
-            {"timestamp", std::time(nullptr)},
-            {"data", nlohmann::json::array({
-                {
-                    {"id", 1},
-                    {"drone_id", "DJI-001"},
-                    {"name", "Phantom 4 Pro"},
-                    {"model", "Phantom 4 Pro"},
-                    {"status", "active"},
-                    {"battery", 85.5},
-                    {"location", {
-                        {"lat", 39.904200},
-                        {"lng", 116.407396}
-                    }}
-                },
-                {
-                    {"id", 2},
-                    {"drone_id", "DJI-002"},
-                    {"name", "Mavic 3"},
-                    {"model", "Mavic 3"},
-                    {"status", "active"},
-                    {"battery", 72.3},
-                    {"location", {
-                        {"lat", 39.914200},
-                        {"lng", 116.417396}
-                    }}
-                }
-            })}
-        };
-
-        res.result(boost::beast::http::status::ok);
-        res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
-        res.body() = response.dump();
-        res.prepare_payload();
+    // 获取用户列表（需要管理员权限）
+    server.get("/api/v1/users", [systemMonitorController](const auto& req, auto& res) {
+        auto response = systemMonitorController->getUsersList(req);
+        res = std::move(response);
     });
 
-    // 任务列表API
-    server.get("/api/v1/tasks", [](const auto& req, auto& res) {
+    // 任务列表API (旧的简单版本 - 已被FlightTask替代)
+    /*server.get("/api/v1/tasks", [](const auto& req, auto& res) {
         nlohmann::json response = {
             {"success", true},
             {"message", "Tasks retrieved successfully"},
@@ -309,9 +211,466 @@ void setupRoutes(server::HttpServer& server) {
         res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
         res.body() = response.dump();
         res.prepare_payload();
+    });*/
+
+    // ========== 地图相关API ==========
+
+    // 获取地图标记点
+    server.get("/api/v1/map/markers", [](const auto& req, auto& res) {
+        try {
+            auto& db_manager = database::DatabaseManager::getInstance();
+
+            // 查询所有标记点
+            auto result = db_manager.executeQuery(
+                "SELECT id, lng, lat, title, type, description, created_at FROM low_altitude_traffic_system.map_markers WHERE is_active = 1 ORDER BY created_at DESC"
+            );
+
+            nlohmann::json markers = nlohmann::json::array();
+
+            if (result) {
+                while (auto row = result->fetchRow()) {
+                    markers.push_back({
+                        {"id", static_cast<int>(row[0])},
+                        {"lng", static_cast<double>(row[1])},
+                        {"lat", static_cast<double>(row[2])},
+                        {"title", static_cast<std::string>(row[3])},
+                        {"type", static_cast<std::string>(row[4])},
+                        {"description", row[5].isNull() ? "" : static_cast<std::string>(row[5])},
+                        {"created_at", static_cast<std::string>(row[6])}
+                    });
+                }
+            }
+
+            nlohmann::json response = {
+                {"success", true},
+                {"message", "Markers retrieved successfully"},
+                {"timestamp", std::time(nullptr)},
+                {"data", markers}
+            };
+
+            res.result(boost::beast::http::status::ok);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = response.dump();
+            res.prepare_payload();
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error retrieving markers: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", "Failed to retrieve markers"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
     });
 
-    spdlog::info("API routes configured");
+    // 添加地图标记点
+    server.post("/api/v1/map/markers", [](const auto& req, auto& res) {
+        try {
+            // 解析请求体JSON
+            auto json_data = nlohmann::json::parse(req.body());
+
+            // 验证必需字段
+            if (!json_data.contains("lng") || !json_data.contains("lat") || !json_data.contains("title")) {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error", "Missing required fields: lng, lat, title"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::bad_request);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+                return;
+            }
+
+            double lng = json_data["lng"].get<double>();
+            double lat = json_data["lat"].get<double>();
+            std::string title = json_data["title"].get<std::string>();
+            std::string type = json_data.value("type", "marker");
+            std::string description = json_data.value("description", "");
+
+            auto& db_manager = database::DatabaseManager::getInstance();
+
+            // 使用预编译语句插入标记点
+            std::vector<mysqlx::Value> params = {lng, lat, title, type, description};
+
+            spdlog::debug("Inserting marker - lng: {}, lat: {}, title: {}, type: {}, description: {}", lng, lat, title, type, description);
+
+            uint64_t affected_rows = db_manager.executePreparedUpdate(
+                "INSERT INTO low_altitude_traffic_system.map_markers (lng, lat, title, type, description, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
+                params
+            );
+
+            if (affected_rows > 0) {
+                nlohmann::json response = {
+                    {"success", true},
+                    {"message", "Marker added successfully"},
+                    {"timestamp", std::time(nullptr)},
+                    {"data", {
+                        {"id", static_cast<int>(db_manager.getLastInsertId())},
+                        {"lng", lng},
+                        {"lat", lat},
+                        {"title", title},
+                        {"type", type},
+                        {"description", description}
+                    }}
+                };
+
+                res.result(boost::beast::http::status::created);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = response.dump();
+                res.prepare_payload();
+            } else {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error", "Failed to add marker"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+
+        } catch (const nlohmann::json::parse_error& e) {
+            spdlog::error("JSON parse error in marker creation: {}", e.what());
+            spdlog::error("Request body: {}", req.body());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", std::string("Invalid JSON format: ") + e.what()},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::bad_request);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error adding marker: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", "Internal server error"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 清除所有标记点
+    server.del("/api/v1/map/markers", [](const auto& req, auto& res) {
+        try {
+            auto& db_manager = database::DatabaseManager::getInstance();
+
+            uint64_t affected_rows = db_manager.executeUpdate("DELETE FROM map_markers");
+
+            nlohmann::json response = {
+                {"success", true},
+                {"message", "All markers cleared successfully"},
+                {"timestamp", std::time(nullptr)},
+                {"data", {
+                    {"cleared_count", static_cast<int>(affected_rows)}
+                }}
+            };
+
+            res.result(boost::beast::http::status::ok);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = response.dump();
+            res.prepare_payload();
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error clearing markers: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", "Failed to clear markers"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 路线规划API
+    server.get("/api/v1/map/route", [](const auto& req, auto& res) {
+        try {
+            // 从查询参数获取起点、终点和策略
+            std::string query_string = std::string(req.target());
+            std::string origin, destination, strategy = "0";
+
+            // 简单的查询参数解析
+            size_t origin_pos = query_string.find("origin=");
+            size_t dest_pos = query_string.find("destination=");
+            size_t strategy_pos = query_string.find("strategy=");
+
+            if (origin_pos != std::string::npos) {
+                size_t start = origin_pos + 7;  // "origin="的长度
+                size_t end = query_string.find("&", start);
+                if (end == std::string::npos) end = query_string.length();
+                origin = query_string.substr(start, end - start);
+            }
+
+            if (dest_pos != std::string::npos) {
+                size_t start = dest_pos + 12;  // "destination="的长度
+                size_t end = query_string.find("&", start);
+                if (end == std::string::npos) end = query_string.length();
+                destination = query_string.substr(start, end - start);
+            }
+
+            if (strategy_pos != std::string::npos) {
+                size_t start = strategy_pos + 9;  // "strategy="的长度
+                size_t end = query_string.find("&", start);
+                if (end == std::string::npos) end = query_string.length();
+                strategy = query_string.substr(start, end - start);
+            }
+
+            spdlog::debug("Route planning request - Origin: {}, Destination: {}, Strategy: {}", origin, destination, strategy);
+
+            if (origin.empty() || destination.empty()) {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error", "Missing required parameters: origin and destination"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::bad_request);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+                return;
+            }
+
+            // 创建路线规划服务
+            auto& config = config::Config::getInstance();
+            std::string amap_key = config.getString("external_apis.amap.key", "1872806f332dab32a1a3dc895b0ad542");
+            spdlog::debug("Using Amap API key: {}", amap_key.substr(0, 8) + "...");
+            services::RouteService route_service(amap_key);
+
+            // 调用路线规划
+            auto route_result = route_service.planRoute(origin, destination, strategy);
+
+            if (route_result["success"].get<bool>()) {
+                nlohmann::json response = {
+                    {"success", true},
+                    {"message", "Route planned successfully"},
+                    {"timestamp", std::time(nullptr)},
+                    {"data", route_result["data"]}
+                };
+
+                res.result(boost::beast::http::status::ok);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = response.dump();
+                res.prepare_payload();
+            } else {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error", route_result.value("error", "Route planning failed")},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error in route planning: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", std::string("Route planning error: ") + e.what()},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 地理编码API
+    server.get("/api/v1/map/geocode", [](const auto& req, auto& res) {
+        try {
+            std::string query_string = std::string(req.target());
+            std::string address;
+
+            // 解析地址参数
+            size_t addr_pos = query_string.find("address=");
+            if (addr_pos != std::string::npos) {
+                size_t start = addr_pos + 8;  // "address="的长度
+                size_t end = query_string.find("&", start);
+                if (end == std::string::npos) end = query_string.length();
+                address = query_string.substr(start, end - start);
+            }
+
+            if (address.empty()) {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error", "Missing required parameter: address"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::bad_request);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+                return;
+            }
+
+            // 创建路线规划服务
+            auto& config = config::Config::getInstance();
+            std::string amap_key = config.getString("amap.api_key", "1872806f332dab32a1a3dc895b0ad542");
+            services::RouteService route_service(amap_key);
+
+            // 调用地理编码
+            auto geocode_result = route_service.geocode(address);
+
+            nlohmann::json response = {
+                {"success", geocode_result["success"].get<bool>()},
+                {"message", geocode_result["success"].get<bool>() ? "Geocoding successful" : "Geocoding failed"},
+                {"timestamp", std::time(nullptr)},
+                {"data", geocode_result.value("data", nlohmann::json::object())}
+            };
+
+            res.result(boost::beast::http::status::ok);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = response.dump();
+            res.prepare_payload();
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error in geocoding: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error", "Internal server error"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // ========== 飞行任务管理API ==========
+
+    // 获取飞行任务列表
+    server.get("/api/v1/tasks", [taskController](const auto& req, auto& res) {
+        spdlog::info("Handling GET /api/v1/tasks");
+        try {
+            auto response = taskController->getFlightTasks(req);
+            res = std::move(response);
+        } catch (const std::exception& e) {
+            spdlog::error("Error in GET /api/v1/tasks: {}", e.what());
+            res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+        }
+    });
+
+    // 创建飞行任务
+    server.post("/api/v1/tasks", [taskController](const auto& req, auto& res) {
+        spdlog::info("Handling POST /api/v1/tasks");
+        try {
+            auto response = taskController->createFlightTask(req);
+            res = std::move(response);
+        } catch (const std::exception& e) {
+            spdlog::error("Error in POST /api/v1/tasks: {}", e.what());
+            res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+        }
+    });
+
+    // 获取指定飞行任务
+    server.get("/api/v1/tasks/{id}", [taskController](const auto& req, auto& res) {
+        spdlog::info("Handling GET /api/v1/tasks/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取任务ID
+        std::regex id_regex(R"(/api/v1/tasks/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string task_id = matches[1].str();
+            spdlog::info("Extracted task ID: {}", task_id);
+            try {
+                auto response = taskController->getFlightTaskById(req, task_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/tasks/{}: {}", task_id, e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            spdlog::warn("Invalid task ID format in path: {}", target);
+            res = utils::HttpResponse::createErrorResponse("无效的任务ID格式");
+        }
+    });
+
+    // 更新飞行任务
+    server.put("/api/v1/tasks/{id}", [taskController](const auto& req, auto& res) {
+        spdlog::info("Handling PUT /api/v1/tasks/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取任务ID
+        std::regex id_regex(R"(/api/v1/tasks/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string task_id = matches[1].str();
+            spdlog::info("Extracted task ID: {}", task_id);
+            try {
+                auto response = taskController->updateFlightTask(req, task_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in PUT /api/v1/tasks/{}: {}", task_id, e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            spdlog::warn("Invalid task ID format in path: {}", target);
+            res = utils::HttpResponse::createErrorResponse("无效的任务ID格式");
+        }
+    });
+
+    // 删除飞行任务
+    server.del("/api/v1/tasks/{id}", [taskController](const auto& req, auto& res) {
+        spdlog::info("Handling DELETE /api/v1/tasks/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取任务ID
+        std::regex id_regex(R"(/api/v1/tasks/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string task_id = matches[1].str();
+            spdlog::info("Extracted task ID: {}", task_id);
+            try {
+                auto response = taskController->deleteFlightTask(req, task_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in DELETE /api/v1/tasks/{}: {}", task_id, e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            spdlog::warn("Invalid task ID format in path: {}", target);
+            res = utils::HttpResponse::createErrorResponse("无效的任务ID格式");
+        }
+    });
+
+    spdlog::info("API routes configured (including FlightTask APIs)");
 }
 
 int main(int argc, char* argv[]) {

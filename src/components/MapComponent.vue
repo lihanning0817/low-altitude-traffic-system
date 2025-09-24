@@ -277,7 +277,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import {
   Plus, Minus, Grid, LocationInformation, Position, VideoCamera, Radar,
   Flag, Location, Delete, Close
@@ -428,6 +428,9 @@ const initMap = () => {
 
     // 初始化设备标记
     initDeviceMarkers()
+
+    // 加载已有的地图标记点
+    loadExistingMarkers()
   }
 }
 
@@ -467,11 +470,40 @@ const hideContextMenu = () => {
 }
 
 // 设置路线点位
-const setRoutePoint = (type) => {
+const setRoutePoint = async (type) => {
   if (!contextMenu.lnglat) return
 
   const { lng, lat } = contextMenu.lnglat
   const position = [lng, lat]
+
+  try {
+    // 保存标记点到后端
+    const markerData = {
+      lng: lng,
+      lat: lat,
+      title: type === 'start' ? '起点' : type === 'end' ? '终点' : '途经点',
+      type: type,
+      description: `${type === 'start' ? '起点' : type === 'end' ? '终点' : '途经点'}设置于 ${new Date().toLocaleString()}`
+    }
+
+    const response = await fetch('http://localhost:8081/api/v1/map/markers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(markerData)
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      console.log('标记点已保存到服务器:', result.data)
+    } else {
+      console.warn('保存标记点失败:', result.error)
+    }
+  } catch (error) {
+    console.error('保存标记点时出错:', error)
+  }
 
   if (type === 'start') {
     routeData.start = position
@@ -562,57 +594,127 @@ const planRoute = async () => {
     routePolyline = null
   }
 
+  let loading = null
   try {
-    const loading = ElMessage.loading('正在规划路线...')
-
-    // 构建请求参数
-    const params = new URLSearchParams({
-      origin: `${routeData.start[0]},${routeData.start[1]}`,
-      destination: `${routeData.end[0]},${routeData.end[1]}`,
-      strategy: routeOptions.strategy
+    loading = ElLoading.service({
+      lock: true,
+      text: '正在规划路线...',
+      background: 'rgba(0, 0, 0, 0.7)'
     })
 
-    // 调用后端路线规划接口
-    const response = await fetch(`http://localhost:8081/api/route?${params}`)
-    const result = await response.json()
+    // 构建请求参数
+    const origin = `${routeData.start[0]},${routeData.start[1]}`
+    const destination = `${routeData.end[0]},${routeData.end[1]}`
+    const strategy = routeOptions.strategy
 
-    loading.close()
+    console.log('路线规划参数:', {
+      origin,
+      destination,
+      strategy,
+      startCoords: routeData.start,
+      endCoords: routeData.end
+    })
+
+    const params = new URLSearchParams({
+      origin: origin,
+      destination: destination,
+      strategy: strategy
+    })
+
+    const requestUrl = `http://localhost:8081/api/v1/map/route?${params}`
+    console.log('请求URL:', requestUrl)
+
+    // 调用后端路线规划接口
+    const response = await fetch(requestUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('响应状态:', response.status, response.statusText)
+    console.log('响应头:', Object.fromEntries(response.headers.entries()))
+
+    if (!response.ok) {
+      throw new Error(`HTTP错误: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    console.log('API返回结果:', result)
+
+    if (loading) {
+      loading.close()
+      loading = null
+    }
 
     if (result.success && result.data) {
+      console.log('路线数据:', result.data)
+
       // 创建路线信息
       routeInfo.value = {
         distance: result.data.distance,
         duration: result.data.duration,
-        segments: result.data.steps.length
+        segments: result.data.steps ? result.data.steps.length : 0
       }
 
       // 绘制路线
       const path = result.data.coordinates
+      console.log('路线坐标点数量:', path ? path.length : 0)
 
-      routePolyline = new AMap.Polyline({
-        path: path,
-        strokeColor: '#00AA00',
-        strokeWeight: 6,
-        strokeOpacity: 0.8
-      })
+      if (path && path.length > 0) {
+        routePolyline = new AMap.Polyline({
+          path: path,
+          strokeColor: '#00AA00',
+          strokeWeight: 6,
+          strokeOpacity: 0.8
+        })
 
-      map.add(routePolyline)
+        map.add(routePolyline)
 
-      // 调整地图视野
-      map.setFitView([routePolyline])
+        // 调整地图视野
+        map.setFitView([routePolyline])
 
-      ElMessage.success('路线规划完成')
+        ElMessage.success('路线规划完成')
+      } else {
+        console.error('路线坐标数据为空')
+        ElMessage.error('路线数据异常，无法绘制路线')
+      }
     } else {
+      console.error('路线规划API返回错误:', result)
       ElMessage.error(result.error || '路线规划失败，请检查参数')
     }
   } catch (error) {
-    console.error('路线规划请求失败:', error)
-    ElMessage.error('路线规划失败，请检查网络连接')
+    console.error('路线规划请求失败详细错误:', error)
+    console.error('错误类型:', error.constructor.name)
+    console.error('错误消息:', error.message)
+    console.error('错误堆栈:', error.stack)
+
+    if (loading) {
+      loading.close()
+    }
+
+    ElMessage.error(`路线规划失败: ${error.message}`)
   }
 }
 
 // 清除路线
-const clearRoute = () => {
+const clearRoute = async () => {
+  try {
+    // 清除后端标记点
+    const response = await fetch('http://localhost:8081/api/v1/map/markers', {
+      method: 'DELETE'
+    })
+
+    const result = await response.json()
+    if (result.success) {
+      console.log('服务器标记点已清除:', result.data)
+    } else {
+      console.warn('清除服务器标记点失败:', result.error)
+    }
+  } catch (error) {
+    console.error('清除服务器标记点时出错:', error)
+  }
+
   // 清除路线数据
   routeData.start = null
   routeData.end = null
@@ -670,6 +772,39 @@ const clearWaypoint = (index) => {
 const formatCoords = (coords) => {
   if (!coords) return ''
   return `${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}`
+}
+
+// 加载已有的地图标记点
+const loadExistingMarkers = async () => {
+  try {
+    const response = await fetch('http://localhost:8081/api/v1/map/markers')
+    const result = await response.json()
+
+    if (result.success && result.data) {
+      console.log('从服务器加载的标记点:', result.data)
+
+      result.data.forEach(marker => {
+        const position = [marker.lng, marker.lat]
+
+        if (marker.type === 'start') {
+          routeData.start = position
+          updateStartMarker()
+        } else if (marker.type === 'end') {
+          routeData.end = position
+          updateEndMarker()
+        } else if (marker.type === 'waypoint') {
+          routeData.waypoints.push(position)
+        }
+      })
+
+      // 更新所有途经点标记
+      if (routeData.waypoints.length > 0) {
+        updateWaypointMarkers()
+      }
+    }
+  } catch (error) {
+    console.error('加载地图标记点失败:', error)
+  }
 }
 
 // 初始化设备标记

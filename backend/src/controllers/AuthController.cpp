@@ -129,7 +129,7 @@ http::response<http::string_body> AuthController::registerUser(const http::reque
         std::string username = registerData["username"].get<std::string>();
         std::string email = registerData["email"].get<std::string>();
         std::string password = registerData["password"].get<std::string>();
-        std::string fullName = registerData.value("full_name", "");
+        std::string fullName = registerData.value("full_name", username);
 
         // 检查用户名是否已存在
         if (userRepository_->getUserByUsername(username).has_value()) {

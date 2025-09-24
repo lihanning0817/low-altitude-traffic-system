@@ -4,11 +4,12 @@
 #include <thread>
 #include <vector>
 #include <regex>
+#include <sstream>
 
 namespace server {
 
 HttpServer::HttpServer(const std::string& address, unsigned short port)
-    : ioc_(1)
+    : ioc_()  // 移除硬编码的线程数1
     , acceptor_(ioc_)
     , address_(address)
     , port_(port) {
@@ -76,12 +77,23 @@ void HttpServer::run(int threads) {
     // 创建工作线程
     for (int i = 1; i < threads; ++i) {
         workers.emplace_back([this] {
-            ioc_.run();
+            try {
+                ioc_.run();
+            } catch (const std::exception& e) {
+                spdlog::error("Worker thread error: {}", e.what());
+            }
         });
+        spdlog::debug("Started worker thread {}/{}", i, threads);
     }
 
+    spdlog::info("Running server with {} threads", threads);
+
     // 主线程也参与处理
-    ioc_.run();
+    try {
+        ioc_.run();
+    } catch (const std::exception& e) {
+        spdlog::error("Main thread error: {}", e.what());
+    }
 
     // 等待所有工作线程结束
     for (auto& t : workers) {
@@ -89,12 +101,15 @@ void HttpServer::run(int threads) {
             t.join();
         }
     }
+
+    spdlog::info("All threads terminated");
 }
 
 void HttpServer::doAccept() {
     acceptor_.async_accept(
         [this](beast::error_code ec, tcp::socket socket) {
             if (!ec) {
+                spdlog::debug("New connection accepted from: {}", socket.remote_endpoint().address().to_string());
                 std::make_shared<HttpSession>(std::move(socket), this)->run();
             } else {
                 spdlog::error("Accept error: {}", ec.message());
@@ -122,6 +137,7 @@ void HttpServer::handleRequest(
         if (req.method() == http::verb::options) {
             res.result(http::status::ok);
             res.set(http::field::content_length, "0");
+            spdlog::debug("OPTIONS request handled for: {}", std::string(req.target()));
             return;
         }
 
@@ -129,30 +145,45 @@ void HttpServer::handleRequest(
         auto handler = findRoute(req.method(), std::string(req.target()));
 
         if (handler) {
+            spdlog::debug("Route found for: {} {}", std::string(http::to_string(req.method())), std::string(req.target()));
             // 调用路由处理函数
             handler(req, res);
         } else {
+            spdlog::warn("No route found for: {} {}", std::string(http::to_string(req.method())), std::string(req.target()));
             // 404 Not Found
-            res = createErrorResponse(http::status::not_found, "API endpoint not found");
+            auto error_res = createErrorResponse(http::status::not_found, "API endpoint not found");
+            // 保留CORS头信息
+            applyCors(req, error_res);
+            res = std::move(error_res);
         }
 
     } catch (const std::exception& e) {
         spdlog::error("Request handling error: {}", e.what());
-        res = createErrorResponse(http::status::internal_server_error, "Internal server error");
+        auto error_res = createErrorResponse(http::status::internal_server_error, "Internal server error");
+        // 保留CORS头信息
+        applyCors(req, error_res);
+        res = std::move(error_res);
     }
 }
 
 RequestHandler HttpServer::findRoute(http::verb method, const std::string& path) {
+    // 提取路径部分，忽略查询参数
+    std::string clean_path = path;
+    size_t query_pos = path.find('?');
+    if (query_pos != std::string::npos) {
+        clean_path = path.substr(0, query_pos);
+    }
+
     for (const auto& route : routes_) {
         if (route.method == method) {
             // 简单路径匹配（可以扩展为正则表达式匹配）
-            if (route.path == path) {
+            if (route.path == clean_path) {
                 return route.handler;
             }
 
             // 支持路径参数匹配（例如：/api/users/{id}）
             std::regex route_regex(std::regex_replace(route.path, std::regex(R"(\{[^}]+\})"), R"([^/]+)"));
-            if (std::regex_match(path, route_regex)) {
+            if (std::regex_match(clean_path, route_regex)) {
                 return route.handler;
             }
         }
@@ -164,6 +195,7 @@ void HttpServer::applyCors(
     const http::request<http::string_body>& req,
     http::response<http::string_body>& res) {
 
+    boost::ignore_unused(req);
     auto& config = config::Config::getInstance();
 
     if (config.getBool("cors.enabled", true)) {
@@ -215,14 +247,21 @@ http::response<http::string_body> HttpServer::createJsonResponse(
 HttpSession::HttpSession(tcp::socket&& socket, HttpServer* server)
     : stream_(std::move(socket))
     , server_(server) {
+    spdlog::debug("HttpSession created");
 }
 
 void HttpSession::run() {
+    spdlog::debug("HttpSession started");
     doRead();
 }
 
 void HttpSession::doRead() {
     req_ = {};
+
+    spdlog::debug("Starting async read for new request");
+
+    // 设置读取超时
+    stream_.expires_after(std::chrono::seconds(30));
 
     http::async_read(stream_, buffer_, req_,
         [self = shared_from_this()](beast::error_code ec, std::size_t bytes_transferred) {
@@ -234,17 +273,27 @@ void HttpSession::onRead(beast::error_code ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
 
     if (ec == http::error::end_of_stream) {
+        spdlog::debug("End of stream detected");
         return doClose();
     }
 
     if (ec) {
         spdlog::error("Read error: {}", ec.message());
-        return;
+        return doClose();
     }
+
+    std::ostringstream thread_id_str;
+    thread_id_str << std::this_thread::get_id();
+    spdlog::debug("Request received: {} {} from thread: {}",
+                  std::string(http::to_string(req_.method())),
+                  std::string(req_.target()),
+                  thread_id_str.str());
 
     // 处理请求
     http::response<http::string_body> res;
     server_->handleRequest(req_, res);
+
+    spdlog::debug("Response prepared with status: {}", static_cast<int>(res.result()));
 
     // 发送响应
     sendResponse(std::move(res));
@@ -253,6 +302,9 @@ void HttpSession::onRead(beast::error_code ec, std::size_t bytes_transferred) {
 void HttpSession::sendResponse(http::response<http::string_body>&& res) {
     auto sp = std::make_shared<http::response<http::string_body>>(std::move(res));
     bool close = sp->need_eof();
+
+    // 设置写入超时
+    stream_.expires_after(std::chrono::seconds(30));
 
     http::async_write(stream_, *sp,
         [self = shared_from_this(), close](beast::error_code ec, std::size_t bytes_transferred) {
@@ -265,10 +317,13 @@ void HttpSession::onWrite(beast::error_code ec, std::size_t bytes_transferred, b
 
     if (ec) {
         spdlog::error("Write error: {}", ec.message());
-        return;
+        return doClose();
     }
 
+    spdlog::debug("Response sent successfully, bytes: {}", bytes_transferred);
+
     if (close) {
+        spdlog::debug("Closing connection as requested");
         return doClose();
     }
 
@@ -277,6 +332,7 @@ void HttpSession::onWrite(beast::error_code ec, std::size_t bytes_transferred, b
 }
 
 void HttpSession::doClose() {
+    spdlog::debug("Closing HTTP session");
     beast::error_code ec;
     stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 

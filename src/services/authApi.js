@@ -5,8 +5,9 @@ import { ElMessage } from 'element-plus'
 class AuthApiService {
   constructor() {
     this.baseURL = 'http://localhost:8081/api/v1/auth'
-    this.accessToken = null
-    this.refreshToken = null
+    // 初始化时从localStorage加载token
+    this.accessToken = localStorage.getItem('access_token')
+    this.refreshToken = localStorage.getItem('refresh_token')
 
     // 创建axios实例
     this.api = axios.create({

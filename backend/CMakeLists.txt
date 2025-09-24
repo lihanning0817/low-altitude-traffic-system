@@ -21,20 +21,25 @@ find_package(Threads REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS system thread json)
 
 # 设置OpenSSL路径（vcpkg安装）
-set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows")
+set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-windows")
 set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
 set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libcrypto.lib")
 set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.lib")
 
 # 设置ZLIB路径
-set(ZLIB_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows")
+set(ZLIB_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-windows")
+
+# 设置MySQL连接器路径（使用系统安装的MySQL连接器）
+set(MYSQL_CONNECTOR_ROOT "C:/Program Files/MySQL/mysql-connector-c++-9.4.0-winx64")
+set(MYSQL_CONNECTOR_INCLUDE_DIR "${MYSQL_CONNECTOR_ROOT}/include")
+set(MYSQL_CONNECTOR_LIB_DIR "${MYSQL_CONNECTOR_ROOT}/lib64/vs14")
 
 # 查找其他依赖包
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(zstd CONFIG REQUIRED)
-find_package(mysql-concpp CONFIG REQUIRED)
+# 不使用find_package，手动设置MySQL连接器
 find_package(spdlog CONFIG REQUIRED)
 find_package(CURL REQUIRED)
 
@@ -42,6 +47,7 @@ find_package(CURL REQUIRED)
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include
+    ${MYSQL_CONNECTOR_INCLUDE_DIR}
 )
 
 # 收集所有源文件
@@ -57,6 +63,7 @@ list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/test_jwt_service.cpp")
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/test_auth_controller.cpp")
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/test_jwt_standalone.cpp")
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/test_database_connection.cpp")
+list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/test_mysql_basic.cpp")
 
 # 创建静态库（包含除main.cpp外的所有源码）
 add_library(${PROJECT_NAME}_lib STATIC ${SOURCES})
@@ -71,7 +78,7 @@ target_link_libraries(${PROJECT_NAME}_lib
     OpenSSL::SSL
     OpenSSL::Crypto
     ZLIB::ZLIB
-    mysql::concpp
+    "${MYSQL_CONNECTOR_LIB_DIR}/mysqlcppconnx.lib"
     spdlog::spdlog
     CURL::libcurl
     Threads::Threads
@@ -98,53 +105,7 @@ target_link_libraries(${PROJECT_NAME}
     ${PROJECT_NAME}_lib
 )
 
-# 创建UserRepository测试程序
-add_executable(test_user_repository src/test_user_repository.cpp)
-
-# 链接UserRepository测试程序
-target_link_libraries(test_user_repository
-    PRIVATE
-    ${PROJECT_NAME}_lib
-)
-
-# 创建JWT服务测试程序
-add_executable(test_jwt_service src/test_jwt_service.cpp)
-
-# 链接JWT服务测试程序
-target_link_libraries(test_jwt_service
-    PRIVATE
-    ${PROJECT_NAME}_lib
-)
-
-# 创建AuthController测试程序
-add_executable(test_auth_controller src/test_auth_controller.cpp)
-
-# 链接AuthController测试程序
-target_link_libraries(test_auth_controller
-    PRIVATE
-    ${PROJECT_NAME}_lib
-)
-
-# 创建独立JWT测试程序（无数据库依赖）
-add_executable(test_jwt_standalone src/test_jwt_standalone.cpp)
-
-# 链接独立JWT测试程序（只需要基本依赖，无数据库）
-target_link_libraries(test_jwt_standalone
-    PRIVATE
-    nlohmann_json::nlohmann_json
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    spdlog::spdlog
-)
-
-# 创建数据库连接测试程序
-add_executable(test_database_connection src/test_database_connection.cpp)
-
-# 链接数据库连接测试程序
-target_link_libraries(test_database_connection
-    PRIVATE
-    ${PROJECT_NAME}_lib
-)
+# 测试程序已移除，仅保留主程序构建
 
 # 编译选项
 if(MSVC)

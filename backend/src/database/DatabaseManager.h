@@ -243,6 +243,12 @@ private:
      * @return 是否成功
      */
     bool createUserTable();
+
+    /**
+     * @brief 创建飞行任务表
+     * @return 是否成功
+     */
+    bool createFlightTaskTable();
 };
 
 /**

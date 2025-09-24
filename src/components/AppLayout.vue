@@ -128,6 +128,13 @@
               <span>数据分析</span>
             </li>
             <li
+              :class="{ active: currentRoute === 'system-monitor' }"
+              @click="navigateTo('system-monitor')"
+            >
+              <el-icon><Monitor /></el-icon>
+              <span>系统监控</span>
+            </li>
+            <li
               :class="{ active: currentRoute === 'api-test' }"
               @click="navigateTo('api-test')"
             >
@@ -179,10 +186,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, House, DataLine, MapLocation, Pointer, Location, Sunny, Warning, TrendCharts, Connection } from '@element-plus/icons-vue'
+import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
+import { User, House, DataLine, MapLocation, Location, Sunny, Warning, TrendCharts, Connection } from '@element-plus/icons-vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
+const store = useStore()
 const currentRoute = ref(router.currentRoute.value.name)
 
 // 监听路由变化
@@ -194,12 +204,40 @@ const navigateTo = (route) => {
   router.push(`/${route}`)
 }
 
-const handleCommand = (command) => {
+const handleCommand = async (command) => {
   switch(command) {
     case 'logout':
-      // 清除用户会话
-      localStorage.removeItem('user')
-      router.push('/login')
+      try {
+        // 使用 Vuex store 的 logout action，它会：
+        // 1. 调用后端 logout API
+        // 2. 清除 localStorage/sessionStorage 中的 tokens
+        // 3. 重置 store 状态
+        await store.dispatch('logout')
+
+        ElMessage.success('退出登录成功')
+
+        // 重定向到登录页面
+        router.push('/login')
+      } catch (error) {
+        console.error('退出登录失败:', error)
+        ElMessage.error('退出登录失败，请重试')
+
+        // 即使后端失败，也尝试清除本地状态并跳转
+        try {
+          store.commit('SET_USER', null)
+          // 清除API token
+          if (window.apiService && window.apiService.clearToken) {
+            window.apiService.clearToken()
+          }
+          localStorage.removeItem('token')
+          localStorage.removeItem('refreshToken')
+          sessionStorage.removeItem('token')
+          sessionStorage.removeItem('refreshToken')
+          router.push('/login')
+        } catch (fallbackError) {
+          console.error('本地状态清除失败:', fallbackError)
+        }
+      }
       break
     case 'profile':
       router.push('/profile')

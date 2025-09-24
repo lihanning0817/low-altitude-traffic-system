@@ -10,7 +10,16 @@
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\AuthController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\FlightTaskController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\SystemMonitorController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\database\DatabaseManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\models\FlightTask.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\models\User.cpp">
@@ -19,13 +28,22 @@
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\BaseRepository.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\FlightTaskRepository.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\UserRepository.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\server\HttpServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\services\RouteService.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\utils\HttpResponse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pc\low-altitude-traffic-system\backend\src\utils\JsonUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,7 +57,16 @@
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\AuthController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\FlightTaskController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\controllers\SystemMonitorController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\database\DatabaseManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\models\FlightTask.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\models\User.h">
@@ -48,13 +75,22 @@
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\BaseRepository.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\FlightTaskRepository.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\repositories\UserRepository.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\server\HttpServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\services\RouteService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\utils\HttpResponse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\pc\low-altitude-traffic-system\backend\src\utils\JsonUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

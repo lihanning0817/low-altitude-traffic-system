@@ -36,8 +36,7 @@
           >
             <option value="">选择角色（可选）</option>
             <option value="admin">管理员</option>
-            <option value="operator">操作员</option>
-            <option value="viewer">观察员</option>
+            <option value="user">普通用户</option>
           </select>
         </div>
 
@@ -80,13 +79,10 @@
         <p class="test-title">测试账号</p>
         <div class="test-account-list">
           <div class="test-account">
-            <strong>管理员:</strong> admin / 123456 / 管理员
+            <strong>管理员:</strong> admin / admin123
           </div>
           <div class="test-account">
-            <strong>操作员:</strong> operator / 123456 / 操作员
-          </div>
-          <div class="test-account">
-            <strong>观察员:</strong> viewer / 123456 / 观察员
+            <strong>普通用户:</strong> testuser / 123456
           </div>
         </div>
       </div>
@@ -164,14 +160,12 @@ const handleLogin = async () => {
   try {
     loading.value = true
 
-    // 测试账号快速登录
+    // 测试账号快速登录（仅限非admin的模拟账户）
     const testAccounts = {
-      'admin': { password: '123456', role: 'admin', username: 'admin' },
-      'operator': { password: '123456', role: 'operator', username: 'operator' },
-      'viewer': { password: '123456', role: 'viewer', username: 'viewer' }
+      'testuser': { password: '123456', role: 'user', username: 'testuser' }
     }
 
-    // 检查是否是测试账号（如果有选择角色的话）
+    // 检查是否是测试账号（不包括admin，admin走真实后端）
     const testAccount = testAccounts[loginData.username]
     if (testAccount && testAccount.password === loginData.password &&
         (!loginData.role || testAccount.role === loginData.role)) {
@@ -180,12 +174,18 @@ const handleLogin = async () => {
         id: Date.now(),
         username: testAccount.username,
         role: testAccount.role,
-        name: testAccount.role === 'admin' ? '系统管理员' : testAccount.role === 'operator' ? '系统操作员' : '系统观察员',
+        full_name: '测试用户',
+        email: `${testAccount.username}@example.com`,
         avatar: null
       }
 
+      // 为测试用户生成假的token，以便通过路由守卫
+      const fakeToken = `fake_token_${Date.now()}_${testAccount.username}`
+      localStorage.setItem('access_token', fakeToken)
+      localStorage.setItem('refresh_token', fakeToken)
+
       store.commit('SET_USER', mockUser)
-      ElMessage.success(`欢迎回来，${mockUser.name}！`)
+      ElMessage.success(`欢迎回来，${mockUser.full_name}！`)
 
       // 登录成功后重定向
       const redirect = route.query.redirect || '/dashboard'
@@ -193,7 +193,7 @@ const handleLogin = async () => {
       return
     }
 
-    // 调用真实的后端API
+    // 调用真实的后端API（包括admin账户）
     const response = await authApi.login({
       username: loginData.username,
       password: loginData.password

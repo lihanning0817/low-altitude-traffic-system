@@ -5,6 +5,7 @@ import LoginPage from '@/views/LoginPage.vue'
 import HomeDashboard from '@/views/HomeDashboard.vue'
 import LoginDashboard from '@/views/LoginDashboard.vue'
 import RegisterDashboard from '@/views/RegisterDashboard.vue'
+import RegisterPage from '@/components/RegisterPage.vue'
 import AdminLogin from '@/views/AdminLogin.vue'
 import AdminDashboard from '@/views/AdminDashboard.vue'
 import TaskTracking from '@/views/TaskTracking.vue'
@@ -25,7 +26,7 @@ const routes = [
   {
     path: '/register',
     name: 'register',
-    component: RegisterDashboard
+    component: RegisterPage
   },
   {
     path: '/dashboard',
@@ -61,7 +62,8 @@ const routes = [
   {
     path: '/tasks',
     name: 'tasks',
-    component: () => import('@/components/FlightTaskList.vue')
+    component: () => import('@/components/FlightTaskList.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/map',
@@ -104,6 +106,12 @@ const routes = [
     component: () => import('@/components/ApiTest.vue')
   },
   {
+    path: '/system-monitor',
+    name: 'system-monitor',
+    component: () => import('@/views/SystemMonitor.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }
@@ -115,33 +123,82 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = store.getters.isLoggedIn
-  const userRole = store.getters.userRole
-  const isAdmin = userRole === 'admin'
+router.beforeEach(async (to, from, next) => {
+  try {
+    // 轻量级认证状态检查，避免API调用
+    const hasToken = !!localStorage.getItem('access_token')
+    const storedUser = localStorage.getItem('user')
+    let hasUser = false
+    let userRole = 'guest'
 
-  // 无需认证的页面
-  const publicPages = ['home', 'login', 'register', 'admin-login']
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser)
+        hasUser = !!user
+        userRole = user.role || 'guest'
 
-  // 检查是否需要管理员权限
-  if (to.meta.requiresAdmin && !isAdmin) {
-    next('/login?redirect=' + encodeURIComponent(to.fullPath))
-    return
+        // 确保store中有用户信息
+        if (!store.state.user && hasUser) {
+          store.commit('SET_USER', user)
+        }
+      } catch (error) {
+        console.warn('解析localStorage用户信息失败:', error)
+        hasUser = false
+      }
+    }
+
+    const isAuthenticated = hasToken && hasUser
+    const isAdmin = userRole === 'admin'
+
+    console.log('Route Guard Debug:', {
+      route: to.path,
+      hasToken,
+      hasUser,
+      userRole,
+      isAuthenticated,
+      requiresAuth: to.meta.requiresAuth
+    })
+
+    // 无需认证的页面
+    const publicPages = ['home', 'login', 'register', 'admin-login']
+
+    // 如果是公共页面，直接通过
+    if (publicPages.includes(to.name)) {
+      next()
+      return
+    }
+
+    // 检查是否需要管理员权限
+    if (to.meta.requiresAdmin && !isAdmin) {
+      console.log('Redirecting to admin login: Admin required')
+      next('/admin/login?redirect=' + encodeURIComponent(to.fullPath))
+      return
+    }
+
+    // 检查是否需要认证
+    if (to.meta.requiresAuth && !isAuthenticated) {
+      console.log('Redirecting to login: Auth required')
+      next('/login?redirect=' + encodeURIComponent(to.fullPath))
+      return
+    }
+
+    // 如果已登录用户访问登录页，重定向到仪表板
+    if (isAuthenticated && (to.name === 'login' || to.name === 'register')) {
+      next('/dashboard')
+      return
+    }
+
+    next()
+  } catch (error) {
+    console.error('Route guard error:', error)
+    // 如果出现错误且不是公共页面，重定向到登录页
+    const publicPages = ['home', 'login', 'register', 'admin-login']
+    if (!publicPages.includes(to.name)) {
+      next('/login')
+    } else {
+      next()
+    }
   }
-
-  // 检查是否需要认证
-  if (!isAuthenticated && !publicPages.includes(to.name)) {
-    next('/login?redirect=' + encodeURIComponent(to.fullPath))
-    return
-  }
-
-  // 如果已登录用户访问登录页，重定向到仪表板
-  if (isAuthenticated && (to.name === 'login' || to.name === 'register')) {
-    next('/dashboard')
-    return
-  }
-
-  next()
 })
 
 export default router

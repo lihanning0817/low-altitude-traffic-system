@@ -234,6 +234,7 @@ std::pair<std::string, std::string> JwtService::generatePayload(
         {"exp", timeToTimestamp(exp_time)},                 // 过期时间
         {"iat", timeToTimestamp(now)},                      // 签发时间
         {"jti", jti},                                       // JWT ID
+        {"user_id", user.getId()},                          // 用户ID（前端兼容）
         {"username", user.getUsername()},                    // 用户名
         {"email", user.getEmail()},                         // 邮箱
         {"role", models::User::roleToString(user.getRole())}, // 角色

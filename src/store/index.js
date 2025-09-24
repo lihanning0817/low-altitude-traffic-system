@@ -4,6 +4,8 @@ import { ElMessage } from 'element-plus'
 import aMapRoutePlanner from '@/services/aMapRoutePlanner'
 import apiService from '@/services/api'
 import authApi from '@/services/authApi'
+import flightTaskApi from '@/services/flightTaskApi'
+import systemMonitorApi from '@/services/systemMonitorApi'
 
 // 本地存储工具
 const storage = {
@@ -36,7 +38,7 @@ export default createStore({
   state: {
     // 用户相关
     user: storage.get('user') || null,
-    isAuthenticated: !!storage.get('user'),
+    isAuthenticated: !!storage.get('user') && !!localStorage.getItem('access_token'),
 
     // 任务相关
     flightTasks: [],
@@ -83,14 +85,50 @@ export default createStore({
 
     // 系统状态
     loading: false,
-    systemStatus: 'online'
+    systemStatus: 'online',
+
+    // 系统监控相关
+    systemMonitor: {
+      healthStatus: null,
+      systemInfo: null,
+      drones: [],
+      users: {
+        users: [],
+        pagination: {}
+      },
+      lastUpdated: {
+        health: null,
+        info: null,
+        drones: null,
+        users: null
+      },
+      cacheExpiry: {
+        health: 30000,    // 30秒
+        info: 300000,     // 5分钟
+        drones: 60000,    // 1分钟
+        users: 120000     // 2分钟
+      }
+    }
   },
 
   getters: {
     // 用户相关
-    isLoggedIn: state => state.isAuthenticated && state.user !== null,
+    isLoggedIn: state => state.isAuthenticated && state.user !== null && !!localStorage.getItem('access_token'),
     userName: state => state.user?.username || '未登录',
     userRole: state => state.user?.role || 'guest',
+    userEmail: state => state.user?.email || '',
+    userId: state => state.user?.id || null,
+    userFullName: state => state.user?.full_name || state.user?.fullName || '',
+
+    // 权限相关
+    isAdmin: state => state.user?.role === 'admin',
+    isOperator: state => state.user?.role === 'operator',
+    isUser: state => state.user?.role === 'user',
+    hasAdminPrivileges: state => state.user?.role === 'admin',
+    hasOperatorPrivileges: state => state.user?.role === 'admin' || state.user?.role === 'operator',
+
+    // 用户状态检查
+    isUserActive: state => state.user?.status === 'active',
 
     // 任务统计
     totalTasks: state => state.flightTasks.length,
@@ -119,18 +157,66 @@ export default createStore({
     emergencyEventsCount: state => state.emergencyEvents.length,
 
     // 通知相关
-    unreadNotifications: state => state.notifications.filter(n => !n.read).length
+    unreadNotifications: state => state.notifications.filter(n => !n.read).length,
+
+    // 系统监控相关
+    systemHealthStatus: state => state.systemMonitor.healthStatus,
+    systemInfo: state => state.systemMonitor.systemInfo,
+    monitorDrones: state => state.systemMonitor.drones,
+    monitorUsers: state => state.systemMonitor.users,
+    systemMonitorLastUpdated: state => state.systemMonitor.lastUpdated,
+
+    // 判断缓存是否需要刷新
+    needsRefresh: state => (type) => {
+      const lastUpdated = state.systemMonitor.lastUpdated[type]
+      const cacheExpiry = state.systemMonitor.cacheExpiry[type]
+      if (!lastUpdated) return true
+      return (Date.now() - lastUpdated) > cacheExpiry
+    }
   },
 
   mutations: {
     // 用户相关
     SET_USER(state, user) {
       state.user = user
-      state.isAuthenticated = !!user
+
+      // 更新认证状态
+      const hasToken = !!localStorage.getItem('access_token')
+      state.isAuthenticated = !!user && hasToken
+
       if (user) {
-        storage.set('user', user)
+        // 确保用户对象包含所有必要字段
+        const normalizedUser = {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role || 'user',
+          status: user.status || 'active',
+          full_name: user.full_name || user.fullName || '',
+          created_at: user.created_at || user.createdAt,
+          updated_at: user.updated_at || user.updatedAt
+        }
+
+        state.user = normalizedUser
+        storage.set('user', normalizedUser)
+
+        console.log('[Vuex] 用户信息已更新:', normalizedUser)
       } else {
         storage.remove('user')
+        storage.remove('access_token')
+        storage.remove('refresh_token')
+
+        console.log('[Vuex] 用户信息已清除')
+      }
+    },
+
+    // 更新用户信息（不清除token）
+    UPDATE_USER(state, updates) {
+      if (state.user) {
+        const updatedUser = { ...state.user, ...updates }
+        state.user = updatedUser
+        storage.set('user', updatedUser)
+        console.log('[Vuex] 用户信息已更新:', updatedUser)
       }
     },
 
@@ -345,6 +431,40 @@ export default createStore({
 
     SET_SYSTEM_STATUS(state, status) {
       state.systemStatus = status
+    },
+
+    // 系统监控相关
+    SET_SYSTEM_HEALTH_STATUS(state, healthStatus) {
+      state.systemMonitor.healthStatus = healthStatus
+      state.systemMonitor.lastUpdated.health = Date.now()
+    },
+
+    SET_SYSTEM_INFO(state, systemInfo) {
+      state.systemMonitor.systemInfo = systemInfo
+      state.systemMonitor.lastUpdated.info = Date.now()
+    },
+
+    SET_MONITOR_DRONES(state, drones) {
+      state.systemMonitor.drones = drones
+      state.systemMonitor.lastUpdated.drones = Date.now()
+    },
+
+    SET_MONITOR_USERS(state, users) {
+      state.systemMonitor.users = users
+      state.systemMonitor.lastUpdated.users = Date.now()
+    },
+
+    CLEAR_SYSTEM_MONITOR_CACHE(state) {
+      state.systemMonitor.healthStatus = null
+      state.systemMonitor.systemInfo = null
+      state.systemMonitor.drones = []
+      state.systemMonitor.users = { users: [], pagination: {} }
+      state.systemMonitor.lastUpdated = {
+        health: null,
+        info: null,
+        drones: null,
+        users: null
+      }
     }
   },
 
@@ -359,10 +479,7 @@ export default createStore({
 
         if (response.success) {
           const user = response.data.user
-          const accessToken = response.data.access_token
-
-          // 设置API token
-          apiService.setToken(accessToken)
+          // 注意：token已在authApi.login()中设置，无需重复设置
 
           commit('SET_USER', user)
           dispatch('addNotification', {
@@ -454,6 +571,56 @@ export default createStore({
       commit('SET_USER', user)
     },
 
+    // 强制同步认证状态
+    async syncAuthState({ commit, dispatch, getters }) {
+      try {
+        const hasToken = !!localStorage.getItem('access_token')
+        const storedUser = storage.get('user')
+
+        console.log('[Store] syncAuthState Debug:', {
+          hasToken,
+          hasStoredUser: !!storedUser,
+          currentUser: getters.userName,
+          tokenValue: hasToken ? '***存在***' : '无',
+          userValue: storedUser?.username || '无'
+        })
+
+        if (hasToken && storedUser) {
+          // 确保 Vuex state 与 localStorage 同步
+          if (!getters.isLoggedIn || getters.userId !== storedUser.id) {
+            commit('SET_USER', storedUser)
+          }
+
+          // 验证token是否仍然有效
+          try {
+            await dispatch('getCurrentUser')
+            console.log('[Store] Token验证成功，用户状态已同步')
+          } catch (error) {
+            console.warn('[Store] Token验证失败，清除认证状态:', error)
+            // Token无效，清除状态
+            commit('SET_USER', null)
+            dispatch('addNotification', {
+              type: 'warning',
+              title: '登录已过期',
+              message: '请重新登录以继续使用系统'
+            })
+          }
+        } else if (!hasToken) {
+          console.log('[Store] 无有效Token，清除用户状态')
+          commit('SET_USER', null)
+        }
+      } catch (error) {
+        console.error('[Store] syncAuthState error:', error)
+        commit('SET_USER', null)
+      }
+    },
+
+    // 初始化认证状态（应用启动时调用）
+    initAuthState({ dispatch }) {
+      console.log('[Store] 初始化认证状态')
+      return dispatch('syncAuthState')
+    },
+
     // 获取当前用户信息
     async getCurrentUser({ commit, dispatch }) {
       try {
@@ -515,15 +682,32 @@ export default createStore({
       }
     },
 
-    async fetchFlightTasks({ commit }) {
+    async fetchFlightTasks({ commit, dispatch }) {
       try {
-        // 调用API获取飞行任务
-        const response = await apiService.getFlightTasks()
-        const tasks = response.data.tasks || []
+        commit('SET_LOADING', true)
 
-        commit('SET_FLIGHT_TASKS', tasks)
+        // 调用FlightTask API获取飞行任务
+        const response = await flightTaskApi.getFlightTasks()
+
+        if (response.success) {
+          const tasks = response.data.tasks || []
+          // 格式化任务数据
+          const formattedTasks = tasks.map(task => flightTaskApi.formatTask(task))
+          commit('SET_FLIGHT_TASKS', formattedTasks)
+          return formattedTasks
+        } else {
+          throw new Error(response.message || '获取任务列表失败')
+        }
       } catch (error) {
         console.error('获取任务列表失败:', error)
+        dispatch('addNotification', {
+          type: 'error',
+          title: '获取任务失败',
+          message: error.message || '无法获取飞行任务列表'
+        })
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
 
@@ -561,70 +745,178 @@ export default createStore({
     // 任务管理
     async createTask({ commit, dispatch }, taskData) {
       try {
-        // 调用API创建任务
-        const response = await apiService.createFlightTask(taskData)
-        const newTask = response.data.task
+        commit('SET_LOADING', true)
 
-        commit('ADD_FLIGHT_TASK', newTask)
+        // 验证任务数据
+        const validation = flightTaskApi.validateTaskData(taskData)
+        if (!validation.isValid) {
+          throw new Error(validation.errors.join(', '))
+        }
 
-        dispatch('addNotification', {
-          type: 'success',
-          title: '任务创建成功',
-          message: `任务 ${newTask.id} 已创建`
-        })
+        // 调用FlightTask API创建任务
+        const response = await flightTaskApi.createFlightTask(taskData)
 
-        return newTask
+        if (response.success) {
+          const newTask = flightTaskApi.formatTask(response.data.task)
+          commit('ADD_FLIGHT_TASK', newTask)
+
+          dispatch('addNotification', {
+            type: 'success',
+            title: '任务创建成功',
+            message: `任务"${newTask.name}"已创建`
+          })
+
+          return newTask
+        } else {
+          throw new Error(response.message || '任务创建失败')
+        }
       } catch (error) {
+        console.error('创建任务失败:', error)
         dispatch('addNotification', {
           type: 'error',
           title: '任务创建失败',
-          message: error.message
+          message: error.message || '创建任务时发生错误'
         })
         throw error
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
 
     async updateTask({ commit, dispatch }, { id, updates }) {
       try {
-        // 调用API更新任务
-        await apiService.updateFlightTask(id, updates)
+        commit('SET_LOADING', true)
 
-        commit('UPDATE_FLIGHT_TASK', { id, updates })
+        // 验证更新数据
+        if (updates.name !== undefined || updates.description !== undefined ||
+            updates.scheduled_time !== undefined || updates.status !== undefined) {
+          const validation = flightTaskApi.validateTaskData(updates, true) // 传递isUpdate=true
+          if (!validation.isValid) {
+            throw new Error(validation.errors.join(', '))
+          }
+        }
 
-        dispatch('addNotification', {
-          type: 'success',
-          title: '任务更新成功',
-          message: `任务 ${id} 已更新`
-        })
+        // 调用FlightTask API更新任务
+        const response = await flightTaskApi.updateFlightTask(id, updates)
+
+        if (response.success) {
+          const updatedTask = flightTaskApi.formatTask(response.data.task)
+          commit('UPDATE_FLIGHT_TASK', { id, updates: updatedTask })
+
+          dispatch('addNotification', {
+            type: 'success',
+            title: '任务更新成功',
+            message: `任务"${updatedTask.name}"已更新`
+          })
+
+          return updatedTask
+        } else {
+          throw new Error(response.message || '任务更新失败')
+        }
       } catch (error) {
+        console.error('更新任务失败:', error)
         dispatch('addNotification', {
           type: 'error',
           title: '任务更新失败',
-          message: error.message
+          message: error.message || '更新任务时发生错误'
         })
         throw error
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
 
     async deleteTask({ commit, dispatch }, taskId) {
       try {
-        // 调用API删除任务
-        await apiService.deleteFlightTask(taskId)
+        commit('SET_LOADING', true)
 
-        commit('REMOVE_FLIGHT_TASK', taskId)
+        // 调用FlightTask API删除任务
+        const response = await flightTaskApi.deleteFlightTask(taskId)
 
-        dispatch('addNotification', {
-          type: 'warning',
-          title: '任务已删除',
-          message: `任务 ${taskId} 已删除`
-        })
+        if (response.success) {
+          commit('REMOVE_FLIGHT_TASK', taskId)
+
+          dispatch('addNotification', {
+            type: 'warning',
+            title: '任务已删除',
+            message: response.message || `任务 ${taskId} 已删除`
+          })
+
+          return true
+        } else {
+          throw new Error(response.message || '任务删除失败')
+        }
       } catch (error) {
+        console.error('删除任务失败:', error)
         dispatch('addNotification', {
           type: 'error',
           title: '任务删除失败',
-          message: error.message
+          message: error.message || '删除任务时发生错误'
         })
         throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    // 获取单个任务详情
+    async fetchTask({ commit, dispatch }, taskId) {
+      try {
+        commit('SET_LOADING', true)
+
+        const response = await flightTaskApi.getFlightTask(taskId)
+
+        if (response.success) {
+          const task = flightTaskApi.formatTask(response.data.task)
+          commit('SET_CURRENT_TASK', task)
+          return task
+        } else {
+          throw new Error(response.message || '获取任务详情失败')
+        }
+      } catch (error) {
+        console.error('获取任务详情失败:', error)
+        dispatch('addNotification', {
+          type: 'error',
+          title: '获取任务详情失败',
+          message: error.message || '无法获取任务详情'
+        })
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    // 批量更新任务状态
+    async batchUpdateTaskStatus({ commit, dispatch }, { taskIds, status }) {
+      try {
+        commit('SET_LOADING', true)
+
+        const response = await flightTaskApi.batchUpdateStatus(taskIds, status)
+
+        if (response.success) {
+          // 刷新任务列表
+          await dispatch('fetchFlightTasks')
+
+          dispatch('addNotification', {
+            type: 'success',
+            title: '批量更新成功',
+            message: response.message
+          })
+
+          return response
+        } else {
+          throw new Error(response.message || '批量更新失败')
+        }
+      } catch (error) {
+        console.error('批量更新失败:', error)
+        dispatch('addNotification', {
+          type: 'error',
+          title: '批量更新失败',
+          message: error.message || '批量更新任务状态时发生错误'
+        })
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
 
@@ -892,6 +1184,152 @@ export default createStore({
         })
         throw error
       }
+    },
+
+    // ========== 系统监控相关Actions ==========
+
+    /**
+     * 获取系统健康状态（带缓存）
+     */
+    async fetchSystemHealthStatus({ commit, getters }, { forceRefresh = false } = {}) {
+      try {
+        // 检查是否需要刷新缓存
+        if (!forceRefresh && !getters.needsRefresh('health')) {
+          return getters.systemHealthStatus
+        }
+
+        const response = await systemMonitorApi.getHealthStatus()
+
+        if (response.success) {
+          const healthStatus = systemMonitorApi.formatHealthStatus(response)
+          commit('SET_SYSTEM_HEALTH_STATUS', healthStatus)
+          return healthStatus
+        } else {
+          throw new Error(response.message || '获取系统健康状态失败')
+        }
+      } catch (error) {
+        console.error('获取系统健康状态失败:', error)
+        throw error
+      }
+    },
+
+    /**
+     * 获取系统基本信息（带缓存）
+     */
+    async fetchSystemInfo({ commit, getters }, { forceRefresh = false } = {}) {
+      try {
+        // 检查是否需要刷新缓存
+        if (!forceRefresh && !getters.needsRefresh('info')) {
+          return getters.systemInfo
+        }
+
+        const response = await systemMonitorApi.getSystemInfo()
+
+        if (response.success) {
+          const systemInfo = systemMonitorApi.formatSystemInfo(response)
+          commit('SET_SYSTEM_INFO', systemInfo)
+          return systemInfo
+        } else {
+          throw new Error(response.message || '获取系统信息失败')
+        }
+      } catch (error) {
+        console.error('获取系统信息失败:', error)
+        throw error
+      }
+    },
+
+    /**
+     * 获取无人机列表（带缓存）
+     */
+    async fetchMonitorDrones({ commit, getters }, { forceRefresh = false } = {}) {
+      try {
+        // 检查是否需要刷新缓存
+        if (!forceRefresh && !getters.needsRefresh('drones')) {
+          return getters.monitorDrones
+        }
+
+        const response = await systemMonitorApi.getDronesList()
+
+        if (response.success) {
+          const drones = systemMonitorApi.formatDronesData(response)
+          commit('SET_MONITOR_DRONES', drones)
+          return drones
+        } else {
+          // 如果是认证相关错误，直接抛出包含错误代码的对象
+          if (response.requiresAuth || response.error_code === 'NOT_AUTHENTICATED' || response.error_code === 'AUTHENTICATION_EXPIRED') {
+            const authError = new Error(response.message || '获取无人机列表失败')
+            authError.error_code = response.error_code
+            authError.requiresAuth = response.requiresAuth
+            throw authError
+          }
+          throw new Error(response.message || '获取无人机列表失败')
+        }
+      } catch (error) {
+        console.error('获取无人机列表失败:', error)
+        throw error
+      }
+    },
+
+    /**
+     * 获取用户列表（带缓存和分页）
+     */
+    async fetchMonitorUsers({ commit, getters }, { params = {}, forceRefresh = false } = {}) {
+      try {
+        // 检查是否需要刷新缓存（如果有新参数则强制刷新）
+        const currentUsers = getters.monitorUsers
+        const hasNewParams = JSON.stringify(params) !== JSON.stringify(currentUsers.lastParams || {})
+
+        if (!forceRefresh && !hasNewParams && !getters.needsRefresh('users')) {
+          return currentUsers
+        }
+
+        const response = await systemMonitorApi.getUsersList(params)
+
+        if (response.success) {
+          const usersData = systemMonitorApi.formatUsersData(response)
+          usersData.lastParams = params  // 保存查询参数
+          commit('SET_MONITOR_USERS', usersData)
+          return usersData
+        } else {
+          // 如果是认证或权限相关错误，直接抛出包含错误代码的对象
+          if (response.requiresAuth || response.requiresAdmin ||
+              ['NOT_AUTHENTICATED', 'AUTHENTICATION_EXPIRED', 'INSUFFICIENT_PRIVILEGES', 'INVALID_USER_DATA', 'MISSING_USER_DATA'].includes(response.error_code)) {
+            const authError = new Error(response.message || '获取用户列表失败')
+            authError.error_code = response.error_code
+            authError.requiresAuth = response.requiresAuth
+            authError.requiresAdmin = response.requiresAdmin
+            throw authError
+          }
+          throw new Error(response.message || '获取用户列表失败')
+        }
+      } catch (error) {
+        console.error('获取用户列表失败:', error)
+        throw error
+      }
+    },
+
+    /**
+     * 刷新所有系统监控数据
+     */
+    async refreshAllSystemMonitorData({ dispatch }) {
+      try {
+        await Promise.all([
+          dispatch('fetchSystemHealthStatus', { forceRefresh: true }),
+          dispatch('fetchSystemInfo', { forceRefresh: true }),
+          dispatch('fetchMonitorDrones', { forceRefresh: true }),
+          dispatch('fetchMonitorUsers', { forceRefresh: true })
+        ])
+      } catch (error) {
+        console.error('刷新系统监控数据失败:', error)
+        throw error
+      }
+    },
+
+    /**
+     * 清除系统监控缓存
+     */
+    clearSystemMonitorCache({ commit }) {
+      commit('CLEAR_SYSTEM_MONITOR_CACHE')
     }
   }
 })

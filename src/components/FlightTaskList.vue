@@ -225,23 +225,6 @@
         </el-table-column>
 
         <el-table-column
-          prop="priority"
-          label="优先级"
-          width="100"
-          align="center"
-        >
-          <template #default="{ row }">
-            <el-tag
-              :type="getPriorityType(row.priority)"
-              :effect="row.priority === '高' ? 'dark' : 'plain'"
-              size="small"
-            >
-              {{ row.priority }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column
           prop="status"
           label="状态"
           width="120"
@@ -253,7 +236,7 @@
                 class="status-dot"
                 :class="getStatusClass(row.status)"
               />
-              <span>{{ row.status }}</span>
+              <span>{{ getStatusText(row.status) }}</span>
             </div>
           </template>
         </el-table-column>
@@ -267,18 +250,18 @@
           <template #default="{ row }">
             <div class="progress-wrapper">
               <el-progress
-                :percentage="row.progress"
-                :color="getProgressColor(row.progress)"
+                :percentage="getTaskProgress(row.status)"
+                :color="getProgressColor(getTaskProgress(row.status))"
                 :stroke-width="8"
                 :show-text="false"
               />
-              <span class="progress-text">{{ row.progress }}%</span>
+              <span class="progress-text">{{ getTaskProgress(row.status) }}%</span>
             </div>
           </template>
         </el-table-column>
 
         <el-table-column
-          prop="createTime"
+          prop="createdAt"
           label="创建时间"
           width="180"
           sortable
@@ -291,14 +274,14 @@
               >
                 <Calendar />
               </el-icon>
-              <span>{{ row.createTime }}</span>
+              <span>{{ formatTime(row.createdAt) }}</span>
             </div>
           </template>
         </el-table-column>
 
         <el-table-column
           label="操作"
-          width="200"
+          width="250"
           align="center"
           fixed="right"
         >
@@ -313,7 +296,15 @@
                 详情
               </el-button>
               <el-button
-                v-if="row.status !== '已完成'"
+                type="warning"
+                size="small"
+                @click.stop="editTask(row)"
+              >
+                <el-icon><Edit /></el-icon>
+                编辑
+              </el-button>
+              <el-button
+                v-if="row.status !== 'completed'"
                 type="success"
                 size="small"
                 @click.stop="executeTask(row)"
@@ -359,24 +350,13 @@
             placeholder="请输入任务描述"
           />
         </el-form-item>
-        <el-form-item label="优先级">
-          <el-select
-            v-model="newTask.priority"
-            placeholder="请选择优先级"
-          >
-            <el-option
-              label="低"
-              value="低"
-            />
-            <el-option
-              label="中"
-              value="中"
-            />
-            <el-option
-              label="高"
-              value="高"
-            />
-          </el-select>
+        <el-form-item label="计划时间">
+          <el-date-picker
+            v-model="newTask.scheduled_time"
+            type="datetime"
+            placeholder="请选择计划执行时间"
+            style="width: 100%"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -391,17 +371,70 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑任务对话框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      title="编辑任务"
+      width="600px"
+      @close="resetEditForm"
+    >
+      <el-form
+        v-if="editingTask"
+        :model="editingTask"
+        label-width="100px"
+      >
+        <el-form-item label="任务名称">
+          <el-input
+            v-model="editingTask.name"
+            placeholder="请输入任务名称"
+          />
+        </el-form-item>
+        <el-form-item label="任务描述">
+          <el-input
+            v-model="editingTask.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入任务描述"
+          />
+        </el-form-item>
+        <el-form-item label="计划时间">
+          <el-date-picker
+            v-model="editingTask.scheduledTime"
+            type="datetime"
+            placeholder="请选择计划执行时间"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="updateTask"
+        >
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, DataLine, Clock, CircleCheck, Warning, Search, Refresh,
-  Files, View, VideoPlay, Delete, Calendar
+  Files, View, VideoPlay, Delete, Calendar, Edit
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
+import flightTaskApi from '@/services/flightTaskApi'
+import { useStore } from 'vuex'
+
+// Vuex store
+const store = useStore()
 
 // 防抖函数
 const debounce = (func, wait) => {
@@ -420,64 +453,21 @@ const loading = ref(false)
 const searchKeyword = ref('')
 const statusFilter = ref('')
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
+const editingTask = ref(null)
 
 // 防抖搜索处理
 const debouncedSearch = debounce((value) => {
   searchKeyword.value = value
 }, 300)
 
-const tasks = ref([
-  {
-    id: 'T001',
-    name: '城区巡航任务',
-    description: '对城区主要交通干道进行巡航监控',
-    status: '进行中',
-    priority: '高',
-    progress: 65,
-    createTime: '2024-01-15 09:30:00'
-  },
-  {
-    id: 'T002',
-    name: '应急响应任务',
-    description: '响应交通事故紧急情况',
-    status: '已完成',
-    priority: '高',
-    progress: 100,
-    createTime: '2024-01-14 14:20:00'
-  },
-  {
-    id: 'T003',
-    name: '定点监控任务',
-    description: '对重点区域进行定点监控',
-    status: '待执行',
-    priority: '中',
-    progress: 0,
-    createTime: '2024-01-16 08:00:00'
-  },
-  {
-    id: 'T004',
-    name: '数据收集任务',
-    description: '收集交通流量数据',
-    status: '进行中',
-    priority: '中',
-    progress: 30,
-    createTime: '2024-01-15 16:45:00'
-  },
-  {
-    id: 'T005',
-    name: '设备检测任务',
-    description: '检测无人机设备状态',
-    status: '已完成',
-    priority: '低',
-    progress: 100,
-    createTime: '2024-01-13 10:15:00'
-  }
-])
+// 从 Vuex store 获取任务数据
+const tasks = computed(() => store.state.flightTasks || [])
 
 const newTask = reactive({
   name: '',
   description: '',
-  priority: '中'
+  scheduled_time: ''
 })
 
 // 计算属性
@@ -487,32 +477,62 @@ const filteredTasks = computed(() => {
   if (searchKeyword.value) {
     result = result.filter(task =>
       task.name.includes(searchKeyword.value) ||
-      task.id.includes(searchKeyword.value)
+      task.id.toString().includes(searchKeyword.value)
     )
   }
 
   if (statusFilter.value) {
-    result = result.filter(task => task.status === statusFilter.value)
+    // 将中文状态映射到英文状态
+    const statusMap = {
+      '进行中': 'ongoing',
+      '已完成': 'completed',
+      '待执行': 'pending'
+    }
+    const englishStatus = statusMap[statusFilter.value]
+    if (englishStatus) {
+      result = result.filter(task => task.status === englishStatus)
+    }
   }
 
   return result
 })
 
-const runningTasks = computed(() => tasks.value.filter(t => t.status === '进行中').length)
-const completedTasks = computed(() => tasks.value.filter(t => t.status === '已完成').length)
-const pendingTasks = computed(() => tasks.value.filter(t => t.status === '待执行').length)
+const runningTasks = computed(() => tasks.value.filter(t => t.status === 'ongoing').length)
+const completedTasks = computed(() => tasks.value.filter(t => t.status === 'completed').length)
+const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'pending').length)
 
 // 方法
-const refreshTasks = () => {
+const refreshTasks = async () => {
   loading.value = true
-  setTimeout(() => {
-    loading.value = false
+  try {
+    await store.dispatch('fetchFlightTasks')
     ElMessage.success('任务列表已刷新')
-  }, 1000)
+  } catch (error) {
+    ElMessage.error('刷新失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载任务数据
+const loadTasks = async () => {
+  loading.value = true
+  try {
+    await store.dispatch('fetchFlightTasks')
+  } catch (error) {
+    ElMessage.error('加载任务失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
 }
 
 const viewDetail = (task) => {
   ElMessage.info(`查看任务详情：${task.name}`)
+}
+
+const editTask = (task) => {
+  editingTask.value = { ...task }
+  showEditDialog.value = true
 }
 
 const executeTask = async (task) => {
@@ -523,11 +543,15 @@ const executeTask = async (task) => {
       type: 'warning'
     })
 
-    task.status = '进行中'
-    task.progress = 10
+    await store.dispatch('updateTask', {
+      id: task.id,
+      updates: { status: 'ongoing' }
+    })
     ElMessage.success('任务执行成功')
-  } catch {
-    // 用户取消操作
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error('执行失败：' + error.message)
+    }
   }
 }
 
@@ -539,65 +563,101 @@ const deleteTask = async (task) => {
       type: 'error'
     })
 
-    const index = tasks.value.findIndex(t => t.id === task.id)
-    if (index > -1) {
-      tasks.value.splice(index, 1)
-      ElMessage.success('任务删除成功')
+    await store.dispatch('deleteTask', task.id)
+    ElMessage.success('任务删除成功')
+  } catch (error) {
+    if (error.message) {
+      ElMessage.error('删除失败：' + error.message)
     }
-  } catch {
-    // 用户取消操作
   }
 }
 
-const createTask = () => {
+const createTask = async () => {
   if (!newTask.name) {
     ElMessage.warning('请输入任务名称')
     return
   }
 
-  const taskId = `T${String(tasks.value.length + 1).padStart(3, '0')}`
-  tasks.value.push({
-    id: taskId,
-    name: newTask.name,
-    description: newTask.description || '暂无描述',
-    status: '待执行',
-    priority: newTask.priority,
-    progress: 0,
-    createTime: new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).replace(/\//g, '-')
-  })
+  try {
+    await store.dispatch('createTask', {
+      name: newTask.name,
+      description: newTask.description || '',
+      scheduled_time: newTask.scheduled_time || null
+    })
 
-  showCreateDialog.value = false
-  resetCreateForm()
-  ElMessage.success('任务创建成功')
+    showCreateDialog.value = false
+    resetCreateForm()
+    ElMessage.success('任务创建成功')
+  } catch (error) {
+    ElMessage.error('创建失败：' + error.message)
+  }
+}
+
+const updateTask = async () => {
+  if (!editingTask.value.name) {
+    ElMessage.warning('请输入任务名称')
+    return
+  }
+
+  try {
+    await store.dispatch('updateTask', {
+      id: editingTask.value.id,
+      updates: {
+        name: editingTask.value.name,
+        description: editingTask.value.description,
+        scheduled_time: editingTask.value.scheduledTime || null
+      }
+    })
+
+    showEditDialog.value = false
+    editingTask.value = null
+    ElMessage.success('任务更新成功')
+  } catch (error) {
+    ElMessage.error('更新失败：' + error.message)
+  }
 }
 
 const resetCreateForm = () => {
   newTask.name = ''
   newTask.description = ''
-  newTask.priority = '中'
+  newTask.scheduled_time = ''
 }
+
+const resetEditForm = () => {
+  editingTask.value = null
+}
+
+// 获取状态显示文本
+const getStatusText = (status) => {
+  const statusMap = {
+    'pending': '待执行',
+    'ongoing': '进行中',
+    'completed': '已完成'
+  }
+  return statusMap[status] || status
+}
+
+// 格式化时间
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  return date.toLocaleString('zh-CN')
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadTasks()
+})
 
 const handleRowClick = (row) => {
   viewDetail(row)
 }
 
-const getPriorityType = (priority) => {
-  const typeMap = { '高': 'danger', '中': 'warning', '低': 'info' }
-  return typeMap[priority] || 'info'
-}
-
 const getStatusClass = (status) => {
   const classMap = {
-    '进行中': 'status-running',
-    '已完成': 'status-completed',
-    '待执行': 'status-pending'
+    'ongoing': 'status-running',
+    'completed': 'status-completed',
+    'pending': 'status-pending'
   }
   return classMap[status] || ''
 }
@@ -606,6 +666,16 @@ const getProgressColor = (progress) => {
   if (progress < 30) return '#f56c6c'
   if (progress < 70) return '#e6a23c'
   return '#67c23a'
+}
+
+// 获取进度（暂时返回基于状态的进度）
+const getTaskProgress = (status) => {
+  const progressMap = {
+    'pending': 0,
+    'ongoing': 50,
+    'completed': 100
+  }
+  return progressMap[status] || 0
 }
 </script>
 

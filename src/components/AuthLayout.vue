@@ -36,6 +36,19 @@
 // 无需额外的脚本逻辑，完全依靠插槽来组织内容
 </script>
 
+<style>
+/* 重置body背景 - 使用全局样式确保覆盖 */
+body {
+  background: #ffffff !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #000000 !important;
+  }
+}
+</style>
+
 <style scoped>
 /* Apple-style minimal auth layout */
 .auth-container {
@@ -43,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+  background: #ffffff !important;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   padding: 20px;
   position: relative;
@@ -56,22 +69,17 @@
 }
 
 .auth-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 12px;
   padding: 48px 40px 40px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.02),
-    0 8px 24px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .auth-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.03),
-    0 16px 48px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 .logo-section {
@@ -140,12 +148,17 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .auth-container {
-    background: linear-gradient(180deg, #1c1c1e 0%, #000000 100%);
+    background: #000000 !important;
   }
 
   .auth-card {
-    background: rgba(44, 44, 46, 0.9);
-    border: 1px solid rgba(84, 84, 88, 0.6);
+    background: #1c1c1e;
+    border: 1px solid rgba(84, 84, 88, 0.2);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .auth-card:hover {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   }
 
   .auth-title {

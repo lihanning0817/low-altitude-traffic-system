@@ -26,8 +26,10 @@
         <button
           type="submit"
           class="admin-login-button"
+          :disabled="loading"
         >
-          登录
+          <span v-if="loading">登录中...</span>
+          <span v-else>登录</span>
         </button>
       </form>
     </div>
@@ -35,6 +37,9 @@
 </template>
 
 <script>
+import { ElMessage } from 'element-plus'
+import authApi from '@/services/authApi'
+
 export default {
   name: 'AdminLogin',
   data() {
@@ -42,15 +47,64 @@ export default {
       loginForm: {
         username: '',
         password: ''
-      }
+      },
+      loading: false
     }
   },
   methods: {
-    handleAdminLogin() {
-      // 这里应该调用后端API进行管理员登录验证
-      console.log('Admin login form submitted:', this.loginForm)
-      // 模拟登录成功，跳转到管理后台首页
-      this.$router.push('/admin/dashboard')
+    async handleAdminLogin() {
+      // 基础验证
+      if (!this.loginForm.username || !this.loginForm.password) {
+        ElMessage.error('请填写用户名和密码')
+        return
+      }
+
+      if (this.loginForm.username.length < 3 || this.loginForm.username.length > 20) {
+        ElMessage.error('用户名长度在3到20个字符')
+        return
+      }
+
+      if (this.loginForm.password.length < 6) {
+        ElMessage.error('密码长度不能少于6位')
+        return
+      }
+
+      try {
+        this.loading = true
+
+        // 调用后端API进行登录验证
+        const response = await authApi.login({
+          username: this.loginForm.username,
+          password: this.loginForm.password
+        })
+
+        if (response.success) {
+          const user = response.data.user
+
+          // 验证是否为管理员权限
+          if (user.role !== 'admin') {
+            ElMessage.error('此页面仅限管理员访问，请使用管理员账号登录')
+            return
+          }
+
+          // 保存用户信息到store
+          await this.$store.dispatch('setUser', user)
+
+          ElMessage.success('管理员登录成功！')
+
+          // 跳转到管理后台
+          const redirect = this.$route.query.redirect || '/admin/dashboard'
+          this.$router.push(redirect)
+        } else {
+          ElMessage.error(response.message || '登录失败')
+        }
+
+      } catch (error) {
+        console.error('管理员登录错误:', error)
+        // 错误信息已由 authApi 拦截器统一处理
+      } finally {
+        this.loading = false
+      }
     }
   }
 }
@@ -118,5 +172,15 @@ input:focus {
 
 .admin-login-button:hover {
   background-color: #66b1ff;
+}
+
+.admin-login-button:disabled {
+  background-color: #c0c4cc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-login-button:disabled:hover {
+  background-color: #c0c4cc;
 }
 </style>

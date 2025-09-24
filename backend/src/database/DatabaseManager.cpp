@@ -434,6 +434,11 @@ bool DatabaseManager::initializeDatabase() {
             return false;
         }
 
+        // 创建飞行任务表
+        if (!createFlightTaskTable()) {
+            return false;
+        }
+
         spdlog::info("Database initialization completed");
         return true;
     } catch (const std::exception& e) {
@@ -519,6 +524,37 @@ bool DatabaseManager::createUserTable() {
         return true;
     } catch (const std::exception& e) {
         spdlog::error("Failed to create users table: {}", e.what());
+        return false;
+    }
+}
+
+bool DatabaseManager::createFlightTaskTable() {
+    try {
+        std::string create_table_sql = R"(
+            CREATE TABLE IF NOT EXISTS )" + config_.database + R"(.api_flight_tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                route JSON,
+                status ENUM('pending', 'ongoing', 'completed') DEFAULT 'pending',
+                scheduled_time DATETIME,
+                user_id BIGINT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user_id (user_id),
+                INDEX idx_status (status),
+                INDEX idx_scheduled_time (scheduled_time),
+                INDEX idx_created_at (created_at)
+            ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+        )";
+
+        session_->sql(create_table_sql).execute();
+        spdlog::info("FlightTask table ensured to exist");
+        return true;
+    } catch (const std::exception& e) {
+        spdlog::error("Failed to create flight task table: {}", e.what());
         return false;
     }
 }

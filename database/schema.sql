@@ -361,6 +361,59 @@ CREATE TABLE system_config (
     INDEX idx_public (is_public)
 ) ENGINE=InnoDB COMMENT='系统配置表';
 
+-- 10. 地图标记点表
+CREATE TABLE map_markers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    lng DECIMAL(10,6) NOT NULL COMMENT '经度',
+    lat DECIMAL(10,6) NOT NULL COMMENT '纬度',
+    title VARCHAR(255) NOT NULL COMMENT '标记点标题',
+    type ENUM('marker', 'start', 'end', 'waypoint') DEFAULT 'marker' COMMENT '标记点类型',
+    description TEXT COMMENT '标记点描述',
+    user_id BIGINT NULL COMMENT '创建用户ID',
+    task_id BIGINT NULL COMMENT '关联任务ID',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (task_id) REFERENCES flight_tasks(id) ON DELETE SET NULL,
+    INDEX idx_location (lng, lat),
+    INDEX idx_type (type),
+    INDEX idx_user (user_id),
+    INDEX idx_task (task_id),
+    INDEX idx_active (is_active),
+    INDEX idx_created_time (created_at)
+) ENGINE=InnoDB COMMENT='地图标记点表';
+
+-- 11. 路径线段表
+CREATE TABLE map_routes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    route_name VARCHAR(255) NOT NULL COMMENT '路径名称',
+    start_lng DECIMAL(10,6) NOT NULL COMMENT '起点经度',
+    start_lat DECIMAL(10,6) NOT NULL COMMENT '起点纬度',
+    end_lng DECIMAL(10,6) NOT NULL COMMENT '终点经度',
+    end_lat DECIMAL(10,6) NOT NULL COMMENT '终点纬度',
+    path_coordinates JSON COMMENT '路径坐标数组',
+    distance DECIMAL(10,2) COMMENT '路径距离(km)',
+    duration DECIMAL(8,2) COMMENT '预计时长(分钟)',
+    route_type ENUM('driving', 'walking', 'flight') DEFAULT 'flight' COMMENT '路径类型',
+    user_id BIGINT NULL COMMENT '创建用户ID',
+    task_id BIGINT NULL COMMENT '关联任务ID',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (task_id) REFERENCES flight_tasks(id) ON DELETE SET NULL,
+    INDEX idx_start_location (start_lng, start_lat),
+    INDEX idx_end_location (end_lng, end_lat),
+    INDEX idx_type (route_type),
+    INDEX idx_user (user_id),
+    INDEX idx_task (task_id),
+    INDEX idx_active (is_active),
+    INDEX idx_created_time (created_at)
+) ENGINE=InnoDB COMMENT='地图路径表';
+
 -- 插入初始管理员用户（密码：admin123）
 INSERT INTO users (username, email, password_hash, full_name, role, status)
 VALUES ('admin', 'admin@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKZDKlMHe8w8Hjy', '系统管理员', 'admin', 'active');
