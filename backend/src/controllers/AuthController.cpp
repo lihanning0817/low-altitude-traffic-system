@@ -40,6 +40,7 @@ http::response<http::string_body> AuthController::login(const http::request<http
 
         std::string username = loginData["username"].get<std::string>();
         std::string password = loginData["password"].get<std::string>();
+        std::string expectedRole = loginData["role"].get<std::string>();
 
         // 检查用户是否被锁定
         if (isUserLocked(username)) {
@@ -67,6 +68,15 @@ http::response<http::string_body> AuthController::login(const http::request<http
             logLoginAttempt(username, false, "未知");
             incrementFailedLoginCount(username);
             return utils::HttpResponse::createErrorResponse("用户名或密码错误", 401, "UNAUTHORIZED");
+        }
+
+        // 验证用户角色是否匹配
+        std::string actualRole = models::User::roleToString(user.getRole());
+        if (actualRole != expectedRole) {
+            logLoginAttempt(username, false, "未知");
+            incrementFailedLoginCount(username);
+            spdlog::warn("用户 {} 角色不匹配: 期望 {}, 实际 {}", username, expectedRole, actualRole);
+            return utils::HttpResponse::createErrorResponse("身份验证失败", 401, "ROLE_MISMATCH");
         }
 
         // 检查用户状态
@@ -131,6 +141,18 @@ http::response<http::string_body> AuthController::registerUser(const http::reque
         std::string password = registerData["password"].get<std::string>();
         std::string fullName = registerData.value("full_name", username);
 
+        // 处理角色参数
+        std::string roleStr = registerData.value("role", "user"); // 默认为user
+        models::UserRole userRole = models::UserRole::USER; // 默认角色
+
+        if (roleStr == "admin") {
+            userRole = models::UserRole::ADMIN;
+        } else if (roleStr == "operator") {
+            userRole = models::UserRole::OPERATOR;
+        } else {
+            userRole = models::UserRole::USER;
+        }
+
         // 检查用户名是否已存在
         if (userRepository_->getUserByUsername(username).has_value()) {
             return utils::HttpResponse::createErrorResponse("用户名已存在", 409, "USERNAME_EXISTS");
@@ -146,7 +168,7 @@ http::response<http::string_body> AuthController::registerUser(const http::reque
         newUser.setUsername(username);
         newUser.setEmail(email);
         newUser.setFullName(fullName);
-        newUser.setRole(models::UserRole::USER); // 默认普通用户
+        newUser.setRole(userRole); // 使用前端传递的角色
         newUser.setStatus(models::UserStatus::ACTIVE); // 默认激活状态
 
         // 设置密码哈希
@@ -381,8 +403,13 @@ std::pair<bool, std::string> AuthController::validateLoginRequest(const nlohmann
         return {false, "缺少密码参数"};
     }
 
+    if (!loginData.contains("role") || !loginData["role"].is_string()) {
+        return {false, "缺少身份参数"};
+    }
+
     std::string username = loginData["username"].get<std::string>();
     std::string password = loginData["password"].get<std::string>();
+    std::string role = loginData["role"].get<std::string>();
 
     if (username.empty()) {
         return {false, "用户名不能为空"};
@@ -390,6 +417,14 @@ std::pair<bool, std::string> AuthController::validateLoginRequest(const nlohmann
 
     if (password.empty()) {
         return {false, "密码不能为空"};
+    }
+
+    if (role.empty()) {
+        return {false, "身份不能为空"};
+    }
+
+    if (role != "admin" && role != "user" && role != "operator") {
+        return {false, "身份参数无效"};
     }
 
     return {true, ""};

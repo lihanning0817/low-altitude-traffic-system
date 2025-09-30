@@ -29,12 +29,13 @@
           />
         </div>
 
-        <div class="form-group" v-if="showRoleSelect">
+        <div class="form-group">
           <select
             v-model="loginData.role"
             class="form-select"
+            required
           >
-            <option value="">选择角色（可选）</option>
+            <option value="">请选择身份</option>
             <option value="admin">管理员</option>
             <option value="user">普通用户</option>
           </select>
@@ -82,7 +83,7 @@
             <strong>管理员:</strong> admin / admin123
           </div>
           <div class="test-account">
-            <strong>普通用户:</strong> testuser / 123456
+            <strong>普通用户:</strong> testuser / test1234
           </div>
         </div>
       </div>
@@ -123,8 +124,7 @@ const loginData = reactive({
   role: ''
 })
 
-// 控制是否显示角色选择
-const showRoleSelect = ref(true)
+// 角色选择现在是必填的
 
 const rules = {
   username: [
@@ -142,8 +142,8 @@ const rules = {
 
 const handleLogin = async () => {
   // Basic validation
-  if (!loginData.username || !loginData.password) {
-    ElMessage.error('请填写用户名和密码')
+  if (!loginData.username || !loginData.password || !loginData.role) {
+    ElMessage.error('请填写用户名、密码和身份')
     return
   }
 
@@ -157,49 +157,26 @@ const handleLogin = async () => {
     return
   }
 
+  if (!['admin', 'user'].includes(loginData.role)) {
+    ElMessage.error('请选择有效的身份')
+    return
+  }
+
   try {
     loading.value = true
 
-    // 测试账号快速登录（仅限非admin的模拟账户）
-    const testAccounts = {
-      'testuser': { password: '123456', role: 'user', username: 'testuser' }
-    }
-
-    // 检查是否是测试账号（不包括admin，admin走真实后端）
-    const testAccount = testAccounts[loginData.username]
-    if (testAccount && testAccount.password === loginData.password &&
-        (!loginData.role || testAccount.role === loginData.role)) {
-      // 使用测试账号登录
-      const mockUser = {
-        id: Date.now(),
-        username: testAccount.username,
-        role: testAccount.role,
-        full_name: '测试用户',
-        email: `${testAccount.username}@example.com`,
-        avatar: null
-      }
-
-      // 为测试用户生成假的token，以便通过路由守卫
-      const fakeToken = `fake_token_${Date.now()}_${testAccount.username}`
-      localStorage.setItem('access_token', fakeToken)
-      localStorage.setItem('refresh_token', fakeToken)
-
-      store.commit('SET_USER', mockUser)
-      ElMessage.success(`欢迎回来，${mockUser.full_name}！`)
-
-      // 登录成功后重定向
-      const redirect = route.query.redirect || '/dashboard'
-      router.push(redirect)
-      return
-    }
+    // 所有用户（包括testuser）都通过真实后端API登录
 
     // 调用真实的后端API（包括admin账户）
     const response = await authApi.login({
       username: loginData.username,
-      password: loginData.password
+      password: loginData.password,
+      role: loginData.role
     })
 
-    if (response.success) {
+    console.log('登录响应:', response)
+
+    if (response && response.success) {
       // 保存用户信息到store
       const user = response.data.user
       await store.dispatch('setUser', user)
@@ -208,14 +185,24 @@ const handleLogin = async () => {
 
       // 登录成功后重定向
       const redirect = route.query.redirect || '/dashboard'
-      router.push(redirect)
+      console.log('准备跳转到:', redirect)
+
+      // 使用setTimeout确保状态更新完成后再跳转
+      setTimeout(() => {
+        router.push(redirect)
+      }, 100)
     } else {
-      ElMessage.error(response.message || '登录失败')
+      ElMessage.error(response?.message || '登录失败')
     }
 
   } catch (error) {
     console.error('登录错误:', error)
-    // 错误信息已由 authApi 拦截器统一处理，这里不需要再次显示
+    // 检查是否是成功登录但被异常捕获的情况
+    if (error.success !== false) {
+      // 如果有错误消息但不是明确的失败，尝试显示错误
+      const errorMessage = error.message || error.error_code || '登录过程中出现错误'
+      ElMessage.error(errorMessage)
+    }
   } finally {
     loading.value = false
   }
