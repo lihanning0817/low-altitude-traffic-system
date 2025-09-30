@@ -80,3 +80,14 @@ server.json
 # 测试覆盖率
 coverage/
 *.lcov
+
+# 忽略 vcpkg 安装目录
+backend/vcpkg_installed/
+backend/Release/
+backend/Debug/
+
+# 忽略常见编译产物
+*.pdb
+*.lib
+*.exe
+
