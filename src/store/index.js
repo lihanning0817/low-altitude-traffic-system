@@ -591,19 +591,40 @@ export default createStore({
             commit('SET_USER', storedUser)
           }
 
-          // 验证token是否仍然有效
+          // 只在非登录页面时验证token
           try {
+            const { default: router } = await import('@/router')
+            const currentPath = router.currentRoute.value.path
+
+            // 如果当前在登录/注册页面，跳过token验证
+            if (currentPath === '/login' || currentPath === '/register') {
+              console.log('[Store] 在登录页面，跳过token验证')
+              return
+            }
+
+            // 验证token是否仍然有效
             await dispatch('getCurrentUser')
             console.log('[Store] Token验证成功，用户状态已同步')
           } catch (error) {
             console.warn('[Store] Token验证失败，清除认证状态:', error)
             // Token无效，清除状态
             commit('SET_USER', null)
-            dispatch('addNotification', {
-              type: 'warning',
-              title: '登录已过期',
-              message: '请重新登录以继续使用系统'
-            })
+
+            // 只在非登录页面显示过期提示
+            try {
+              const { default: router } = await import('@/router')
+              const currentPath = router.currentRoute.value.path
+
+              if (currentPath !== '/login' && currentPath !== '/register') {
+                dispatch('addNotification', {
+                  type: 'warning',
+                  title: '登录已过期',
+                  message: '请重新登录以继续使用系统'
+                })
+              }
+            } catch (routerError) {
+              console.error('获取路由信息失败:', routerError)
+            }
           }
         } else if (!hasToken) {
           console.log('[Store] 无有效Token，清除用户状态')

@@ -20,7 +20,21 @@ class AuthApiService {
 
     // 请求拦截器 - 自动添加token
     this.api.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        // 检查当前是否在登录相关页面，避免不必要的token验证
+        try {
+          const { default: router } = await import('@/router')
+          const currentPath = router.currentRoute.value.path
+
+          // 如果在登录/注册页面，且是获取用户信息的请求，则跳过
+          if ((currentPath === '/login' || currentPath === '/register') &&
+              config.url.includes('/me')) {
+            return Promise.reject(new Error('Skip auth check on login page'))
+          }
+        } catch (error) {
+          // 如果router导入失败，继续正常流程
+        }
+
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`
         }
@@ -229,17 +243,20 @@ class AuthApiService {
    */
   handleAuthError() {
     this.clearTokens()
-    ElMessage.error('登录已过期，请重新登录')
 
     // 延迟跳转，确保消息显示 - 使用动态导入避免循环依赖
     setTimeout(async () => {
       // 动态导入router避免循环依赖
       const { default: router } = await import('@/router')
       const currentPath = router.currentRoute.value.path
-      if (currentPath !== '/login') {
+
+      // 只有在非登录相关页面时才显示错误提示和跳转
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        ElMessage.error('登录已过期，请重新登录')
         router.push('/login')
       }
-    }, 1000)
+      // 如果已经在登录页面，则清除token但不显示提示
+    }, 100)
   }
 
   /**

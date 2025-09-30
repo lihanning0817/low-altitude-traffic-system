@@ -95,7 +95,8 @@ public:
      *   "username": "string",      // 用户名（3-20字符）
      *   "email": "string",         // 邮箱地址
      *   "password": "string",      // 密码（8-64字符）
-     *   "full_name": "string"      // 全名（可选）
+     *   "full_name": "string",     // 全名（可选）
+     *   "role": "string"           // 角色（可选：admin/operator/user，默认为user）
      * }
      *
      * @param req HTTP请求对象

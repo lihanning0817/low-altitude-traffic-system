@@ -8,6 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.64.0",
     "@element-plus/icons-vue": "^2.3.2",
     "animate.css": "^4.1.1",
     "axios": "^1.12.2",
@@ -50,5 +51,21 @@
     "last 2 versions",
     "not dead",
     "not ie 11"
-  ]
+  ],
+  "description": "一个基于Vue.js前端和C++后端的低空交通管理系统，用于无人机飞行任务的规划、监控和管理。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zguoxu/low-altitude-traffic-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zguoxu/low-altitude-traffic-system/issues"
+  },
+  "homepage": "https://github.com/Zguoxu/low-altitude-traffic-system#readme"
 }

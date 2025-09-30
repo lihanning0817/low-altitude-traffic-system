@@ -9,6 +9,7 @@
     "boost-uuid",
     "boost-algorithm",
     "boost-thread",
+    "boost-beast",
     "nlohmann-json",
     "mysql-connector-cpp",
     "openssl",

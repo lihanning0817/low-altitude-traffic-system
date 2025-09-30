@@ -197,6 +197,13 @@ const handleLogin = async () => {
 
   } catch (error) {
     console.error('登录错误:', error)
+
+    // 特别处理身份错误
+    if (error.error_code === 'ROLE_MISMATCH') {
+      ElMessage.error('身份错误')
+      return
+    }
+
     // 检查是否是成功登录但被异常捕获的情况
     if (error.success !== false) {
       // 如果有错误消息但不是明确的失败，尝试显示错误

@@ -76,7 +76,7 @@ http::response<http::string_body> AuthController::login(const http::request<http
             logLoginAttempt(username, false, "未知");
             incrementFailedLoginCount(username);
             spdlog::warn("用户 {} 角色不匹配: 期望 {}, 实际 {}", username, expectedRole, actualRole);
-            return utils::HttpResponse::createErrorResponse("身份验证失败", 401, "ROLE_MISMATCH");
+            return utils::HttpResponse::createErrorResponse("身份错误", 401, "ROLE_MISMATCH");
         }
 
         // 检查用户状态

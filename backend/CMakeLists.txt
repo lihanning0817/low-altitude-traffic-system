@@ -30,9 +30,9 @@ set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.lib")
 set(ZLIB_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-windows")
 
 # 设置MySQL连接器路径（使用系统安装的MySQL连接器）
-set(MYSQL_CONNECTOR_ROOT "C:/Program Files/MySQL/mysql-connector-c++-9.4.0-winx64")
-set(MYSQL_CONNECTOR_INCLUDE_DIR "${MYSQL_CONNECTOR_ROOT}/include")
-set(MYSQL_CONNECTOR_LIB_DIR "${MYSQL_CONNECTOR_ROOT}/lib64/vs14")
+#set(MYSQL_CONNECTOR_ROOT "C:/Program Files/MySQL/mysql-connector-c++-9.4.0-winx64")
+#set(MYSQL_CONNECTOR_INCLUDE_DIR "${MYSQL_CONNECTOR_ROOT}/include")
+#set(MYSQL_CONNECTOR_LIB_DIR "${MYSQL_CONNECTOR_ROOT}/lib64/vs14")
 
 # 查找其他依赖包
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -47,7 +47,6 @@ find_package(CURL REQUIRED)
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include
-    ${MYSQL_CONNECTOR_INCLUDE_DIR}
 )
 
 # 收集所有源文件
@@ -78,11 +77,15 @@ target_link_libraries(${PROJECT_NAME}_lib
     OpenSSL::SSL
     OpenSSL::Crypto
     ZLIB::ZLIB
-    "${MYSQL_CONNECTOR_LIB_DIR}/mysqlcppconnx.lib"
+    #"${MYSQL_CONNECTOR_LIB_DIR}/mysqlcppconnx.lib"
     spdlog::spdlog
     CURL::libcurl
     Threads::Threads
 )
+
+# 添加可执行程序（main.cpp 作为入口）
+add_executable(${PROJECT_NAME} src/main.cpp)
+
 
 # 添加Boost Beast头文件支持（Beast是header-only库）
 target_include_directories(${PROJECT_NAME}_lib
@@ -96,14 +99,16 @@ target_compile_definitions(${PROJECT_NAME}_lib PUBLIC
     BOOST_ASIO_HAS_STD_STRING_VIEW
 )
 
-# 创建主程序可执行文件
-add_executable(${PROJECT_NAME} src/main.cpp)
+find_package(unofficial-mysql-connector-cpp CONFIG REQUIRED)
 
-# 链接主程序
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     ${PROJECT_NAME}_lib
+    unofficial::mysql-connector-cpp::connector  
 )
+
+
+
 
 # 测试程序已移除，仅保留主程序构建
 
