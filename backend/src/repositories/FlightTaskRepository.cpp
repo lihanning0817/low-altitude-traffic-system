@@ -5,7 +5,7 @@
 
 namespace repositories {
 
-const std::string FlightTaskRepository::TABLE_NAME = "low_altitude_traffic_system.flight_tasks";
+const std::string FlightTaskRepository::TABLE_NAME = "low_altitude_traffic_system.api_flight_tasks";
 
 FlightTaskRepository::FlightTaskRepository() : BaseRepository() {
     std::cout << "[FlightTaskRepository] Initializing FlightTask Repository" << std::endl;
@@ -19,23 +19,20 @@ int64_t FlightTaskRepository::create(const models::FlightTask& task) {
         auto task_data = task.toDatabaseJson();
 
         std::map<std::string, mysqlx::Value> data;
-        // 映射到主表字段名
-        data["task_name"] = task_data["name"].get<std::string>();
+        // 映射到api_flight_tasks表字段名
+        data["name"] = task_data["name"].get<std::string>();
         data["description"] = task_data["description"].get<std::string>();
-        data["task_type"] = "delivery"; // 默认任务类型
         data["status"] = task_data["status"].get<std::string>();
         data["user_id"] = task_data["user_id"].get<int64_t>();
 
-        // 设置默认位置信息 (可以从route JSON中提取)
-        data["start_lat"] = 39.904200;  // 默认北京坐标
-        data["start_lng"] = 116.407396;
-        data["end_lat"] = 39.914200;
-        data["end_lng"] = 116.417396;
-        data["start_altitude"] = 100.0;
-        data["end_altitude"] = 100.0;
+        // 设置默认路径信息为JSON格式
+        nlohmann::json route_json;
+        route_json["start"] = {{"lat", 39.904200}, {"lng", 116.407396}};
+        route_json["end"] = {{"lat", 39.914200}, {"lng", 116.417396}};
+        data["route"] = route_json.dump();
 
         if (task_data.contains("scheduled_time") && !task_data["scheduled_time"].is_null()) {
-            data["scheduled_start_time"] = task_data["scheduled_time"].get<std::string>();
+            data["scheduled_time"] = task_data["scheduled_time"].get<std::string>();
         }
 
         // 执行插入
@@ -168,14 +165,19 @@ std::vector<models::FlightTask> FlightTaskRepository::findByStatus(
         }
         std::cout << std::endl;
 
-        std::map<std::string, mysqlx::Value> conditions;
-        conditions["status"] = status_str;
+        // 构建查询 - 包含用户自己的任务和管理员的任务，以及创建者信息
+        std::string query = "SELECT t.*, u.username as creator_username, u.role as creator_role FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id WHERE t.status = ?";
+        std::vector<mysqlx::Value> params;
+        params.push_back(status_str);
 
         if (user_id.has_value()) {
-            conditions["user_id"] = user_id.value();
+            query += " AND (t.user_id = ? OR t.user_id IN (SELECT id FROM low_altitude_traffic_system.users WHERE role = 'admin'))";
+            params.push_back(user_id.value());
         }
 
-        auto results = findBy(TABLE_NAME, conditions);
+        query += " ORDER BY t.created_at DESC";
+
+        auto results = executeQueryMultiple(query, params);
 
         std::vector<models::FlightTask> tasks;
         for (const auto& row_json : results) {
@@ -202,16 +204,17 @@ std::vector<models::FlightTask> FlightTaskRepository::findAll(
         }
         std::cout << std::endl;
 
-        // 构建查询
-        std::string query = "SELECT * FROM " + TABLE_NAME;
+        // 构建查询 - 包含创建者信息
+        std::string query = "SELECT t.*, u.username as creator_username, u.role as creator_role FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id";
         std::vector<mysqlx::Value> params;
 
         if (user_id.has_value()) {
-            query += " WHERE user_id = ?";
+            // 查询用户自己的任务 + 所有管理员的任务
+            query += " WHERE t.user_id = ? OR t.user_id IN (SELECT id FROM low_altitude_traffic_system.users WHERE role = 'admin')";
             params.push_back(user_id.value());
         }
 
-        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        query += " ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
         params.push_back(limit);
         params.push_back(offset);
 
