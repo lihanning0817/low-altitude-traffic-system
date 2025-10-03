@@ -4,731 +4,703 @@
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h2>应急响应管理</h2>
-          <p>实时监控和处理紧急事件</p>
+          <h2>应急响应</h2>
+          <p>紧急事件监控与处理</p>
         </div>
-        <div class="status-indicators">
-          <div class="status-item">
-            <el-icon><Warning /></el-icon>
-            <span>{{ activeEmergenciesCount }} 个活跃事件</span>
-          </div>
-          <div class="status-item">
-            <el-icon><Timer /></el-icon>
-            <span>平均响应时间 {{ avgResponseTime }}</span>
-          </div>
+        <div class="action-section">
+          <el-button
+            type="danger"
+            size="large"
+            @click="showCreateDialog = true"
+          >
+            <el-icon><CirclePlus /></el-icon>
+            创建紧急事件
+          </el-button>
+          <el-button
+            type="primary"
+            size="large"
+            @click="refreshEvents"
+          >
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 控制面板 -->
-    <SmartCard
-      hover-effect
-      class="control-panel"
-    >
-      <el-card
-        shadow="never"
-        class="control-card"
-      >
-        <div class="control-content">
-          <div class="left-controls">
-            <el-button
-              type="primary"
-              @click="showReportDialog = true"
-            >
-              <el-icon><Plus /></el-icon>
-              报告事件
-            </el-button>
-            <el-button @click="refreshData">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
+    <!-- 统计卡片 -->
+    <div class="stats-section">
+      <div class="stats-grid">
+        <SmartCard
+          hover-effect
+          bordered
+          class="stat-card"
+        >
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #f56c6c 0%, #ff8a80 100%);"
+          >
+            <el-icon size="24" color="#fff">
+              <Warning />
+            </el-icon>
           </div>
+          <div class="stat-content">
+            <h3>{{ statistics.active_events || 0 }}</h3>
+            <p>激活事件</p>
+          </div>
+        </SmartCard>
 
-          <div class="right-controls">
-            <el-select
-              v-model="filterStatus"
-              placeholder="状态筛选"
-              style="width: 150px"
-            >
-              <el-option
-                label="全部"
-                value=""
-              />
-              <el-option
-                label="已报告"
-                value="reported"
-              />
-              <el-option
-                label="响应中"
-                value="responding"
-              />
-              <el-option
-                label="已解决"
-                value="resolved"
-              />
-            </el-select>
-            <el-select
-              v-model="filterSeverity"
-              placeholder="严重程度"
-              style="width: 150px"
-            >
-              <el-option
-                label="全部"
-                value=""
-              />
-              <el-option
-                label="低"
-                value="low"
-              />
-              <el-option
-                label="中"
-                value="medium"
-              />
-              <el-option
-                label="高"
-                value="high"
-              />
-            </el-select>
+        <SmartCard
+          hover-effect
+          bordered
+          class="stat-card"
+        >
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #e6a23c 0%, #f5a623 100%);"
+          >
+            <el-icon size="24" color="#fff">
+              <Bell />
+            </el-icon>
           </div>
-        </div>
-      </el-card>
+          <div class="stat-content">
+            <h3>{{ statistics.total_events || 0 }}</h3>
+            <p>总事件数</p>
+          </div>
+        </SmartCard>
+
+        <SmartCard
+          hover-effect
+          bordered
+          class="stat-card"
+        >
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);"
+          >
+            <el-icon size="24" color="#fff">
+              <Check />
+            </el-icon>
+          </div>
+          <div class="stat-content">
+            <h3>{{ statistics.by_status?.resolved || 0 }}</h3>
+            <p>已解决</p>
+          </div>
+        </SmartCard>
+
+        <SmartCard
+          hover-effect
+          bordered
+          class="stat-card"
+        >
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #909399 0%, #b1b3b8 100%);"
+          >
+            <el-icon size="24" color="#fff">
+              <Close />
+            </el-icon>
+          </div>
+          <div class="stat-content">
+            <h3>{{ statistics.by_status?.cancelled || 0 }}</h3>
+            <p>已取消</p>
+          </div>
+        </SmartCard>
+      </div>
+    </div>
+
+    <!-- 过滤器 -->
+    <SmartCard class="filter-card" hover-effect>
+      <div class="filter-section">
+        <el-select
+          v-model="filter.status"
+          placeholder="状态筛选"
+          clearable
+          @change="refreshEvents"
+        >
+          <el-option label="激活中" value="active" />
+          <el-option label="响应中" value="responding" />
+          <el-option label="已解决" value="resolved" />
+          <el-option label="已取消" value="cancelled" />
+        </el-select>
+
+        <el-select
+          v-model="filter.severity"
+          placeholder="严重程度筛选"
+          clearable
+          @change="refreshEvents"
+        >
+          <el-option label="低" value="low" />
+          <el-option label="中" value="medium" />
+          <el-option label="高" value="high" />
+          <el-option label="严重" value="critical" />
+        </el-select>
+      </div>
     </SmartCard>
 
-    <!-- 主要内容区域 -->
-    <div class="main-content">
-      <!-- 事件列表 -->
-      <SmartCard
-        hover-effect
-        class="events-panel"
+    <!-- 事件列表 -->
+    <SmartCard class="events-card" hover-effect>
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">紧急事件列表</span>
+        </div>
+      </template>
+
+      <el-table
+        v-loading="loading"
+        :data="events"
+        style="width: 100%"
+        @row-click="handleRowClick"
       >
-        <el-card
-          shadow="never"
-          class="events-card"
-        >
-          <template #header>
-            <div class="panel-header">
-              <span class="panel-title">紧急事件</span>
-              <el-tag type="danger">
-                {{ emergencyEvents.length }} 个事件
-              </el-tag>
-            </div>
+        <el-table-column prop="event_code" label="事件编号" width="150" />
+
+        <el-table-column prop="title" label="标题" min-width="200" />
+
+        <el-table-column label="类型" width="120">
+          <template #default="{ row }">
+            <el-tag :color="emergencyApi.getEventTypeColor(row.type)" style="color: white;">
+              {{ emergencyApi.getEventTypeText(row.type) }}
+            </el-tag>
           </template>
+        </el-table-column>
 
-          <el-table
-            :data="filteredEvents"
-            style="width: 100%"
-            :row-class-name="getRowClassName"
-            @row-click="selectEvent"
-          >
-            <el-table-column
-              type="index"
-              width="60"
-            />
-            <el-table-column
-              prop="title"
-              label="事件标题"
-              min-width="180"
-            />
-            <el-table-column
-              prop="severity"
-              label="严重程度"
-              width="120"
-            >
-              <template #default="{ row }">
-                <el-tag :type="getSeverityType(row.severity)">
-                  {{ row.severity === 'high' ? '高' : row.severity === 'medium' ? '中' : '低' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="status"
-              label="状态"
-              width="100"
-            >
-              <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)">
-                  {{ getStatusText(row.status) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="timestamp"
-              label="时间"
-              width="160"
-            >
-              <template #default="{ row }">
-                {{ formatTime(row.timestamp) }}
-              </template>
-            </el-table-column>
-            <el-table-column
-              label="操作"
-              width="120"
-            >
-              <template #default="{ row }">
-                <el-button
-                  v-if="row.status !== 'resolved'"
-                  type="primary"
-                  size="small"
-                  @click.stop="handleResponse(row)"
-                >
-                  响应
-                </el-button>
-                <el-button
-                  v-else
-                  type="info"
-                  size="small"
-                  @click.stop="handleReopen(row)"
-                >
-                  重新打开
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </SmartCard>
+        <el-table-column label="严重程度" width="120">
+          <template #default="{ row }">
+            <el-tag :type="emergencyApi.getSeverityTagType(row.severity)">
+              {{ emergencyApi.getSeverityText(row.severity) }}
+            </el-tag>
+          </template>
+        </el-table-column>
 
-      <!-- 事件详情和地图 -->
-      <div class="detail-and-map">
-        <!-- 事件详情 -->
-        <SmartCard
-          hover-effect
-          class="detail-panel"
-        >
-          <el-card
-            shadow="never"
-            class="detail-card"
-          >
-            <template #header>
-              <div class="panel-header">
-                <span class="panel-title">事件详情</span>
-                <el-button
-                  v-if="selectedEvent"
-                  type="primary"
-                  size="small"
-                  @click="showOnMap"
-                >
-                  <el-icon><View /></el-icon>
-                  显示在地图
-                </el-button>
-              </div>
-            </template>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="emergencyApi.getStatusTagType(row.status)">
+              {{ emergencyApi.getStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
 
-            <div
-              v-if="selectedEvent"
-              class="event-detail"
+        <el-table-column prop="created_at" label="创建时间" width="180" />
+
+        <el-table-column label="操作" width="280" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'active'"
+              type="warning"
+              size="small"
+              @click.stop="handleRespond(row)"
             >
-              <div class="detail-item">
-                <span class="label">标题:</span>
-                <span class="value">{{ selectedEvent.title }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">描述:</span>
-                <span class="value">{{ selectedEvent.description }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">严重程度:</span>
-                <el-tag :type="getSeverityType(selectedEvent.severity)">
-                  {{ selectedEvent.severity === 'high' ? '高' : selectedEvent.severity === 'medium' ? '中' : '低' }}
-                </el-tag>
-              </div>
-              <div class="detail-item">
-                <span class="label">状态:</span>
-                <el-tag :type="getStatusType(selectedEvent.status)">
-                  {{ getStatusText(selectedEvent.status) }}
-                </el-tag>
-              </div>
-              <div class="detail-item">
-                <span class="label">报告时间:</span>
-                <span class="value">{{ formatTime(selectedEvent.timestamp) }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">报告来源:</span>
-                <span class="value">{{ selectedEvent.reportedBy }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">响应团队:</span>
-                <span class="value">{{ selectedEvent.responseTeam || '未分配' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">预计响应时间:</span>
-                <span class="value">{{ selectedEvent.estimatedResponseTime || 'N/A' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="label">位置:</span>
-                <span class="value">{{ selectedEvent.location.lat.toFixed(6) }}, {{ selectedEvent.location.lng.toFixed(6) }}</span>
-              </div>
-            </div>
-
-            <div
-              v-else
-              class="no-selection"
+              响应
+            </el-button>
+            <el-button
+              v-if="row.status === 'responding'"
+              type="success"
+              size="small"
+              @click.stop="handleResolve(row)"
             >
-              <el-icon><InfoFilled /></el-icon>
-              <p>请选择一个事件查看详情</p>
-            </div>
-          </el-card>
-        </SmartCard>
+              解决
+            </el-button>
+            <el-button
+              v-if="row.status === 'active' || row.status === 'responding'"
+              type="info"
+              size="small"
+              @click.stop="handleCancel(row)"
+            >
+              取消
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              @click.stop="handleViewDetail(row)"
+            >
+              详情
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-        <!-- 地图 -->
-        <SmartCard
-          hover-effect
-          class="map-panel"
-        >
-          <el-card
-            shadow="never"
-            class="map-card"
-          >
-            <template #header>
-              <div class="panel-header">
-                <span class="panel-title">事件地图</span>
-                <el-button
-                  type="primary"
-                  size="small"
-                  @click="centerMap"
-                >
-                  <el-icon><Aim /></el-icon>
-                  居中
-                </el-button>
-              </div>
-            </template>
-
-            <div
-              ref="mapContainer"
-              class="map-view"
-            />
-          </el-card>
-        </SmartCard>
+      <div class="pagination">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.page_size"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="refreshEvents"
+          @size-change="refreshEvents"
+        />
       </div>
-    </div>
+    </SmartCard>
 
-    <!-- 报告事件对话框 -->
+    <!-- 创建事件对话框 -->
     <el-dialog
-      v-model="showReportDialog"
-      title="报告紧急事件"
-      width="500px"
+      v-model="showCreateDialog"
+      title="创建紧急事件"
+      width="600px"
+      :close-on-click-modal="false"
     >
       <el-form
-        :model="reportForm"
+        ref="createFormRef"
+        :model="createForm"
+        :rules="createRules"
         label-width="100px"
       >
-        <el-form-item label="事件类型">
-          <el-select
-            v-model="reportForm.type"
+        <el-form-item label="任务ID" prop="task_id">
+          <el-input-number
+            v-model="createForm.task_id"
+            :min="1"
             style="width: 100%"
-          >
-            <el-option
-              label="交通事故"
-              value="accident"
-            />
-            <el-option
-              label="无人机异常"
-              value="drone_failure"
-            />
-            <el-option
-              label="气象预警"
-              value="weather_alert"
-            />
-            <el-option
-              label="非法飞行"
-              value="illegal_flight"
-            />
-            <el-option
-              label="其他"
-              value="other"
-            />
+          />
+        </el-form-item>
+
+        <el-form-item label="事件类型" prop="type">
+          <el-select v-model="createForm.type" style="width: 100%">
+            <el-option label="设备故障" value="equipment_failure" />
+            <el-option label="恶劣天气" value="weather_emergency" />
+            <el-option label="碰撞风险" value="collision_risk" />
+            <el-option label="信号丢失" value="signal_loss" />
+            <el-option label="电量低" value="battery_low" />
+            <el-option label="电子围栏违规" value="geofence_violation" />
+            <el-option label="手动紧急" value="manual_emergency" />
+            <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
-        <el-form-item label="标题">
-          <el-input v-model="reportForm.title" />
+
+        <el-form-item label="严重程度" prop="severity">
+          <el-select v-model="createForm.severity" style="width: 100%">
+            <el-option label="低" value="low" />
+            <el-option label="中" value="medium" />
+            <el-option label="高" value="high" />
+            <el-option label="严重" value="critical" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="描述">
+
+        <el-form-item label="标题" prop="title">
+          <el-input v-model="createForm.title" />
+        </el-form-item>
+
+        <el-form-item label="描述" prop="description">
           <el-input
-            v-model="reportForm.description"
+            v-model="createForm.description"
             type="textarea"
-            rows="4"
+            :rows="4"
           />
         </el-form-item>
-        <el-form-item label="严重程度">
-          <el-rate
-            v-model="reportForm.severity"
-            :max="3"
-            :texts="['低', '中', '高']"
-            text-color="#ff9900"
+
+        <el-form-item label="纬度" prop="lat">
+          <el-input-number
+            v-model="createForm.lat"
+            :precision="6"
+            style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="位置">
-          <el-input
-            v-model="reportForm.location"
-            placeholder="点击地图选择位置"
-            readonly
+
+        <el-form-item label="经度" prop="lon">
+          <el-input-number
+            v-model="createForm.lon"
+            :precision="6"
+            style="width: 100%"
           />
         </el-form-item>
       </el-form>
+
       <template #footer>
-        <el-button @click="showReportDialog = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="submitReport"
-        >
-          提交
-        </el-button>
+        <el-button @click="showCreateDialog = false">取消</el-button>
+        <el-button type="danger" @click="handleCreate">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 响应事件对话框 -->
+    <el-dialog
+      v-model="showRespondDialog"
+      title="响应紧急事件"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="respondFormRef"
+        :model="respondForm"
+        :rules="respondRules"
+        label-width="100px"
+      >
+        <el-form-item label="响应措施" prop="response_action">
+          <el-input
+            v-model="respondForm.response_action"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入响应措施"
+          />
+        </el-form-item>
+
+        <el-form-item label="响应备注" prop="response_notes">
+          <el-input
+            v-model="respondForm.response_notes"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入响应备注（可选）"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showRespondDialog = false">取消</el-button>
+        <el-button type="warning" @click="handleSubmitRespond">提交响应</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 事件详情对话框 -->
+    <el-dialog
+      v-model="showDetailDialog"
+      title="事件详情"
+      width="700px"
+    >
+      <div v-if="selectedEvent" class="event-detail">
+        <div class="detail-section">
+          <h3>基本信息</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="label">事件编号:</span>
+              <span class="value">{{ selectedEvent.event_code }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">任务ID:</span>
+              <span class="value">{{ selectedEvent.task_id }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">类型:</span>
+              <el-tag :color="emergencyApi.getEventTypeColor(selectedEvent.type)" style="color: white;">
+                {{ emergencyApi.getEventTypeText(selectedEvent.type) }}
+              </el-tag>
+            </div>
+            <div class="detail-item">
+              <span class="label">严重程度:</span>
+              <el-tag :type="emergencyApi.getSeverityTagType(selectedEvent.severity)">
+                {{ emergencyApi.getSeverityText(selectedEvent.severity) }}
+              </el-tag>
+            </div>
+            <div class="detail-item">
+              <span class="label">状态:</span>
+              <el-tag :type="emergencyApi.getStatusTagType(selectedEvent.status)">
+                {{ emergencyApi.getStatusText(selectedEvent.status) }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>事件内容</h3>
+          <div class="detail-item">
+            <span class="label">标题:</span>
+            <span class="value">{{ selectedEvent.title }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">描述:</span>
+            <p class="description">{{ selectedEvent.description }}</p>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>位置信息</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="label">纬度:</span>
+              <span class="value">{{ selectedEvent.location?.lat }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">经度:</span>
+              <span class="value">{{ selectedEvent.location?.lon }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedEvent.response_action" class="detail-section">
+          <h3>响应信息</h3>
+          <div class="detail-item">
+            <span class="label">响应措施:</span>
+            <p class="description">{{ selectedEvent.response_action }}</p>
+          </div>
+          <div v-if="selectedEvent.response_notes" class="detail-item">
+            <span class="label">响应备注:</span>
+            <p class="description">{{ selectedEvent.response_notes }}</p>
+          </div>
+          <div class="detail-item">
+            <span class="label">响应时间:</span>
+            <span class="value">{{ selectedEvent.responded_at || '--' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>时间信息</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="label">创建时间:</span>
+              <span class="value">{{ selectedEvent.created_at }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">更新时间:</span>
+              <span class="value">{{ selectedEvent.updated_at }}</span>
+            </div>
+            <div v-if="selectedEvent.resolved_at" class="detail-item">
+              <span class="label">解决时间:</span>
+              <span class="value">{{ selectedEvent.resolved_at }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showDetailDialog = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useStore } from 'vuex'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import mapContainer from 'vue'
-import { Plus, Refresh, View, Aim, Warning, Timer, InfoFilled } from '@element-plus/icons-vue'
+import {
+  CirclePlus, Refresh, Warning, Bell, Check, Close
+} from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
-
-// 状态管理
-const store = useStore()
+import emergencyApi from '@/services/emergencyApi'
 
 // 响应式数据
-const showReportDialog = ref(false)
-const filterStatus = ref('')
-const filterSeverity = ref('')
+const loading = ref(false)
+const showCreateDialog = ref(false)
+const showRespondDialog = ref(false)
+const showDetailDialog = ref(false)
+const events = ref([])
+const statistics = ref({})
 const selectedEvent = ref(null)
-const map = ref(null)
+const currentRespondEvent = ref(null)
 
-const reportForm = ref({
-  type: '',
+const filter = reactive({
+  status: '',
+  severity: ''
+})
+
+const pagination = reactive({
+  page: 1,
+  page_size: 20,
+  total: 0
+})
+
+const createForm = reactive({
+  task_id: null,
+  type: 'other',
+  severity: 'medium',
   title: '',
   description: '',
-  severity: 2,
-  location: ''
+  lat: 39.9042,
+  lon: 116.4074
 })
 
-// 计算属性
-const emergencyEvents = computed(() => store.state.emergencyEvents || [])
-const activeEmergenciesCount = computed(() => {
-  return emergencyEvents.value.filter(e => e.status === 'reported' || e.status === 'responding').length
-})
-const avgResponseTime = computed(() => {
-  // 模拟计算平均响应时间
-  const resolvedEvents = emergencyEvents.value.filter(e => e.status === 'resolved')
-  if (resolvedEvents.length === 0) return 'N/A'
-  return '12分钟'
+const createRules = {
+  task_id: [{ required: true, message: '请输入任务ID', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择事件类型', trigger: 'change' }],
+  severity: [{ required: true, message: '请选择严重程度', trigger: 'change' }],
+  title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
+  description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
+  lat: [{ required: true, message: '请输入纬度', trigger: 'blur' }],
+  lon: [{ required: true, message: '请输入经度', trigger: 'blur' }]
+}
+
+const respondForm = reactive({
+  response_action: '',
+  response_notes: ''
 })
 
-const filteredEvents = computed(() => {
-  return emergencyEvents.value.filter(event => {
-    const statusMatch = !filterStatus.value || event.status === filterStatus.value
-    const severityMatch = !filterSeverity.value || 
-      (filterSeverity.value === 'low' && event.severity === 'low') ||
-      (filterSeverity.value === 'medium' && event.severity === 'medium') ||
-      (filterSeverity.value === 'high' && event.severity === 'high')
-    return statusMatch && severityMatch
-  })
-})
+const respondRules = {
+  response_action: [{ required: true, message: '请输入响应措施', trigger: 'blur' }]
+}
+
+const createFormRef = ref(null)
+const respondFormRef = ref(null)
 
 // 方法
-const getSeverityType = (severity) => {
-  if (severity === 'high') return 'danger'
-  if (severity === 'medium') return 'warning'
-  return 'success'
-}
+const refreshEvents = async () => {
+  loading.value = true
 
-const getStatusType = (status) => {
-  if (status === 'reported') return 'info'
-  if (status === 'responding') return 'warning'
-  if (status === 'resolved') return 'success'
-  return 'primary'
-}
-
-const getStatusText = (status) => {
-  if (status === 'reported') return '已报告'
-  if (status === 'responding') return '响应中'
-  if (status === 'resolved') return '已解决'
-  return status
-}
-
-const formatTime = (timestamp) => {
-  if (!timestamp) return 'N/A'
-  const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN')
-}
-
-const getRowClassName = ({ row }) => {
-  if (row.severity === 'high') return 'high-severity-row'
-  if (row.severity === 'medium') return 'medium-severity-row'
-  return ''
-}
-
-const selectEvent = (event) => {
-  selectedEvent.value = event
-}
-
-const handleResponse = (event) => {
-  ElMessageBox.confirm(
-    `确定要响应事件 "${event.title}" 吗？`,
-    '确认响应',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    // 这里应该调用API更新事件状态
-    store.dispatch('updateEmergencyEvent', {
-      id: event.id,
-      updates: { status: 'responding', responseTeam: '应急救援队' }
-    })
-    ElMessage.success('已开始响应事件')
-  }).catch(() => {
-    // 用户取消
-  })
-}
-
-const handleReopen = (event) => {
-  ElMessageBox.confirm(
-    `确定要重新打开事件 "${event.title}" 吗？`,
-    '确认重新打开',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    // 这里应该调用API更新事件状态
-    store.dispatch('updateEmergencyEvent', {
-      id: event.id,
-      updates: { status: 'reported' }
-    })
-    ElMessage.success('事件已重新打开')
-  }).catch(() => {
-    // 用户取消
-  })
-}
-
-const showOnMap = () => {
-  if (!selectedEvent.value || !map.value) return
-
-  // 清除现有标记
-  map.value.clearMap()
-
-  // 添加事件标记
-  const marker = new AMap.Marker({
-    position: [selectedEvent.value.location.lng, selectedEvent.value.location.lat],
-    title: selectedEvent.value.title,
-    content: `
-      <div style="background: #fff; border: 2px solid #ff4d4f; border-radius: 8px; padding: 8px; font-size: 12px; font-weight: bold;">
-        ${selectedEvent.value.title}
-      </div>
-    `,
-    offset: new AMap.Pixel(-50, -30)
-  })
-
-  map.value.add(marker)
-  map.value.setZoomAndCenter(15, [selectedEvent.value.location.lng, selectedEvent.value.location.lat])
-}
-
-const centerMap = () => {
-  if (map.value) {
-    map.value.setZoomAndCenter(11, [116.397428, 39.90923])
-  }
-}
-
-const refreshData = () => {
-  // 这里应该重新获取数据
-  store.dispatch('fetchEmergencyEvents')
-  ElMessage.success('数据已刷新')
-}
-
-const submitReport = () => {
-  if (!reportForm.value.title || !reportForm.value.description) {
-    ElMessage.warning('请填写标题和描述')
-    return
-  }
-
-  // 这里应该调用API报告事件
-  const newEvent = {
-    id: 'E' + Date.now(),
-    title: reportForm.value.title,
-    description: reportForm.value.description,
-    severity: reportForm.value.severity === 3 ? 'high' : reportForm.value.severity === 2 ? 'medium' : 'low',
-    status: 'reported',
-    reportedBy: '用户',
-    timestamp: new Date().toISOString(),
-    location: { lat: 39.90923, lng: 116.397428 } // 默认位置
-  }
-
-  store.dispatch('addEmergencyEvent', newEvent)
-  ElMessage.success('事件报告成功')
-  showReportDialog.value = false
-  reportForm.value = {
-    type: '',
-    title: '',
-    description: '',
-    severity: 2,
-    location: ''
-  }
-}
-
-// 地图初始化
-const initMap = () => {
-  if (window.AMap && mapContainer.value) {
-    map.value = new AMap.Map(mapContainer.value, {
-      zoom: 11,
-      center: [116.397428, 39.90923],
-      viewMode: '3D',
-      features: ['bg', 'road', 'building', 'point'],
-      resizeEnable: true
-    })
-
-    // 防抖函数
-    const debounce = (func, wait) => {
-      let timeout
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout)
-          func(...args)
-        }
-        clearTimeout(timeout)
-        timeout = setTimeout(later, wait)
-      }
+  try {
+    const params = {
+      page: pagination.page,
+      page_size: pagination.page_size
     }
 
-    // 添加点击事件以选择位置
-    map.value.on('click', (e) => {
-      if (showReportDialog.value) {
-        reportForm.value.location = `${e.lnglat.lat.toFixed(6)}, ${e.lnglat.lng.toFixed(6)}`
-      }
-    })
+    if (filter.status) {
+      params.status = filter.status
+    }
 
-    // 监听地图缩放和移动事件
-    const debouncedZoomChange = debounce(() => {
-      // 可以在这里处理缩放变化
-    }, 100)
+    if (filter.severity) {
+      params.severity = filter.severity
+    }
 
-    const debouncedMoveEnd = debounce(() => {
-      // 可以在这里处理地图移动
-    }, 100)
+    const response = await emergencyApi.getAllEvents(params)
 
-    // 移除之前的事件监听器，避免重复绑定
-    map.value.off('zoomchange', debouncedZoomChange)
-    map.value.off('moveend', debouncedMoveEnd)
-    
-    map.value.on('zoomchange', debouncedZoomChange)
-    map.value.on('moveend', debouncedMoveEnd)
+    if (response.success) {
+      events.value = response.data.events || []
+      pagination.total = response.data.total || 0
+    }
+  } catch (error) {
+    console.error('获取事件列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
-// 监听紧急事件变化，实时更新地图标记
-    watch(emergencyEvents, (newEvents) => {
-      if (!map.value) return
+const refreshStatistics = async () => {
+  try {
+    const response = await emergencyApi.getStatistics()
 
-      // 清除所有现有标记
-      map.value.clearMap()
+    if (response.success) {
+      statistics.value = response.data.statistics || {}
+    }
+  } catch (error) {
+    console.error('获取统计信息失败:', error)
+  }
+}
 
-      // 重新添加所有事件标记
-      newEvents.forEach(event => {
-        const marker = new AMap.Marker({
-          position: [event.location.lng, event.location.lat],
-          title: event.title,
-          icon: getMarkerIcon(event.severity),
-          offset: new AMap.Pixel(-12, -12),
-          zIndex: 100
-        })
+const handleCreate = async () => {
+  if (!createFormRef.value) return
 
-        // 添加点击事件
-        marker.on('click', () => {
-          selectEvent(event)
-          showOnMap()
-        })
-
-        // 添加鼠标悬停事件
-        marker.on('mouseover', () => {
-          marker.setLabel({
-            offset: new AMap.Pixel(10, -20),
-            content: `<div style="background: #fff; border: 2px solid ${getSeverityType(event.severity) === 'danger' ? '#ff4d4f' : getSeverityType(event.severity) === 'warning' ? '#faad14' : '#52c41a'}; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #333;">${event.title}</div>`,
-            direction: 'top'
-          })
-        })
-
-        // 添加鼠标离开事件
-        marker.on('mouseout', () => {
-          marker.setLabel(null)
-        })
-
-        map.value.add(marker)
-      })
-    }, { deep: true })
-
-    // 定期检查紧急事件状态
-    const statusCheckInterval = setInterval(() => {
-      if (map.value) {
-        // 这里可以添加检查逻辑，例如检查事件是否超时
-        const now = new Date()
-        emergencyEvents.value.forEach(event => {
-          if (event.status === 'reported' && 
-              now - new Date(event.timestamp) > 300000) { // 5分钟未响应
-            // 可以在地图上高亮显示
-            console.log(`事件 ${event.id} 已超时，需要紧急处理`)
+  await createFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        const eventData = {
+          task_id: createForm.task_id,
+          type: createForm.type,
+          severity: createForm.severity,
+          title: createForm.title,
+          description: createForm.description,
+          location: {
+            lat: createForm.lat,
+            lon: createForm.lon
           }
-        })
-      }
-    }, 60000) // 每分钟检查一次
+        }
 
-    // 组件卸载时清理定时器
-    onUnmounted(() => {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval)
-      }
-      if (map.value) {
-        map.value.destroy()
-      }
-    })
-  }
-}
+        const response = await emergencyApi.createEvent(eventData)
 
-const getMarkerIcon = (severity) => {
-  return new AMap.Icon({
-    size: new AMap.Size(24, 24),
-    image: `https://webapi.amap.com/theme/v1.3/markers/n/mark_b${severity === 'high' ? 'r' : severity === 'medium' ? 'y' : 'g'}.png`,
-    imageSize: new AMap.Size(24, 24)
+        if (response.success) {
+          ElMessage.success('紧急事件创建成功')
+          showCreateDialog.value = false
+          createFormRef.value.resetFields()
+          refreshEvents()
+          refreshStatistics()
+        }
+      } catch (error) {
+        console.error('创建事件失败:', error)
+      }
+    }
   })
 }
 
-// 生命周期钩子
-onMounted(() => {
-  // 初始化数据
-  store.dispatch('initializeEmergencyLandingPoints')
-  store.dispatch('fetchEmergencyEvents')
-  
-  // 初始化地图
-  initMap()
-})
+const handleRespond = (event) => {
+  currentRespondEvent.value = event
+  respondForm.response_action = ''
+  respondForm.response_notes = ''
+  showRespondDialog.value = true
+}
 
-onUnmounted(() => {
-  if (map.value) {
-    map.value.destroy()
+const handleSubmitRespond = async () => {
+  if (!respondFormRef.value) return
+
+  await respondFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        const response = await emergencyApi.respondToEvent(
+          currentRespondEvent.value.id,
+          respondForm.response_action,
+          respondForm.response_notes
+        )
+
+        if (response.success) {
+          ElMessage.success('响应提交成功')
+          showRespondDialog.value = false
+          refreshEvents()
+          refreshStatistics()
+        }
+      } catch (error) {
+        console.error('响应事件失败:', error)
+      }
+    }
+  })
+}
+
+const handleResolve = async (event) => {
+  try {
+    await ElMessageBox.confirm('确认解决该紧急事件？', '确认', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'success'
+    })
+
+    const response = await emergencyApi.resolveEvent(event.id)
+
+    if (response.success) {
+      ElMessage.success('事件已解决')
+      refreshEvents()
+      refreshStatistics()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('解决事件失败:', error)
+    }
   }
+}
+
+const handleCancel = async (event) => {
+  try {
+    await ElMessageBox.confirm('确认取消该紧急事件？', '确认', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const response = await emergencyApi.cancelEvent(event.id)
+
+    if (response.success) {
+      ElMessage.success('事件已取消')
+      refreshEvents()
+      refreshStatistics()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消事件失败:', error)
+    }
+  }
+}
+
+const handleViewDetail = (event) => {
+  selectedEvent.value = event
+  showDetailDialog.value = true
+}
+
+const handleRowClick = (row) => {
+  handleViewDetail(row)
+}
+
+// 初始化
+onMounted(() => {
+  refreshEvents()
+  refreshStatistics()
 })
 </script>
 
 <style scoped>
 .emergency-response {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 20px;
+  min-height: 100%;
 }
 
 /* 页面头部 */
 .page-header {
-  margin-bottom: 0;
+  margin-bottom: 24px;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
+  padding: 24px 0;
 }
 
 .title-section h2 {
@@ -736,7 +708,7 @@ onUnmounted(() => {
   font-size: 28px;
   font-weight: 600;
   color: #2c3e50;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f56c6c 0%, #e6a23c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -748,179 +720,144 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
-.status-indicators {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #606266;
-}
-
-/* 控制面板 */
-.control-panel {
-  margin-bottom: 0;
-}
-
-.control-card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
-}
-
-.control-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-}
-
-.left-controls,
-.right-controls {
+.action-section {
   display: flex;
   gap: 12px;
 }
 
-/* 主要内容区域 */
-.main-content {
-  display: flex;
+/* 统计卡片 */
+.stats-section {
+  margin-bottom: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  flex: 1;
+}
+
+.stat-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.stat-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+/* 过滤器 */
+.filter-card {
+  margin-bottom: 24px;
+}
+
+.filter-section {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
 }
 
 /* 事件列表 */
-.events-panel {
-  flex: 1;
-}
-
 .events-card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
-  height: 100%;
+  margin-bottom: 24px;
 }
 
-.panel-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.panel-title {
-  font-size: 16px;
+.card-title {
+  font-size: 18px;
   font-weight: 600;
   color: #2c3e50;
 }
 
-/* 事件详情和地图 */
-.detail-and-map {
+.pagination {
+  margin-top: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 600px;
+  justify-content: flex-end;
 }
 
-.detail-panel {
-  flex: 1;
-}
-
-.detail-card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
-  height: 100%;
-}
-
+/* 事件详情 */
 .event-detail {
-  display: flex;
-  flex-direction: column;
+  padding: 20px 0;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
 .detail-item {
   display: flex;
-  gap: 12px;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .detail-item .label {
-  font-weight: 600;
-  color: #2c3e50;
-  width: 120px;
-  flex-shrink: 0;
+  font-size: 13px;
+  color: #7f8c8d;
+  font-weight: 500;
 }
 
 .detail-item .value {
-  color: #7f8c8d;
-  flex: 1;
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 600;
 }
 
-.no-selection {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: #909399;
-}
-
-.no-selection .el-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-/* 地图 */
-.map-panel {
-  flex: 1;
-}
-
-.map-card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
-  height: 100%;
-}
-
-.map-view {
-  width: 100%;
-  height: 400px;
-  border-radius: 12px;
-}
-
-/* 表格样式 */
-:deep(.el-table .high-severity-row) {
-  background: #fef6f6;
-}
-
-:deep(.el-table .medium-severity-row) {
-  background: #fff7eb;
-}
-
-:deep(.el-table__body tr:hover > td) {
-  background-color: #f5f7fa !important;
-}
-
-:deep(.el-table__inner-wrapper) {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-:deep(.el-table__header) {
-  background: #f8f9fa;
+.detail-item .description {
+  margin: 0;
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 /* 响应式设计 */
-@media (max-width: 1200px) {
-  .main-content {
-    flex-direction: column;
-  }
-
-  .detail-and-map {
-    width: 100%;
-  }
-}
-
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
@@ -928,39 +865,35 @@ onUnmounted(() => {
     align-items: flex-start;
   }
 
-  .control-content {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .left-controls,
-  .right-controls {
+  .action-section {
     width: 100%;
-    justify-content: center;
-  }
-
-  .status-indicators {
     flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
   }
 
-  .map-view {
-    height: 300px;
+  .action-section .el-button {
+    width: 100%;
+  }
+
+  .filter-section {
+    flex-direction: column;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 /* Element Plus 样式覆盖 */
-:deep(.el-card__body) {
-  padding: 20px;
+:deep(.el-table) {
+  cursor: pointer;
 }
 
-:deep(.el-rate__item) {
-  font-size: 24px;
+:deep(.el-table__row:hover) {
+  background-color: #f8f9fa;
 }
 
-:deep(.el-rate__text) {
-  margin-left: 8px;
-  font-size: 14px;
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
 }
 </style>

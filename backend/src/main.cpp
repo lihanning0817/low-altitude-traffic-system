@@ -13,9 +13,11 @@
 #include "controllers/FlightTaskController.h"
 #include "controllers/SystemMonitorController.h"
 #include "controllers/WeatherController.h"
+#include "controllers/EmergencyController.h"
 #include "auth/JwtService.h"
 #include "services/RouteService.h"
 #include "services/WeatherService.h"
+#include "repositories/EmergencyEventRepository.h"
 
 // 全局服务器实例，用于信号处理
 std::unique_ptr<server::HttpServer> g_server = nullptr;
@@ -102,6 +104,10 @@ void setupRoutes(server::HttpServer& server) {
     std::string weatherApiKey = config.getString("weather.api_key", "");
     auto weatherService = std::make_shared<services::WeatherService>(weatherApiKey);
     auto weatherController = std::make_shared<controllers::WeatherController>(weatherService, jwtService);
+
+    // 初始化应急响应控制器
+    auto emergencyRepo = std::make_shared<repositories::EmergencyEventRepository>();
+    auto emergencyController = std::make_shared<controllers::EmergencyController>(emergencyRepo, jwtService);
 
     // ========== 认证相关API ==========
 
@@ -704,7 +710,95 @@ void setupRoutes(server::HttpServer& server) {
         res = std::move(response);
     });
 
-    spdlog::info("API routes configured (including FlightTask and Weather APIs)");
+    // ========== 应急响应API ==========
+
+    // 创建紧急事件
+    server.post("/api/v1/emergency/events", [emergencyController](const auto& req, auto& res) {
+        auto response = emergencyController->createEvent(req);
+        res = std::move(response);
+    });
+
+    // 获取所有紧急事件
+    server.get("/api/v1/emergency/events", [emergencyController](const auto& req, auto& res) {
+        auto response = emergencyController->getAllEvents(req);
+        res = std::move(response);
+    });
+
+    // 获取紧急事件统计
+    server.get("/api/v1/emergency/statistics", [emergencyController](const auto& req, auto& res) {
+        auto response = emergencyController->getStatistics(req);
+        res = std::move(response);
+    });
+
+    // 根据ID获取紧急事件
+    server.get("/api/v1/emergency/events/", [emergencyController](const auto& req, auto& res) {
+        std::string target = req.target();
+
+        // 匹配 /api/v1/emergency/events/{id} 格式
+        std::regex pattern("/api/v1/emergency/events/(\\d+)$");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                int64_t event_id = std::stoll(matches[1].str());
+                auto response = emergencyController->getEventById(req, event_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/emergency/events/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            spdlog::warn("Invalid event ID format in path: {}", target);
+            res = utils::HttpResponse::createErrorResponse("无效的事件ID格式");
+        }
+    });
+
+    // 响应紧急事件
+    server.post("/api/v1/emergency/events/", [emergencyController](const auto& req, auto& res) {
+        std::string target = req.target();
+
+        // 匹配 /api/v1/emergency/events/{id}/respond 格式
+        std::regex pattern("/api/v1/emergency/events/(\\d+)/respond$");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                int64_t event_id = std::stoll(matches[1].str());
+                auto response = emergencyController->respondToEvent(req, event_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/emergency/events/{}/respond: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        }
+        // 匹配 /api/v1/emergency/events/{id}/resolve 格式
+        else if (std::regex_match(target, std::regex("/api/v1/emergency/events/(\\d+)/resolve$"), matches)) {
+            try {
+                int64_t event_id = std::stoll(matches[1].str());
+                auto response = emergencyController->resolveEvent(req, event_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/emergency/events/{}/resolve: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        }
+        // 匹配 /api/v1/emergency/events/{id}/cancel 格式
+        else if (std::regex_match(target, std::regex("/api/v1/emergency/events/(\\d+)/cancel$"), matches)) {
+            try {
+                int64_t event_id = std::stoll(matches[1].str());
+                auto response = emergencyController->cancelEvent(req, event_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/emergency/events/{}/cancel: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            spdlog::warn("Invalid emergency event action in path: {}", target);
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    spdlog::info("API routes configured (including FlightTask, Weather, and Emergency APIs)");
 }
 
 int main(int argc, char* argv[]) {
