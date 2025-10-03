@@ -40,7 +40,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.main?.temp }}°C</h3>
+            <h3>{{ currentWeather?.weather?.temperature ? currentWeather.weather.temperature.toFixed(1) : '--' }}°C</h3>
             <p>当前温度</p>
           </div>
         </SmartCard>
@@ -62,7 +62,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.wind?.speed }} m/s</h3>
+            <h3>{{ currentWeather?.weather?.wind_speed ? currentWeather.weather.wind_speed.toFixed(1) : '--' }} m/s</h3>
             <p>风速</p>
           </div>
         </SmartCard>
@@ -84,7 +84,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.weather?.[0]?.main }}</h3>
+            <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
             <p>天气状况</p>
           </div>
         </SmartCard>
@@ -144,57 +144,57 @@
           <div class="weather-details">
             <div class="detail-item">
               <span class="label">温度:</span>
-              <span class="value">{{ currentWeather?.main?.temp }}°C</span>
+              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.temperature || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">体感温度:</span>
-              <span class="value">{{ currentWeather?.main?.feels_like }}°C</span>
+              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.feels_like || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">湿度:</span>
-              <span class="value">{{ currentWeather?.main?.humidity }}%</span>
+              <span class="value">{{ weatherApi.formatHumidity(currentWeather?.weather?.humidity || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">气压:</span>
-              <span class="value">{{ currentWeather?.main?.pressure }} hPa</span>
+              <span class="value">{{ currentWeather?.weather?.pressure || '--' }} hPa</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">风速:</span>
-              <span class="value">{{ currentWeather?.wind?.speed }} m/s</span>
+              <span class="value">{{ weatherApi.formatWindSpeed(currentWeather?.weather?.wind_speed || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">风向:</span>
-              <span class="value">{{ getWindDirection(currentWeather?.wind?.deg) }}</span>
+              <span class="value">{{ weatherApi.getWindDirection(currentWeather?.weather?.wind_direction || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">能见度:</span>
-              <span class="value">{{ currentWeather?.visibility > 0 ? (currentWeather?.visibility / 1000).toFixed(1) + 'km' : '未知' }}</span>
+              <span class="value">{{ weatherApi.formatVisibility(currentWeather?.weather?.visibility || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">云量:</span>
-              <span class="value">{{ currentWeather?.clouds?.all }}%</span>
+              <span class="value">{{ currentWeather?.weather?.cloudiness || '--' }}%</span>
             </div>
           </div>
         </div>
 
         <div class="weather-condition">
           <div class="condition-icon">
-            <img 
-              :src="getWeatherIconUrl(currentWeather?.weather?.[0]?.icon)" 
-              :alt="currentWeather?.weather?.[0]?.description"
+            <img
+              :src="weatherApi.getWeatherIconUrl(currentWeather?.weather?.icon || '01d')"
+              :alt="currentWeather?.weather?.condition"
               class="weather-icon"
             >
           </div>
           <div class="condition-description">
-            <h3>{{ currentWeather?.weather?.[0]?.main }}</h3>
-            <p>{{ currentWeather?.weather?.[0]?.description }}</p>
+            <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
+            <p>{{ weatherApi.getWeatherDescription(currentWeather?.weather?.condition || '') }}</p>
           </div>
         </div>
       </div>
@@ -458,39 +458,39 @@
             :class="{ 'forecast-today': index === 0 }"
           >
             <div class="forecast-date">
-              <span class="day">{{ getDayName(day.dt_txt) }}</span>
-              <span class="date">{{ getDate(day.dt_txt) }}</span>
+              <span class="day">{{ getDayName(day.timestamp) }}</span>
+              <span class="date">{{ getDate(day.timestamp) }}</span>
             </div>
             
             <div class="forecast-icon">
-              <img 
-                :src="getWeatherIconUrl(day.weather[0].icon)" 
-                :alt="day.weather[0].description"
+              <img
+                :src="weatherApi.getWeatherIconUrl(day.icon || '01d')"
+                :alt="day.condition"
                 class="forecast-icon-img"
               >
             </div>
-            
+
             <div class="forecast-temp">
-              <span class="high">{{ day.main.temp_max }}°C</span>
-              <span class="low">{{ day.main.temp_min }}°C</span>
+              <span class="high">{{ day.temp_max ? Math.round(day.temp_max) : '--' }}°C</span>
+              <span class="low">{{ day.temp_min ? Math.round(day.temp_min) : '--' }}°C</span>
             </div>
-            
+
             <div class="forecast-condition">
-              {{ day.weather[0].main }}
+              {{ day.condition || '--' }}
             </div>
-            
+
             <div class="forecast-detail">
               <div class="detail-row">
                 <span class="label">风速:</span>
-                <span class="value">{{ day.wind.speed }} m/s</span>
+                <span class="value">{{ day.wind_speed ? day.wind_speed.toFixed(1) : '--' }} m/s</span>
               </div>
               <div class="detail-row">
-                <span class="label">降水概率:</span>
-                <span class="value">{{ (day.pop * 100).toFixed(0) }}%</span>
+                <span class="label">安全评分:</span>
+                <span class="value">{{ day.flight_safety?.score || '--' }}</span>
               </div>
               <div class="detail-row">
                 <span class="label">湿度:</span>
-                <span class="value">{{ day.main.humidity }}%</span>
+                <span class="value">{{ day.humidity || '--' }}%</span>
               </div>
             </div>
           </div>
@@ -724,13 +724,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Temperature, Wind, Cloud, Warning, Location, Refresh,
   Map, Check
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
+import weatherApi from '@/services/weatherApi'
 
 // const store = useStore()
 
@@ -740,11 +741,13 @@ const showRiskDetails = ref(false)
 const showRoutePlanner = ref(false)
 
 const currentWeather = ref(null)
+const flightSafetyData = ref(null)
 const riskAssessment = ref(null)
 const routeWeather = ref([])
 const forecast = ref([])
 const selectedRoute = ref('')
 const forecastTimeRange = ref([])
+const currentLocation = ref({ lat: 39.9042, lon: 116.4074 }) // 默认北京坐标
 
 const routeStart = ref('')
 const routeEnd = ref('')
@@ -1278,8 +1281,22 @@ const mockRouteWeather = [
 ]
 
 // 计算属性
-const weatherLocation = computed(() => currentWeather.value?.name || '未知位置')
-const riskLevel = computed(() => riskAssessment.value?.overallRisk || 'low')
+const weatherLocation = computed(() => {
+  if (currentWeather.value?.weather?.location) {
+    return currentWeather.value.weather.location
+  }
+  return '未知位置'
+})
+
+const riskLevel = computed(() => {
+  if (!flightSafetyData.value?.safety) return 'low'
+  const score = flightSafetyData.value.safety.score || 100
+  if (score >= 80) return 'low'
+  if (score >= 60) return 'low_medium'
+  if (score >= 40) return 'medium'
+  return 'high'
+})
+
 const riskLevelText = computed(() => {
   const levels = {
     'low': '低风险',
@@ -1308,19 +1325,142 @@ const routePreviewSpeed = computed(() => {
 })
 
 // 方法
-const refreshWeatherData = () => {
+const refreshWeatherData = async () => {
   loading.value = true
-  
-  // 模拟API调用
-  setTimeout(() => {
-    currentWeather.value = mockWeatherData
-    riskAssessment.value = mockRiskAssessment
-    forecast.value = mockForecast
-    routeWeather.value = mockRouteWeather
-    
+
+  try {
+    // 并发获取当前天气、预报和飞行安全评估
+    const [weatherResponse, forecastResponse, safetyResponse] = await Promise.all([
+      weatherApi.getCurrentWeatherByCoords(currentLocation.value.lat, currentLocation.value.lon),
+      weatherApi.getForecast(currentLocation.value.lat, currentLocation.value.lon),
+      weatherApi.checkFlightSafety(currentLocation.value.lat, currentLocation.value.lon)
+    ])
+
+    if (weatherResponse.success) {
+      currentWeather.value = weatherResponse.data
+    }
+
+    if (forecastResponse.success) {
+      forecast.value = forecastResponse.data.forecast || []
+    }
+
+    if (safetyResponse.success) {
+      flightSafetyData.value = safetyResponse.data
+      // 构建风险评估数据
+      buildRiskAssessment(safetyResponse.data)
+    }
+
     ElMessage.success('天气数据已刷新')
+  } catch (error) {
+    console.error('刷新天气数据失败:', error)
+    ElMessage.error('获取天气数据失败，请稍后重试')
+  } finally {
     loading.value = false
-  }, 1500)
+  }
+}
+
+/**
+ * 根据后端返回的飞行安全数据构建前端风险评估
+ */
+const buildRiskAssessment = (safetyData) => {
+  if (!safetyData || !safetyData.safety) return
+
+  const safety = safetyData.safety
+  const weather = safetyData.weather
+
+  const risks = []
+  const warnings = []
+  const recommendations = []
+
+  // 添加风险项
+  if (weather.wind_speed) {
+    const windSpeed = weather.wind_speed
+    let riskLevel = 'low'
+    if (windSpeed > 15) {
+      riskLevel = 'high'
+    } else if (windSpeed > 10) {
+      riskLevel = 'medium'
+    }
+
+    if (windSpeed > 10) {
+      risks.push({
+        type: 'wind',
+        level: riskLevel,
+        value: windSpeed,
+        threshold: 15,
+        description: `风速: ${windSpeed.toFixed(1)} m/s`
+      })
+    }
+  }
+
+  if (weather.visibility) {
+    const visibility = weather.visibility
+    let riskLevel = 'low'
+    if (visibility < 1000) {
+      riskLevel = 'high'
+    } else if (visibility < 5000) {
+      riskLevel = 'medium'
+    }
+
+    if (visibility < 5000) {
+      risks.push({
+        type: 'visibility',
+        level: riskLevel,
+        value: visibility,
+        threshold: 1000,
+        description: `能见度: ${(visibility / 1000).toFixed(1)} km`
+      })
+    }
+  }
+
+  // 温度评估
+  if (weather.temperature) {
+    const temp = weather.temperature
+    let riskLevel = 'low'
+    if (temp < -10 || temp > 40) {
+      riskLevel = 'medium'
+    }
+
+    risks.push({
+      type: 'temperature',
+      level: riskLevel,
+      value: temp,
+      threshold: -10,
+      description: `温度: ${temp.toFixed(1)}°C`
+    })
+  }
+
+  // 添加警告和建议
+  if (safety.warnings && safety.warnings.length > 0) {
+    safety.warnings.forEach(warning => {
+      warnings.push({
+        type: 'warning',
+        level: 'medium',
+        description: warning
+      })
+    })
+  }
+
+  // 根据评分生成建议
+  const score = safety.score || 100
+  if (score >= 80) {
+    recommendations.push('天气条件良好，适合飞行')
+  } else if (score >= 60) {
+    recommendations.push('天气条件一般，建议谨慎飞行')
+    recommendations.push('注意观察天气变化')
+  } else if (score >= 40) {
+    recommendations.push('天气条件较差，不建议飞行')
+    recommendations.push('如必须飞行，请降低飞行高度和速度')
+  } else {
+    recommendations.push('天气条件恶劣，禁止飞行')
+  }
+
+  riskAssessment.value = {
+    overallRisk: riskLevel.value,
+    risks,
+    warnings,
+    recommendations
+  }
 }
 
 const getRiskTagType = (level) => {
@@ -1380,14 +1520,16 @@ const getWeatherIconUrl = (iconCode) => {
   return `https://openweathermap.org/img/wn/${iconCode}@2x.png`
 }
 
-const getDayName = (dateTimeStr) => {
-  const date = new Date(dateTimeStr)
+const getDayName = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   return days[date.getDay()]
 }
 
-const getDate = (dateTimeStr) => {
-  const date = new Date(dateTimeStr)
+const getDate = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
   return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
