@@ -116,6 +116,12 @@ public:
      */
     nlohmann::json getEventStatistics();
 
+    /**
+     * @brief 生成唯一的事件编号
+     * @return 事件编号
+     */
+    std::string generateEventCode();
+
 private:
     /**
      * @brief 从数据库行创建EmergencyEvent对象
@@ -123,12 +129,6 @@ private:
      * @return EmergencyEvent对象
      */
     models::EmergencyEvent createEventFromRow(mysqlx::Row& row);
-
-    /**
-     * @brief 生成唯一的事件编号
-     * @return 事件编号
-     */
-    std::string generateEventCode();
 };
 
 } // namespace repositories

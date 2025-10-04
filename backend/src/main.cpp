@@ -753,12 +753,11 @@ void setupRoutes(server::HttpServer& server) {
         }
     });
 
-    // 响应紧急事件
-    server.post("/api/v1/emergency/events/", [emergencyController](const auto& req, auto& res) {
+    // 响应紧急事件 - respond
+    server.post("/api/v1/emergency/events/{id}/respond", [emergencyController](const auto& req, auto& res) {
         std::string target = req.target();
 
-        // 匹配 /api/v1/emergency/events/{id}/respond 格式
-        std::regex pattern("/api/v1/emergency/events/(\\d+)/respond$");
+        std::regex pattern("/api/v1/emergency/events/(\\d+)/respond");
         std::smatch matches;
 
         if (std::regex_match(target, matches, pattern)) {
@@ -770,9 +769,19 @@ void setupRoutes(server::HttpServer& server) {
                 spdlog::error("Error in POST /api/v1/emergency/events/{}/respond: {}", matches[1].str(), e.what());
                 res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
             }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
         }
-        // 匹配 /api/v1/emergency/events/{id}/resolve 格式
-        else if (std::regex_match(target, std::regex("/api/v1/emergency/events/(\\d+)/resolve$"), matches)) {
+    });
+
+    // 解决紧急事件 - resolve
+    server.post("/api/v1/emergency/events/{id}/resolve", [emergencyController](const auto& req, auto& res) {
+        std::string target = req.target();
+
+        std::regex pattern("/api/v1/emergency/events/(\\d+)/resolve");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
             try {
                 int64_t event_id = std::stoll(matches[1].str());
                 auto response = emergencyController->resolveEvent(req, event_id);
@@ -781,9 +790,19 @@ void setupRoutes(server::HttpServer& server) {
                 spdlog::error("Error in POST /api/v1/emergency/events/{}/resolve: {}", matches[1].str(), e.what());
                 res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
             }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
         }
-        // 匹配 /api/v1/emergency/events/{id}/cancel 格式
-        else if (std::regex_match(target, std::regex("/api/v1/emergency/events/(\\d+)/cancel$"), matches)) {
+    });
+
+    // 取消紧急事件 - cancel
+    server.post("/api/v1/emergency/events/{id}/cancel", [emergencyController](const auto& req, auto& res) {
+        std::string target = req.target();
+
+        std::regex pattern("/api/v1/emergency/events/(\\d+)/cancel");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
             try {
                 int64_t event_id = std::stoll(matches[1].str());
                 auto response = emergencyController->cancelEvent(req, event_id);
@@ -793,7 +812,6 @@ void setupRoutes(server::HttpServer& server) {
                 res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
             }
         } else {
-            spdlog::warn("Invalid emergency event action in path: {}", target);
             res = utils::HttpResponse::createErrorResponse("无效的请求路径");
         }
     });

@@ -19,7 +19,11 @@ nlohmann::json EmergencyEvent::toJson() const {
     json["severity"] = severityToString(severity);
     json["status"] = statusToString(status);
     json["title"] = title;
-    json["description"] = description;
+
+    if (description.has_value()) {
+        json["description"] = description.value();
+    }
+
     json["location"] = location;
 
     if (response_action.has_value()) {
@@ -76,7 +80,11 @@ EmergencyEvent EmergencyEvent::fromDatabaseJson(const nlohmann::json& json) {
     event.severity = stringToSeverity(json.value("severity", "medium"));
     event.status = stringToStatus(json.value("status", "active"));
     event.title = json.value("title", "");
-    event.description = json.value("description", "");
+
+    if (json.contains("description") && !json["description"].is_null()) {
+        event.description = json["description"].get<std::string>();
+    }
+
     event.location = json.value("location", nlohmann::json::object());
 
     if (json.contains("response_action") && !json["response_action"].is_null()) {
@@ -172,7 +180,6 @@ bool EmergencyEvent::validate() const {
     if (event_code.empty()) return false;
     if (task_id <= 0) return false;
     if (title.empty()) return false;
-    if (description.empty()) return false;
     if (!location.contains("lat") || !location.contains("lon")) return false;
     return true;
 }

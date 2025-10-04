@@ -54,7 +54,7 @@ public:
     EmergencySeverity severity;                    // 严重程度
     EmergencyStatus status;                        // 事件状态
     std::string title;                             // 事件标题
-    std::string description;                       // 事件描述
+    std::optional<std::string> description;        // 事件描述（可选）
     nlohmann::json location;                       // 事件位置 {lat, lon}
     std::optional<std::string> response_action;    // 响应措施
     std::optional<std::string> response_notes;     // 响应备注
