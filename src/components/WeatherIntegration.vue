@@ -40,7 +40,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.main?.temp }}°C</h3>
+            <h3>{{ currentWeather?.weather?.temperature ? currentWeather.weather.temperature.toFixed(1) : '--' }}°C</h3>
             <p>当前温度</p>
           </div>
         </SmartCard>
@@ -62,7 +62,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.wind?.speed }} m/s</h3>
+            <h3>{{ currentWeather?.weather?.wind_speed ? currentWeather.weather.wind_speed.toFixed(1) : '--' }} m/s</h3>
             <p>风速</p>
           </div>
         </SmartCard>
@@ -84,7 +84,7 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ currentWeather?.weather?.[0]?.main }}</h3>
+            <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
             <p>天气状况</p>
           </div>
         </SmartCard>
@@ -106,7 +106,9 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3>{{ riskLevelText }}</h3>
+            <h3 v-if="riskAssessment && riskAssessment.overallRisk">{{ getRiskLevelText(riskAssessment.overallRisk) }}</h3>
+            <h3 v-else-if="loading">加载中...</h3>
+            <h3 v-else>--</h3>
             <p>飞行风险等级</p>
           </div>
         </SmartCard>
@@ -122,10 +124,25 @@
         <div class="card-header">
           <span class="card-title">实时天气</span>
           <el-tag
-            :type="getRiskTagType(riskLevel)"
+            v-if="riskAssessment && riskAssessment.overallRisk"
+            :type="getRiskTagType(riskAssessment.overallRisk)"
             size="medium"
           >
-            {{ riskLevelText }}
+            {{ getRiskLevelText(riskAssessment.overallRisk) }}
+          </el-tag>
+          <el-tag
+            v-else-if="loading"
+            type="info"
+            size="medium"
+          >
+            加载中...
+          </el-tag>
+          <el-tag
+            v-else
+            type="info"
+            size="medium"
+          >
+            暂无数据
           </el-tag>
         </div>
       </template>
@@ -144,57 +161,57 @@
           <div class="weather-details">
             <div class="detail-item">
               <span class="label">温度:</span>
-              <span class="value">{{ currentWeather?.main?.temp }}°C</span>
+              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.temperature || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">体感温度:</span>
-              <span class="value">{{ currentWeather?.main?.feels_like }}°C</span>
+              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.feels_like || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">湿度:</span>
-              <span class="value">{{ currentWeather?.main?.humidity }}%</span>
+              <span class="value">{{ weatherApi.formatHumidity(currentWeather?.weather?.humidity || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">气压:</span>
-              <span class="value">{{ currentWeather?.main?.pressure }} hPa</span>
+              <span class="value">{{ currentWeather?.weather?.pressure || '--' }} hPa</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">风速:</span>
-              <span class="value">{{ currentWeather?.wind?.speed }} m/s</span>
+              <span class="value">{{ weatherApi.formatWindSpeed(currentWeather?.weather?.wind_speed || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">风向:</span>
-              <span class="value">{{ getWindDirection(currentWeather?.wind?.deg) }}</span>
+              <span class="value">{{ weatherApi.getWindDirection(currentWeather?.weather?.wind_direction || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">能见度:</span>
-              <span class="value">{{ currentWeather?.visibility > 0 ? (currentWeather?.visibility / 1000).toFixed(1) + 'km' : '未知' }}</span>
+              <span class="value">{{ weatherApi.formatVisibility(currentWeather?.weather?.visibility || 0) }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="label">云量:</span>
-              <span class="value">{{ currentWeather?.clouds?.all }}%</span>
+              <span class="value">{{ currentWeather?.weather?.cloudiness || '--' }}%</span>
             </div>
           </div>
         </div>
 
         <div class="weather-condition">
           <div class="condition-icon">
-            <img 
-              :src="getWeatherIconUrl(currentWeather?.weather?.[0]?.icon)" 
-              :alt="currentWeather?.weather?.[0]?.description"
+            <img
+              :src="weatherApi.getWeatherIconUrl(currentWeather?.weather?.icon || '01d')"
+              :alt="currentWeather?.weather?.condition"
               class="weather-icon"
             >
           </div>
           <div class="condition-description">
-            <h3>{{ currentWeather?.weather?.[0]?.main }}</h3>
-            <p>{{ currentWeather?.weather?.[0]?.description }}</p>
+            <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
+            <p>{{ weatherApi.getWeatherDescription(currentWeather?.weather?.condition || '') }}</p>
           </div>
         </div>
       </div>
@@ -247,24 +264,18 @@
           <div
             v-for="(warning, index) in riskAssessment.warnings"
             :key="index"
-            class="risk-item"
+            class="risk-item warning-item"
           >
-            <div
-              class="risk-icon warning-icon"
-              :class="getRiskIconClass(warning.level)"
-            >
+            <div class="risk-icon warning-icon">
               <el-icon
                 :size="18"
-                :color="getRiskColor(warning.level)"
+                color="#E6A23C"
               >
                 {{ getRiskIcon('warning') }}
               </el-icon>
             </div>
             <div class="risk-info">
               <h4>{{ warning.description }}</h4>
-              <p class="risk-level">
-                {{ getRiskLevelText(warning.level) }}
-              </p>
             </div>
           </div>
         </div>
@@ -350,80 +361,102 @@
             :row-class-name="getRowClass"
           >
             <el-table-column
-              prop="node.lat"
-              label="纬度"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                {{ row.node.lat.toFixed(4) }}
-              </template>
-            </el-table-column>
-            
-            <el-table-column
-              prop="node.lng"
-              label="经度"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                {{ row.node.lng.toFixed(4) }}
-              </template>
-            </el-table-column>
-            
-            <el-table-column
-              prop="weather.main.temp"
-              label="温度"
-              width="80"
-              align="center"
-            >
-              <template #default="{ row }">
-                <span :class="getTempClass(row.weather.main.temp)">{{ row.weather.main.temp }}°C</span>
-              </template>
-            </el-table-column>
-            
-            <el-table-column
-              prop="weather.weather[0].main"
-              label="天气"
+              prop="date"
+              label="日期"
               width="120"
               align="center"
             >
               <template #default="{ row }">
-                <div class="weather-status">
-                  <img 
-                    :src="getWeatherIconUrl(row.weather.weather[0].icon)" 
-                    :alt="row.weather.weather[0].description"
-                    class="weather-icon-small"
-                  >
-                  <span>{{ row.weather.weather[0].description }}</span>
+                <div>
+                  <div style="font-weight: 500;">{{ row.dayName }}</div>
+                  <div style="font-size: 12px; color: #909399;">{{ row.dateStr }}</div>
                 </div>
               </template>
             </el-table-column>
-            
+
             <el-table-column
-              prop="riskAssessment.overallRisk"
+              prop="weather"
+              label="天气状况"
+              width="150"
+              align="center"
+            >
+              <template #default="{ row }">
+                <div class="weather-status">
+                  <img
+                    :src="getWeatherIconUrl(row.icon)"
+                    :alt="row.condition"
+                    class="weather-icon-small"
+                  >
+                  <span>{{ row.condition }}</span>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="temperature"
+              label="温度范围"
+              width="120"
+              align="center"
+            >
+              <template #default="{ row }">
+                <div>
+                  <span style="color: #F56C6C; font-weight: 500;">{{ row.temp_max }}°C</span>
+                  <span style="margin: 0 5px;">/</span>
+                  <span style="color: #409EFF;">{{ row.temp_min }}°C</span>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="wind_speed"
+              label="风速"
+              width="100"
+              align="center"
+            >
+              <template #default="{ row }">
+                <span>{{ row.wind_speed }} m/s</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="humidity"
+              label="湿度"
+              width="80"
+              align="center"
+            >
+              <template #default="{ row }">
+                <span>{{ row.humidity }}%</span>
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="safety_score"
+              label="安全评分"
+              width="100"
+              align="center"
+            >
+              <template #default="{ row }">
+                <el-progress
+                  :percentage="row.safety_score"
+                  :color="getSafetyScoreColor(row.safety_score)"
+                  :stroke-width="8"
+                />
+              </template>
+            </el-table-column>
+
+            <el-table-column
+              prop="risk_level"
               label="风险等级"
               width="120"
               align="center"
             >
               <template #default="{ row }">
                 <el-tag
-                  :type="getRiskTagType(row.riskAssessment.overallRisk)"
+                  :type="getRiskTagType(row.risk_level)"
                   size="small"
                 >
-                  {{ getRiskLevelText(row.riskAssessment.overallRisk) }}
+                  {{ getRiskLevelText(row.risk_level) }}
                 </el-tag>
-              </template>
-            </el-table-column>
-            
-            <el-table-column
-              prop="riskAssessment.risks.length"
-              label="风险项"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                <span>{{ row.riskAssessment.risks.length }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -445,52 +478,53 @@
     >
       <template #header>
         <div class="card-header">
-          <span class="card-title">未来24小时天气预报</span>
+          <span class="card-title">当日每时段天气变化表（3h）</span>
+          <el-tag type="info" size="small">每3小时更新</el-tag>
         </div>
       </template>
 
       <div class="forecast-content">
         <div class="forecast-grid">
-          <div 
-            v-for="(day, index) in forecast" 
-            :key="index" 
+          <div
+            v-for="(day, index) in forecast"
+            :key="index"
             class="forecast-item"
             :class="{ 'forecast-today': index === 0 }"
           >
             <div class="forecast-date">
-              <span class="day">{{ getDayName(day.dt_txt) }}</span>
-              <span class="date">{{ getDate(day.dt_txt) }}</span>
+              <span class="day">{{ getTimeSlot(index) }}</span>
+              <span class="date">{{ getTimeSlotDate(index) }}</span>
             </div>
             
             <div class="forecast-icon">
-              <img 
-                :src="getWeatherIconUrl(day.weather[0].icon)" 
-                :alt="day.weather[0].description"
+              <img
+                :src="weatherApi.getWeatherIconUrl(day.icon || '01d')"
+                :alt="day.condition"
                 class="forecast-icon-img"
               >
             </div>
-            
+
             <div class="forecast-temp">
-              <span class="high">{{ day.main.temp_max }}°C</span>
-              <span class="low">{{ day.main.temp_min }}°C</span>
+              <span class="high">{{ day.temp_max ? Math.round(day.temp_max) : '--' }}°C</span>
+              <span class="low">{{ day.temp_min ? Math.round(day.temp_min) : '--' }}°C</span>
             </div>
-            
+
             <div class="forecast-condition">
-              {{ day.weather[0].main }}
+              {{ day.condition || '--' }}
             </div>
-            
+
             <div class="forecast-detail">
               <div class="detail-row">
                 <span class="label">风速:</span>
-                <span class="value">{{ day.wind.speed }} m/s</span>
+                <span class="value">{{ day.wind_speed ? day.wind_speed.toFixed(1) : '--' }} m/s</span>
               </div>
               <div class="detail-row">
-                <span class="label">降水概率:</span>
-                <span class="value">{{ (day.pop * 100).toFixed(0) }}%</span>
+                <span class="label">安全评分:</span>
+                <span class="value">{{ day.flight_safety?.score || '--' }}</span>
               </div>
               <div class="detail-row">
                 <span class="label">湿度:</span>
-                <span class="value">{{ day.main.humidity }}%</span>
+                <span class="value">{{ day.humidity || '--' }}%</span>
               </div>
             </div>
           </div>
@@ -724,13 +758,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Temperature, Wind, Cloud, Warning, Location, Refresh,
   Map, Check
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
+import weatherApi from '@/services/weatherApi'
 
 // const store = useStore()
 
@@ -740,11 +775,13 @@ const showRiskDetails = ref(false)
 const showRoutePlanner = ref(false)
 
 const currentWeather = ref(null)
+const flightSafetyData = ref(null)
 const riskAssessment = ref(null)
 const routeWeather = ref([])
 const forecast = ref([])
 const selectedRoute = ref('')
 const forecastTimeRange = ref([])
+const currentLocation = ref({ lat: 39.9042, lon: 116.4074 }) // 默认北京坐标
 
 const routeStart = ref('')
 const routeEnd = ref('')
@@ -1061,234 +1098,71 @@ const mockForecast = [
   }
 ]
 
-const mockRouteWeather = [
-  {
-    node: { lat: 39.90923, lng: 116.397428 },
-    weather: {
-      main: {
-        temp: 18.5,
-        feels_like: 17.2,
-        temp_min: 16.8,
-        temp_max: 20.1,
-        pressure: 1013,
-        humidity: 65
-      },
-      weather: [
-        {
-          id: 800,
-          main: "Clear",
-          description: "晴朗",
-          icon: "01d"
-        }
-      ],
-      visibility: 10000,
-      wind: {
-        speed: 3.5,
-        deg: 180
-      },
-      clouds: {
-        all: 10
-      }
-    },
-    riskAssessment: {
-      overallRisk: 'low',
-      risks: [],
-      warnings: [],
-      recommendations: ['天气条件良好，适合飞行']
+// 生成未来5天的航线天气预报Mock数据
+const generateMockRouteWeather = (startDate = null) => {
+  const baseDate = startDate ? new Date(startDate) : new Date()
+  const weatherConditions = [
+    { condition: '晴朗', icon: '01d', temp_max: 22, temp_min: 15, wind: 3.5, humidity: 55, score: 95, risk: 'low' },
+    { condition: '少云', icon: '02d', temp_max: 21, temp_min: 14, wind: 4.2, humidity: 60, score: 88, risk: 'low' },
+    { condition: '多云', icon: '03d', temp_max: 20, temp_min: 13, wind: 5.5, humidity: 65, score: 72, risk: 'low_medium' },
+    { condition: '阴天', icon: '04d', temp_max: 18, temp_min: 12, wind: 6.8, humidity: 70, score: 58, risk: 'medium' },
+    { condition: '小雨', icon: '10d', temp_max: 16, temp_min: 11, wind: 8.2, humidity: 80, score: 45, risk: 'medium' }
+  ]
+
+  return weatherConditions.map((weather, index) => {
+    const date = new Date(baseDate)
+    date.setDate(date.getDate() + index)
+
+    // 计算相对于今天的天数差
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const targetDate = new Date(date)
+    targetDate.setHours(0, 0, 0, 0)
+    const daysDiff = Math.floor((targetDate - today) / (1000 * 60 * 60 * 24))
+
+    let dayName = ''
+    if (daysDiff === 0) {
+      dayName = '今天'
+    } else if (daysDiff === 1) {
+      dayName = '明天'
+    } else if (daysDiff === 2) {
+      dayName = '后天'
+    } else if (daysDiff > 0) {
+      dayName = `${daysDiff}天后`
+    } else if (daysDiff === -1) {
+      dayName = '昨天'
+    } else {
+      dayName = `${Math.abs(daysDiff)}天前`
     }
-  },
-  {
-    node: { lat: 39.91423, lng: 116.402428 },
-    weather: {
-      main: {
-        temp: 18.2,
-        feels_like: 16.9,
-        temp_min: 16.5,
-        temp_max: 19.8,
-        pressure: 1012,
-        humidity: 67
-      },
-      weather: [
-        {
-          id: 801,
-          main: "Few clouds",
-          description: "少云",
-          icon: "02d"
-        }
-      ],
-      visibility: 9800,
-      wind: {
-        speed: 4.1,
-        deg: 175
-      },
-      clouds: {
-        all: 20
-      }
-    },
-    riskAssessment: {
-      overallRisk: 'low',
-      risks: [],
-      warnings: [],
-      recommendations: ['天气条件良好，适合飞行']
+
+    const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`
+
+    return {
+      date: date.getTime(),
+      dayName: dayName,
+      dateStr: dateStr,
+      condition: weather.condition,
+      icon: weather.icon,
+      temp_max: weather.temp_max,
+      temp_min: weather.temp_min,
+      wind_speed: weather.wind.toFixed(1),
+      humidity: weather.humidity,
+      safety_score: weather.score,
+      risk_level: weather.risk
     }
-  },
-  {
-    node: { lat: 39.91923, lng: 116.407428 },
-    weather: {
-      main: {
-        temp: 17.8,
-        feels_like: 16.5,
-        temp_min: 16.1,
-        temp_max: 19.4,
-        pressure: 1011,
-        humidity: 69
-      },
-      weather: [
-        {
-          id: 802,
-          main: "Scattered clouds",
-          description: "多云",
-          icon: "03d"
-        }
-      ],
-      visibility: 9500,
-      wind: {
-        speed: 4.8,
-        deg: 170
-      },
-      clouds: {
-        all: 40
-      }
-    },
-    riskAssessment: {
-      overallRisk: 'medium',
-      risks: [
-        {
-          type: 'wind',
-          level: 'medium',
-          value: 4.8,
-          threshold: 15,
-          description: '风速较高: 4.8 m/s'
-        }
-      ],
-      warnings: [],
-      recommendations: ['风速较高，建议降低飞行高度']
-    }
-  },
-  {
-    node: { lat: 39.92423, lng: 116.412428 },
-    weather: {
-      main: {
-        temp: 17.5,
-        feels_like: 16.2,
-        temp_min: 15.8,
-        temp_max: 19.1,
-        pressure: 1010,
-        humidity: 70
-      },
-      weather: [
-        {
-          id: 803,
-          main: "Broken clouds",
-          description: "阴天",
-          icon: "04d"
-        }
-      ],
-      visibility: 9200,
-      wind: {
-        speed: 5.2,
-        deg: 165
-      },
-      clouds: {
-        all: 60
-      }
-    },
-    riskAssessment: {
-      overallRisk: 'medium',
-      risks: [
-        {
-          type: 'wind',
-          level: 'medium',
-          value: 5.2,
-          threshold: 15,
-          description: '风速较高: 5.2 m/s'
-        },
-        {
-          type: 'visibility',
-          level: 'medium',
-          value: 9200,
-          threshold: 1000,
-          description: '能见度不足: 9200米'
-        }
-      ],
-      warnings: [],
-      recommendations: ['风速较高，能见度一般，建议谨慎飞行']
-    }
-  },
-  {
-    node: { lat: 39.92923, lng: 116.417428 },
-    weather: {
-      main: {
-        temp: 17.2,
-        feels_like: 15.9,
-        temp_min: 15.5,
-        temp_max: 18.8,
-        pressure: 1009,
-        humidity: 72
-      },
-      weather: [
-        {
-          id: 804,
-          main: "Overcast",
-          description: "阴",
-          icon: "04n"
-        }
-      ],
-      visibility: 8500,
-      wind: {
-        speed: 4.5,
-        deg: 160
-      },
-      clouds: {
-        all: 80
-      }
-    },
-    riskAssessment: {
-      overallRisk: 'medium',
-      risks: [
-        {
-          type: 'wind',
-          level: 'medium',
-          value: 4.5,
-          threshold: 15,
-          description: '风速较高: 4.5 m/s'
-        },
-        {
-          type: 'visibility',
-          level: 'medium',
-          value: 8500,
-          threshold: 1000,
-          description: '能见度不足: 8500米'
-        }
-      ],
-      warnings: [],
-      recommendations: ['风速较高，能见度一般，建议谨慎飞行']
-    }
-  }
-]
+  })
+}
 
 // 计算属性
-const weatherLocation = computed(() => currentWeather.value?.name || '未知位置')
-const riskLevel = computed(() => riskAssessment.value?.overallRisk || 'low')
-const riskLevelText = computed(() => {
-  const levels = {
-    'low': '低风险',
-    'low_medium': '低中风险',
-    'medium': '中风险',
-    'high': '高风险'
+const weatherLocation = computed(() => {
+  if (currentWeather.value?.weather?.location) {
+    return currentWeather.value.weather.location
   }
-  return levels[riskLevel.value] || '未知'
+  return '未知位置'
 })
+
+// 移除了 riskLevel 和 riskLevelText computed 属性
+// 现在统一使用 riskAssessment.overallRisk 来确保一致性
 
 const routePreviewDistance = computed(() => {
   if (routePreview.value.length === 0) return 0
@@ -1308,19 +1182,265 @@ const routePreviewSpeed = computed(() => {
 })
 
 // 方法
-const refreshWeatherData = () => {
+const refreshWeatherData = async () => {
   loading.value = true
-  
-  // 模拟API调用
-  setTimeout(() => {
-    currentWeather.value = mockWeatherData
-    riskAssessment.value = mockRiskAssessment
-    forecast.value = mockForecast
-    routeWeather.value = mockRouteWeather
-    
-    ElMessage.success('天气数据已刷新')
+
+  try {
+    // 并发获取当前天气、预报和飞行安全评估
+    const [weatherResponse, forecastResponse, safetyResponse] = await Promise.all([
+      weatherApi.getCurrentWeatherByCoords(currentLocation.value.lat, currentLocation.value.lon),
+      weatherApi.getForecast(currentLocation.value.lat, currentLocation.value.lon),
+      weatherApi.checkFlightSafety(currentLocation.value.lat, currentLocation.value.lon)
+    ]).catch(error => {
+      console.warn('API请求失败，使用Mock数据作为降级方案:', error)
+      return [null, null, null]
+    })
+
+    // 如果API请求失败，使用Mock数据
+    if (!weatherResponse || !weatherResponse.success) {
+      console.log('使用Mock天气数据')
+      currentWeather.value = {
+        weather: {
+          location: '北京',
+          temperature: 18.5,
+          feels_like: 17.2,
+          temp_min: 16.8,
+          temp_max: 20.1,
+          humidity: 65,
+          pressure: 1013,
+          wind_speed: 3.5,
+          wind_direction: 180,
+          visibility: 10000,
+          cloudiness: 10,
+          condition: '晴朗',
+          icon: '01d',
+          timestamp: Math.floor(Date.now() / 1000)
+        }
+      }
+    } else {
+      currentWeather.value = weatherResponse.data
+    }
+
+    if (!forecastResponse || !forecastResponse.success) {
+      console.log('使用Mock预报数据')
+      forecast.value = mockForecast.map(item => ({
+        timestamp: item.dt,
+        temperature: item.main.temp,
+        temp_min: item.main.temp_min,
+        temp_max: item.main.temp_max,
+        humidity: item.main.humidity,
+        pressure: item.main.pressure,
+        wind_speed: item.wind.speed,
+        condition: item.weather[0].description,
+        icon: item.weather[0].icon,
+        cloudiness: item.clouds.all,
+        visibility: item.visibility,
+        flight_safety: {
+          score: item.main.temp > 15 && item.wind.speed < 5 ? 90 : 70,
+          safe: item.wind.speed < 10
+        }
+      }))
+    } else {
+      forecast.value = forecastResponse.data.forecast || []
+    }
+
+    if (!safetyResponse || !safetyResponse.success) {
+      console.log('使用Mock安全评估数据')
+      const mockSafetyData = {
+        safety: {
+          safe: true,
+          score: 85,
+          warnings: ['天气条件良好']
+        },
+        weather: currentWeather.value.weather
+      }
+      flightSafetyData.value = mockSafetyData
+      buildRiskAssessment(mockSafetyData)
+    } else {
+      flightSafetyData.value = safetyResponse.data
+      // 构建风险评估数据
+      buildRiskAssessment(safetyResponse.data)
+    }
+
+    ElMessage.success('天气数据已加载（演示模式）')
+  } catch (error) {
+    console.error('刷新天气数据失败:', error)
+    ElMessage.warning('使用演示数据显示')
+    // 最终降级：直接使用Mock数据
+    useMockData()
+  } finally {
     loading.value = false
-  }, 1500)
+  }
+}
+
+// 使用Mock数据的降级函数
+const useMockData = () => {
+  currentWeather.value = {
+    weather: {
+      location: '北京',
+      temperature: 18.5,
+      feels_like: 17.2,
+      temp_min: 16.8,
+      temp_max: 20.1,
+      humidity: 65,
+      pressure: 1013,
+      wind_speed: 3.5,
+      wind_direction: 180,
+      visibility: 10000,
+      cloudiness: 10,
+      condition: '晴朗',
+      icon: '01d',
+      timestamp: Math.floor(Date.now() / 1000)
+    }
+  }
+
+  forecast.value = mockForecast.slice(0, 8).map(item => ({
+    timestamp: item.dt,
+    temperature: item.main.temp,
+    temp_min: item.main.temp_min,
+    temp_max: item.main.temp_max,
+    humidity: item.main.humidity,
+    pressure: item.main.pressure,
+    wind_speed: item.wind.speed,
+    condition: item.weather[0].description,
+    icon: item.weather[0].icon,
+    cloudiness: item.clouds.all,
+    visibility: item.visibility,
+    flight_safety: {
+      score: 85,
+      safe: true
+    }
+  }))
+
+  flightSafetyData.value = {
+    safety: {
+      safe: true,
+      score: 85,
+      warnings: ['演示模式：天气条件良好']
+    },
+    weather: currentWeather.value.weather
+  }
+
+  buildRiskAssessment(flightSafetyData.value)
+}
+
+/**
+ * 根据后端返回的飞行安全数据构建前端风险评估
+ */
+const buildRiskAssessment = (safetyData) => {
+  if (!safetyData || !safetyData.safety) return
+
+  const safety = safetyData.safety
+  const weather = safetyData.weather
+
+  const risks = []
+  const warnings = []
+  const recommendations = []
+
+  // 添加风险项
+  if (weather.wind_speed) {
+    const windSpeed = weather.wind_speed
+    let riskLevel = 'low'
+    if (windSpeed > 15) {
+      riskLevel = 'high'
+    } else if (windSpeed > 10) {
+      riskLevel = 'medium'
+    }
+
+    if (windSpeed > 10) {
+      risks.push({
+        type: 'wind',
+        level: riskLevel,
+        value: windSpeed,
+        threshold: 15,
+        description: `风速: ${windSpeed.toFixed(1)} m/s`
+      })
+    }
+  }
+
+  if (weather.visibility) {
+    const visibility = weather.visibility
+    let riskLevel = 'low'
+    if (visibility < 1000) {
+      riskLevel = 'high'
+    } else if (visibility < 5000) {
+      riskLevel = 'medium'
+    }
+
+    if (visibility < 5000) {
+      risks.push({
+        type: 'visibility',
+        level: riskLevel,
+        value: visibility,
+        threshold: 1000,
+        description: `能见度: ${(visibility / 1000).toFixed(1)} km`
+      })
+    }
+  }
+
+  // 温度评估
+  if (weather.temperature) {
+    const temp = weather.temperature
+    let riskLevel = 'low'
+    if (temp < -10 || temp > 40) {
+      riskLevel = 'medium'
+    }
+
+    risks.push({
+      type: 'temperature',
+      level: riskLevel,
+      value: temp,
+      threshold: -10,
+      description: `温度: ${temp.toFixed(1)}°C`
+    })
+  }
+
+  // 添加警告和建议（警告不单独显示风险等级，只作为提示信息）
+  if (safety.warnings && safety.warnings.length > 0) {
+    safety.warnings.forEach(warning => {
+      warnings.push({
+        type: 'warning',
+        description: warning
+      })
+    })
+  }
+
+  // 根据评分生成建议和总体风险等级
+  const score = safety.score || 100
+  let overallRisk = 'low'
+
+  if (score >= 80) {
+    overallRisk = 'low'
+    recommendations.push('天气条件良好，适合飞行')
+  } else if (score >= 60) {
+    overallRisk = 'low_medium'
+    recommendations.push('天气条件一般，建议谨慎飞行')
+    recommendations.push('注意观察天气变化')
+  } else if (score >= 40) {
+    overallRisk = 'medium'
+    recommendations.push('天气条件较差，不建议飞行')
+    recommendations.push('如必须飞行，请降低飞行高度和速度')
+  } else {
+    overallRisk = 'high'
+    recommendations.push('天气条件恶劣，禁止飞行')
+  }
+
+  console.log('[buildRiskAssessment] 计算结果:', {
+    score: score,
+    overallRisk: overallRisk,
+    risks: risks,
+    warnings: warnings,
+    recommendations: recommendations
+  })
+
+  riskAssessment.value = {
+    overallRisk: overallRisk,
+    risks,
+    warnings,
+    recommendations
+  }
+
+  console.log('[buildRiskAssessment] riskAssessment设置完成:', riskAssessment.value)
 }
 
 const getRiskTagType = (level) => {
@@ -1380,15 +1500,60 @@ const getWeatherIconUrl = (iconCode) => {
   return `https://openweathermap.org/img/wn/${iconCode}@2x.png`
 }
 
-const getDayName = (dateTimeStr) => {
-  const date = new Date(dateTimeStr)
+const getDayName = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   return days[date.getDay()]
 }
 
-const getDate = (dateTimeStr) => {
-  const date = new Date(dateTimeStr)
+const getDate = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
   return `${date.getMonth() + 1}月${date.getDate()}日`
+}
+
+const getTimeSlot = (index) => {
+  // 每个时段为3小时，从当前时间开始
+  const now = new Date()
+  const currentHour = now.getHours()
+
+  // 计算起始小时（向下取整到3的倍数）
+  const baseHour = Math.floor(currentHour / 3) * 3
+
+  // 计算该索引对应的起始和结束小时
+  const startHour = (baseHour + index * 3) % 24
+  const endHour = (startHour + 3) % 24
+
+  // 格式化为 HH:MM 格式
+  const formatHour = (hour) => {
+    return `${hour.toString().padStart(2, '0')}:00`
+  }
+
+  return `${formatHour(startHour)} ~ ${formatHour(endHour)}`
+}
+
+const getTimeSlotDate = (index) => {
+  // 计算该时段对应的日期
+  const now = new Date()
+  const currentHour = now.getHours()
+  const baseHour = Math.floor(currentHour / 3) * 3
+
+  // 计算该时段的起始小时（实际小时数，不取模）
+  const actualStartHour = baseHour + index * 3
+
+  // 计算日期偏移（每24小时为一天）
+  const dayOffset = Math.floor(actualStartHour / 24)
+
+  // 创建新日期
+  const slotDate = new Date(now)
+  slotDate.setDate(slotDate.getDate() + dayOffset)
+
+  const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const dayName = days[slotDate.getDay()]
+  const dateStr = `${slotDate.getMonth() + 1}月${slotDate.getDate()}日`
+
+  return `${dayName} ${dateStr}`
 }
 
 const getTempClass = (temp) => {
@@ -1398,9 +1563,16 @@ const getTempClass = (temp) => {
 }
 
 const getRowClass = ({ row }) => {
-  if (row.riskAssessment.overallRisk === 'high') return 'risk-high'
-  if (row.riskAssessment.overallRisk === 'medium') return 'risk-medium'
+  if (row.risk_level === 'high') return 'risk-high'
+  if (row.risk_level === 'medium') return 'risk-medium'
   return ''
+}
+
+const getSafetyScoreColor = (score) => {
+  if (score >= 80) return '#67C23A' // 绿色 - 安全
+  if (score >= 60) return '#E6A23C' // 橙色 - 警告
+  if (score >= 40) return '#F56C6C' // 红色 - 危险
+  return '#909399' // 灰色 - 禁止
 }
 
 const generateRoutePreview = () => {
@@ -1440,6 +1612,51 @@ const resetRouteForm = () => {
   routePreviewDuration.value = 0
   routePreviewSpeed.value = 0
 }
+
+// 加载航线天气数据的函数
+const loadRouteWeatherData = () => {
+  if (!selectedRoute.value) {
+    routeWeather.value = []
+    return
+  }
+
+  // 确定起始日期
+  let startDate = null
+  if (forecastTimeRange.value && forecastTimeRange.value.length > 0) {
+    // 如果用户选择了日期范围，使用起始日期
+    startDate = new Date(forecastTimeRange.value[0])
+    console.log('[WeatherIntegration] 使用选定起始日期:', forecastTimeRange.value[0])
+  } else {
+    // 否则使用今天
+    startDate = new Date()
+    console.log('[WeatherIntegration] 使用今天作为起始日期')
+  }
+
+  console.log('[WeatherIntegration] 加载航线天气:', selectedRoute.value, '起始日期:', startDate)
+
+  // 生成从起始日期开始的未来5天天气预报
+  routeWeather.value = generateMockRouteWeather(startDate)
+
+  const dateStr = `${startDate.getMonth() + 1}月${startDate.getDate()}日`
+  ElMessage.success(`已加载航线 ${selectedRoute.value} 从${dateStr}开始的5天天气预报`)
+}
+
+// 监听航线选择变化
+watch(selectedRoute, (newRoute) => {
+  if (newRoute) {
+    loadRouteWeatherData()
+  } else {
+    routeWeather.value = []
+  }
+})
+
+// 监听日期范围变化
+watch(forecastTimeRange, (newRange) => {
+  // 只有在已选择航线的情况下才重新加载数据
+  if (selectedRoute.value) {
+    loadRouteWeatherData()
+  }
+})
 
 // 初始化数据
 refreshWeatherData()

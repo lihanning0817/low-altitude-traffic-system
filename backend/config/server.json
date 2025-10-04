@@ -50,9 +50,12 @@
   },
   "cors": {
     "enabled": true,
-    "origins": "http://localhost:8080",
+    "origins": "http://localhost:8080,http://localhost:8082",
     "methods": "GET,POST,PUT,DELETE,OPTIONS",
     "headers": "Content-Type,Authorization"
+  },
+  "weather": {
+    "api_key": "c058fd1794cbc0dd8e3e8215e9bd37a3"
   },
   "system": {
     "name": "城市智能低空交通系统",

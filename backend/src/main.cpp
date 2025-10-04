@@ -12,8 +12,10 @@
 #include "controllers/AuthController.h"
 #include "controllers/FlightTaskController.h"
 #include "controllers/SystemMonitorController.h"
+#include "controllers/WeatherController.h"
 #include "auth/JwtService.h"
 #include "services/RouteService.h"
+#include "services/WeatherService.h"
 
 // 全局服务器实例，用于信号处理
 std::unique_ptr<server::HttpServer> g_server = nullptr;
@@ -94,6 +96,12 @@ void setupRoutes(server::HttpServer& server) {
 
     // 初始化系统监控控制器
     auto systemMonitorController = std::make_shared<controllers::SystemMonitorController>(jwtService, userRepo);
+
+    // 初始化天气服务和控制器
+    auto& config = config::Config::getInstance();
+    std::string weatherApiKey = config.getString("weather.api_key", "");
+    auto weatherService = std::make_shared<services::WeatherService>(weatherApiKey);
+    auto weatherController = std::make_shared<controllers::WeatherController>(weatherService, jwtService);
 
     // ========== 认证相关API ==========
 
@@ -670,7 +678,33 @@ void setupRoutes(server::HttpServer& server) {
         }
     });
 
-    spdlog::info("API routes configured (including FlightTask APIs)");
+    // ========== 天气API ==========
+
+    // 根据城市获取当前天气
+    server.get("/api/v1/weather/current", [weatherController](const auto& req, auto& res) {
+        auto response = weatherController->getCurrentWeather(req);
+        res = std::move(response);
+    });
+
+    // 根据坐标获取当前天气
+    server.get("/api/v1/weather/current/coords", [weatherController](const auto& req, auto& res) {
+        auto response = weatherController->getCurrentWeatherByCoords(req);
+        res = std::move(response);
+    });
+
+    // 根据坐标获取天气预报
+    server.get("/api/v1/weather/forecast", [weatherController](const auto& req, auto& res) {
+        auto response = weatherController->getForecast(req);
+        res = std::move(response);
+    });
+
+    // 检查飞行安全性
+    server.get("/api/v1/weather/flight-safety", [weatherController](const auto& req, auto& res) {
+        auto response = weatherController->checkFlightSafety(req);
+        res = std::move(response);
+    });
+
+    spdlog::info("API routes configured (including FlightTask and Weather APIs)");
 }
 
 int main(int argc, char* argv[]) {
