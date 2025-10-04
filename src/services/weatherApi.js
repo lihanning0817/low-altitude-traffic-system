@@ -268,7 +268,7 @@ class WeatherApiService {
    * @returns {string}
    */
   formatTemperature(temp) {
-    return `${Math.round(temp)}°C`
+    return `${temp.toFixed(1)}°C`
   }
 
   /**
