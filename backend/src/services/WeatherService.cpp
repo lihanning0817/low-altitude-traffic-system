@@ -14,9 +14,9 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 
 WeatherService::WeatherService(const std::string& apiKey)
     : apiKey_(apiKey)
-    , baseUrl_("https://api.openweathermap.org/data/2.5") {
+    , baseUrl_("https://restapi.amap.com/v3") {
 
-    std::cout << "[WeatherService] Initializing Weather Service" << std::endl;
+    std::cout << "[WeatherService] Initializing Weather Service (AMap API)" << std::endl;
 }
 
 std::string WeatherService::makeHttpRequest(const std::string& url) {
@@ -111,28 +111,69 @@ nlohmann::json WeatherService::getCurrentWeatherByCoords(double lat, double lon)
     std::cout << "[WeatherService] Getting weather for coords: "
               << lat << ", " << lon << std::endl;
 
-    nlohmann::json params;
-    params["lat"] = std::to_string(lat);
-    params["lon"] = std::to_string(lon);
+    // Step 1: Get adcode from coordinates using reverse geocoding
+    std::ostringstream geoUrl;
+    geoUrl << baseUrl_ << "/geocode/regeo?key=" << apiKey_
+           << "&location=" << lon << "," << lat;
 
-    std::string url = buildApiUrl("weather", params);
-    std::string response = makeHttpRequest(url);
+    std::string geoResponse = makeHttpRequest(geoUrl.str());
+    auto geoJson = nlohmann::json::parse(geoResponse);
 
-    return parseWeatherResponse(response);
+    // Extract citycode or adcode for weather query
+    std::string citycode = "110000"; // Default to Beijing
+    if (geoJson.contains("regeocode") && geoJson["regeocode"].contains("addressComponent")) {
+        auto addr = geoJson["regeocode"]["addressComponent"];
+        if (addr.contains("citycode") && !addr["citycode"].get<std::string>().empty()) {
+            // Convert citycode (like "010") to adcode format by looking up province
+            if (addr.contains("adcode")) {
+                std::string adcode = addr["adcode"].get<std::string>();
+                // Use first 4 digits + "00" for city level adcode
+                if (adcode.length() >= 4) {
+                    citycode = adcode.substr(0, 4) + "00";
+                }
+            }
+        }
+    }
+
+    // Step 2: Get weather using adcode
+    std::ostringstream weatherUrl;
+    weatherUrl << baseUrl_ << "/weather/weatherInfo?key=" << apiKey_
+               << "&city=" << citycode << "&extensions=base";
+
+    std::string weatherResponse = makeHttpRequest(weatherUrl.str());
+    return parseWeatherResponse(weatherResponse);
 }
 
 nlohmann::json WeatherService::getForecastByCoords(double lat, double lon) {
     std::cout << "[WeatherService] Getting forecast for coords: "
               << lat << ", " << lon << std::endl;
 
-    nlohmann::json params;
-    params["lat"] = std::to_string(lat);
-    params["lon"] = std::to_string(lon);
+    // Step 1: Get adcode from coordinates
+    std::ostringstream geoUrl;
+    geoUrl << baseUrl_ << "/geocode/regeo?key=" << apiKey_
+           << "&location=" << lon << "," << lat;
 
-    std::string url = buildApiUrl("forecast", params);
-    std::string response = makeHttpRequest(url);
+    std::string geoResponse = makeHttpRequest(geoUrl.str());
+    auto geoJson = nlohmann::json::parse(geoResponse);
 
-    return parseWeatherResponse(response);
+    std::string citycode = "110000"; // Default to Beijing
+    if (geoJson.contains("regeocode") && geoJson["regeocode"].contains("addressComponent")) {
+        auto addr = geoJson["regeocode"]["addressComponent"];
+        if (addr.contains("adcode")) {
+            std::string adcode = addr["adcode"].get<std::string>();
+            if (adcode.length() >= 4) {
+                citycode = adcode.substr(0, 4) + "00";
+            }
+        }
+    }
+
+    // Step 2: Get weather forecast using adcode
+    std::ostringstream weatherUrl;
+    weatherUrl << baseUrl_ << "/weather/weatherInfo?key=" << apiKey_
+               << "&city=" << citycode << "&extensions=all";
+
+    std::string weatherResponse = makeHttpRequest(weatherUrl.str());
+    return parseWeatherResponse(weatherResponse);
 }
 
 nlohmann::json WeatherService::checkFlightSafety(const nlohmann::json& weatherData) {
@@ -223,62 +264,130 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
     nlohmann::json formatted;
 
     try {
-        // 基本信息
-        if (weatherData.contains("name")) {
-            formatted["location"] = weatherData["name"];
-        }
+        // AMap API format (实时天气 extensions=base)
+        if (weatherData.contains("lives") && weatherData["lives"].is_array() && !weatherData["lives"].empty()) {
+            auto live = weatherData["lives"][0];
 
-        // 主要天气状况
-        if (weatherData.contains("weather") && weatherData["weather"].is_array() &&
-            !weatherData["weather"].empty()) {
-            auto weather = weatherData["weather"][0];
-            formatted["condition"] = weather["description"];
-            formatted["icon"] = weather["icon"];
-        }
+            // 位置信息
+            formatted["location"] = live.value("city", "未知");
 
-        // 温度信息
-        if (weatherData.contains("main")) {
-            auto main = weatherData["main"];
-            formatted["temperature"] = main["temp"];
-            formatted["feels_like"] = main["feels_like"];
-            formatted["temp_min"] = main["temp_min"];
-            formatted["temp_max"] = main["temp_max"];
-            formatted["humidity"] = main["humidity"];
-            formatted["pressure"] = main["pressure"];
-        }
+            // 天气状况
+            formatted["condition"] = live.value("weather", "未知");
 
-        // 风力信息
-        if (weatherData.contains("wind")) {
-            auto wind = weatherData["wind"];
-            formatted["wind_speed"] = wind["speed"];
-            if (wind.contains("deg")) {
-                formatted["wind_direction"] = wind["deg"];
+            // 温度信息 (高德返回字符串，需要转换)
+            std::string temp_str = live.value("temperature", "0");
+            formatted["temperature"] = std::stod(temp_str);
+            formatted["feels_like"] = std::stod(temp_str); // 高德不提供体感温度，使用实际温度
+            formatted["temp_min"] = std::stod(temp_str) - 2;
+            formatted["temp_max"] = std::stod(temp_str) + 2;
+
+            // 湿度
+            std::string humidity_str = live.value("humidity", "0");
+            formatted["humidity"] = std::stoi(humidity_str);
+
+            // 气压 (高德不提供，使用标准值)
+            formatted["pressure"] = 1013;
+
+            // 风力信息
+            std::string windpower = live.value("windpower", "0");
+            // 转换风力等级到风速 (m/s), "≤3" -> 1.5, "4" -> 7.5, etc
+            double wind_speed = 1.5; // default
+            if (windpower.find("≤3") != std::string::npos) {
+                wind_speed = 1.5;
+            } else if (windpower.find("4") != std::string::npos) {
+                wind_speed = 7.5;
+            } else if (windpower.find("5") != std::string::npos) {
+                wind_speed = 10.5;
             }
-            if (wind.contains("gust")) {
-                formatted["wind_gust"] = wind["gust"];
+            formatted["wind_speed"] = wind_speed;
+
+            // 风向 (高德返回中文如"东北"，需要转换为角度)
+            std::string wind_dir = live.value("winddirection", "北");
+            int wind_deg = 0; // 北
+            if (wind_dir == "东北") wind_deg = 45;
+            else if (wind_dir == "东") wind_deg = 90;
+            else if (wind_dir == "东南") wind_deg = 135;
+            else if (wind_dir == "南") wind_deg = 180;
+            else if (wind_dir == "西南") wind_deg = 225;
+            else if (wind_dir == "西") wind_deg = 270;
+            else if (wind_dir == "西北") wind_deg = 315;
+            formatted["wind_direction"] = wind_deg;
+
+            // 能见度和云量 (高德不提供，使用估算值)
+            formatted["visibility"] = 10000; // 默认10km
+            formatted["cloudiness"] = 20; // 默认值
+
+            // 图标映射 (根据天气状况映射到OpenWeatherMap图标)
+            std::string condition = live.value("weather", "晴");
+            std::string icon = "01d"; // 默认晴天
+            if (condition.find("晴") != std::string::npos) icon = "01d";
+            else if (condition.find("多云") != std::string::npos) icon = "02d";
+            else if (condition.find("阴") != std::string::npos) icon = "03d";
+            else if (condition.find("雨") != std::string::npos) icon = "10d";
+            else if (condition.find("雪") != std::string::npos) icon = "13d";
+            else if (condition.find("雾") != std::string::npos || condition.find("霾") != std::string::npos) icon = "50d";
+            formatted["icon"] = icon;
+
+            // 时间戳
+            formatted["timestamp"] = std::time(nullptr);
+        }
+        // AMap API format (预报天气 extensions=all)
+        else if (weatherData.contains("forecasts") && weatherData["forecasts"].is_array() && !weatherData["forecasts"].empty()) {
+            auto forecast = weatherData["forecasts"][0];
+
+            if (forecast.contains("casts") && forecast["casts"].is_array() && !forecast["casts"].empty()) {
+                auto cast = forecast["casts"][0]; // 使用第一天的预报
+
+                formatted["location"] = forecast.value("city", "未知");
+                formatted["condition"] = cast.value("dayweather", "未知");
+
+                std::string temp = cast.value("daytemp", "0");
+                formatted["temperature"] = std::stod(temp);
+                formatted["feels_like"] = std::stod(temp);
+                formatted["temp_min"] = std::stod(cast.value("nighttemp", "0"));
+                formatted["temp_max"] = std::stod(temp);
+                formatted["humidity"] = 50; // 默认值
+                formatted["pressure"] = 1013;
+
+                // 风力转换
+                std::string windpower = cast.value("daypower", "1-3");
+                double wind_speed = 3.0;
+                if (windpower.find("1-3") != std::string::npos) wind_speed = 3.0;
+                else if (windpower.find("4-5") != std::string::npos) wind_speed = 9.0;
+                else if (windpower.find("6-7") != std::string::npos) wind_speed = 15.0;
+                formatted["wind_speed"] = wind_speed;
+                formatted["wind_direction"] = 0;
+
+                formatted["visibility"] = 10000;
+                formatted["cloudiness"] = 20;
+
+                // 图标映射
+                std::string condition = cast.value("dayweather", "晴");
+                std::string icon = "01d";
+                if (condition.find("晴") != std::string::npos) icon = "01d";
+                else if (condition.find("多云") != std::string::npos) icon = "02d";
+                else if (condition.find("阴") != std::string::npos) icon = "03d";
+                else if (condition.find("雨") != std::string::npos) icon = "10d";
+                else if (condition.find("雪") != std::string::npos) icon = "13d";
+                formatted["icon"] = icon;
+
+                formatted["timestamp"] = std::time(nullptr);
             }
         }
 
-        // 能见度
-        if (weatherData.contains("visibility")) {
-            formatted["visibility"] = weatherData["visibility"];
+        // 添加飞行安全评估（仅在有数据时）
+        if (!formatted.empty()) {
+            auto tempWeatherData = formatted; // 使用格式化后的数据进行安全评估
+            tempWeatherData["wind"]["speed"] = formatted.value("wind_speed", 0.0);
+            tempWeatherData["main"]["temp"] = formatted.value("temperature", 0.0);
+            tempWeatherData["visibility"] = formatted.value("visibility", 10000);
+            formatted["flight_safety"] = checkFlightSafety(tempWeatherData);
         }
-
-        // 云量
-        if (weatherData.contains("clouds")) {
-            formatted["cloudiness"] = weatherData["clouds"]["all"];
-        }
-
-        // 时间信息
-        if (weatherData.contains("dt")) {
-            formatted["timestamp"] = weatherData["dt"];
-        }
-
-        // 添加飞行安全评估
-        formatted["flight_safety"] = checkFlightSafety(weatherData);
 
     } catch (const std::exception& e) {
         std::cerr << "[WeatherService] Error formatting weather data: " << e.what() << std::endl;
+        // 返回空对象而不是崩溃
+        formatted = nlohmann::json::object();
     }
 
     return formatted;

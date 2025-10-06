@@ -9,7 +9,8 @@ import authApi from './authApi'
 
 class WeatherApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8081/api/v1/weather'
+    // 使用相对路径，通过Vue代理转发到后端
+    this.baseURL = '/api/v1/weather'
 
     // 创建axios实例
     this.api = axios.create({

@@ -9,6 +9,15 @@
         </div>
         <div class="action-section">
           <el-button
+            type="success"
+            size="large"
+            @click="autoLocate"
+            :loading="locating"
+          >
+            <el-icon><Location /></el-icon>
+            自动定位
+          </el-button>
+          <el-button
             type="primary"
             size="large"
             @click="refreshWeatherData"
@@ -771,12 +780,18 @@ import weatherApi from '@/services/weatherApi'
 
 // 响应式数据
 const loading = ref(false)
+const locating = ref(false)
 const showRiskDetails = ref(false)
 const showRoutePlanner = ref(false)
 
 const currentWeather = ref(null)
 const flightSafetyData = ref(null)
-const riskAssessment = ref(null)
+const riskAssessment = ref({
+  overallRisk: 'unknown',
+  risks: [],
+  warnings: [],
+  recommendations: ['正在加载天气数据...']
+})
 const routeWeather = ref([])
 const forecast = ref([])
 const selectedRoute = ref('')
@@ -1182,6 +1197,71 @@ const routePreviewSpeed = computed(() => {
 })
 
 // 方法
+/**
+ * 自动定位当前位置
+ */
+const autoLocate = () => {
+  if (!navigator.geolocation) {
+    ElMessage.error('您的浏览器不支持定位功能')
+    return
+  }
+
+  locating.value = true
+  ElMessage.info('正在获取您的位置...')
+
+  navigator.geolocation.getCurrentPosition(
+    // 成功回调
+    (position) => {
+      const { latitude, longitude } = position.coords
+      console.log('[AutoLocate] 获取位置成功:', latitude, longitude)
+
+      // 更新当前位置
+      currentLocation.value = {
+        lat: latitude,
+        lon: longitude
+      }
+
+      ElMessage.success(`定位成功: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+
+      // 自动刷新天气数据
+      locating.value = false
+      refreshWeatherData()
+    },
+    // 错误回调
+    (error) => {
+      locating.value = false
+      console.error('[AutoLocate] 定位失败:', error)
+
+      let errorMessage = '定位失败'
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          errorMessage = '您拒绝了定位请求，请在浏览器设置中允许定位权限'
+          break
+        case error.POSITION_UNAVAILABLE:
+          errorMessage = '位置信息不可用，请检查您的设备定位服务是否开启'
+          break
+        case error.TIMEOUT:
+          errorMessage = '定位请求超时，请重试'
+          break
+        default:
+          errorMessage = '定位失败: ' + error.message
+      }
+
+      ElMessage.error({
+        message: errorMessage,
+        duration: 5000,
+        showClose: true
+      })
+    },
+    // 选项
+    {
+      enableHighAccuracy: true, // 使用高精度定位
+      timeout: 10000,          // 10秒超时
+      maximumAge: 0            // 不使用缓存的位置
+    }
+  )
+}
+
 const refreshWeatherData = async () => {
   loading.value = true
 
@@ -1191,82 +1271,39 @@ const refreshWeatherData = async () => {
       weatherApi.getCurrentWeatherByCoords(currentLocation.value.lat, currentLocation.value.lon),
       weatherApi.getForecast(currentLocation.value.lat, currentLocation.value.lon),
       weatherApi.checkFlightSafety(currentLocation.value.lat, currentLocation.value.lon)
-    ]).catch(error => {
-      console.warn('API请求失败，使用Mock数据作为降级方案:', error)
-      return [null, null, null]
-    })
+    ])
 
-    // 如果API请求失败，使用Mock数据
-    if (!weatherResponse || !weatherResponse.success) {
-      console.log('使用Mock天气数据')
-      currentWeather.value = {
-        weather: {
-          location: '北京',
-          temperature: 18.5,
-          feels_like: 17.2,
-          temp_min: 16.8,
-          temp_max: 20.1,
-          humidity: 65,
-          pressure: 1013,
-          wind_speed: 3.5,
-          wind_direction: 180,
-          visibility: 10000,
-          cloudiness: 10,
-          condition: '晴朗',
-          icon: '01d',
-          timestamp: Math.floor(Date.now() / 1000)
-        }
-      }
-    } else {
+    // 处理天气数据
+    if (weatherResponse && weatherResponse.success) {
       currentWeather.value = weatherResponse.data
+    } else {
+      throw new Error('获取天气数据失败')
     }
 
-    if (!forecastResponse || !forecastResponse.success) {
-      console.log('使用Mock预报数据')
-      forecast.value = mockForecast.map(item => ({
-        timestamp: item.dt,
-        temperature: item.main.temp,
-        temp_min: item.main.temp_min,
-        temp_max: item.main.temp_max,
-        humidity: item.main.humidity,
-        pressure: item.main.pressure,
-        wind_speed: item.wind.speed,
-        condition: item.weather[0].description,
-        icon: item.weather[0].icon,
-        cloudiness: item.clouds.all,
-        visibility: item.visibility,
-        flight_safety: {
-          score: item.main.temp > 15 && item.wind.speed < 5 ? 90 : 70,
-          safe: item.wind.speed < 10
-        }
-      }))
-    } else {
+    // 处理预报数据
+    if (forecastResponse && forecastResponse.success) {
       forecast.value = forecastResponse.data.forecast || []
-    }
-
-    if (!safetyResponse || !safetyResponse.success) {
-      console.log('使用Mock安全评估数据')
-      const mockSafetyData = {
-        safety: {
-          safe: true,
-          score: 85,
-          warnings: ['天气条件良好']
-        },
-        weather: currentWeather.value.weather
-      }
-      flightSafetyData.value = mockSafetyData
-      buildRiskAssessment(mockSafetyData)
     } else {
-      flightSafetyData.value = safetyResponse.data
-      // 构建风险评估数据
-      buildRiskAssessment(safetyResponse.data)
+      throw new Error('获取预报数据失败')
     }
 
-    ElMessage.success('天气数据已加载（演示模式）')
+    // 处理安全评估数据
+    if (safetyResponse && safetyResponse.success) {
+      flightSafetyData.value = safetyResponse.data
+      buildRiskAssessment(safetyResponse.data)
+    } else {
+      throw new Error('获取安全评估数据失败')
+    }
+
+    ElMessage.success('天气数据加载成功')
   } catch (error) {
     console.error('刷新天气数据失败:', error)
-    ElMessage.warning('使用演示数据显示')
-    // 最终降级：直接使用Mock数据
+    ElMessage.warning({
+      message: '外部天气API连接失败（可能被防火墙屏蔽），已切换到演示模式',
+      duration: 5000,
+      showClose: true
+    })
+    // 使用Mock数据作为降级方案
     useMockData()
   } finally {
     loading.value = false
@@ -1694,6 +1731,11 @@ refreshWeatherData()
   margin: 0;
   color: #7f8c8d;
   font-size: 16px;
+}
+
+.action-section {
+  display: flex;
+  gap: 12px;
 }
 
 /* 统计卡片 */

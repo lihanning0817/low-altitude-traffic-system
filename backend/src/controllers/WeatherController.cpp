@@ -134,7 +134,10 @@ http::response<http::string_body> WeatherController::getCurrentWeatherByCoords(
 
         // 获取天气数据
         auto weatherData = weatherService_->getCurrentWeatherByCoords(lat, lon);
+        std::cout << "[WeatherController] Raw weather data: " << weatherData.dump() << std::endl;
+
         auto formattedData = weatherService_->formatWeatherData(weatherData);
+        std::cout << "[WeatherController] Formatted weather data: " << formattedData.dump() << std::endl;
 
         nlohmann::json response_data;
         response_data["weather"] = formattedData;
@@ -175,16 +178,41 @@ http::response<http::string_body> WeatherController::getForecast(
         // 格式化预报数据
         nlohmann::json formattedForecast = nlohmann::json::array();
 
-        if (forecastData.contains("list") && forecastData["list"].is_array()) {
-            for (const auto& item : forecastData["list"]) {
-                auto formatted = weatherService_->formatWeatherData(item);
-                formattedForecast.push_back(formatted);
+        // AMap API format (forecasts[].casts[])
+        if (forecastData.contains("forecasts") && forecastData["forecasts"].is_array() &&
+            !forecastData["forecasts"].empty()) {
+            auto forecast = forecastData["forecasts"][0];
+            if (forecast.contains("casts") && forecast["casts"].is_array()) {
+                for (const auto& cast : forecast["casts"]) {
+                    nlohmann::json item;
+                    item["dayweather"] = cast.value("dayweather", "未知");
+                    item["daytemp"] = cast.value("daytemp", "0");
+                    item["nighttemp"] = cast.value("nighttemp", "0");
+                    item["daypower"] = cast.value("daypower", "1-3");
+                    item["date"] = cast.value("date", "");
+
+                    // Format as single item for compatibility
+                    nlohmann::json formatted;
+                    formatted["forecasts"] = nlohmann::json::array();
+                    formatted["forecasts"][0] = forecast;
+                    formatted["forecasts"][0]["casts"] = nlohmann::json::array();
+                    formatted["forecasts"][0]["casts"].push_back(cast);
+
+                    auto weather_formatted = weatherService_->formatWeatherData(formatted);
+                    formattedForecast.push_back(weather_formatted);
+                }
             }
         }
 
         nlohmann::json response_data;
         response_data["forecast"] = formattedForecast;
-        response_data["city"] = forecastData.value("city", nlohmann::json::object());
+
+        // City info
+        nlohmann::json city_info;
+        if (forecastData.contains("forecasts") && !forecastData["forecasts"].empty()) {
+            city_info["name"] = forecastData["forecasts"][0].value("city", "未知");
+        }
+        response_data["city"] = city_info;
 
         return utils::HttpResponse::createSuccessResponse(response_data, "获取天气预报成功");
 

@@ -4,7 +4,8 @@ import { ElMessage } from 'element-plus'
 
 class AuthApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8081/api/v1/auth'
+    // 使用相对路径，通过Vue代理转发到后端
+    this.baseURL = '/api/v1/auth'
     // 初始化时从localStorage加载token
     this.accessToken = localStorage.getItem('access_token')
     this.refreshToken = localStorage.getItem('refresh_token')
