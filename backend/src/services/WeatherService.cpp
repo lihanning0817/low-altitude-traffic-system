@@ -1,4 +1,6 @@
 #include "WeatherService.h"
+#include "utils/CurlHandle.h"
+#include "utils/ParamParser.h"
 #include <curl/curl.h>
 #include <sstream>
 #include <iostream>
@@ -20,36 +22,38 @@ WeatherService::WeatherService(const std::string& apiKey)
 }
 
 std::string WeatherService::makeHttpRequest(const std::string& url) {
-    CURL* curl;
-    CURLcode res;
     std::string response;
 
-    curl = curl_easy_init();
-    if (!curl) {
+    // 使用RAII包装的CurlHandle，自动管理CURL资源
+    utils::CurlHandle curl;
+
+    if (!curl.isValid()) {
         throw std::runtime_error("Failed to initialize CURL");
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 开发环境可以关闭SSL验证
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); // 跟随重定向
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+    // 配置CURL选项
+    curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl.get(), CURLOPT_TIMEOUT, 30L);
+    curl_easy_setopt(curl.get(), CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L); // 开发环境可以关闭SSL验证
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L); // 跟随重定向
+    curl_easy_setopt(curl.get(), CURLOPT_VERBOSE, 0L);
 
-    res = curl_easy_perform(curl);
+    // 执行HTTP请求
+    CURLcode res = curl.perform();
 
     if (res != CURLE_OK) {
-        std::string error = curl_easy_strerror(res);
-        curl_easy_cleanup(curl);
-        throw std::runtime_error("CURL request failed: " + error);
+        // CurlHandle析构时会自动清理资源，无需手动cleanup
+        throw std::runtime_error("CURL request failed: " + utils::CurlHandle::getErrorString(res));
     }
 
+    // 检查HTTP响应码
     long http_code = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-    curl_easy_cleanup(curl);
+    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+    // CurlHandle析构时会自动清理资源
 
     if (http_code != 200) {
         throw std::runtime_error("HTTP error: " + std::to_string(http_code));
@@ -74,16 +78,15 @@ std::string WeatherService::buildApiUrl(
     std::ostringstream url;
     url << baseUrl_ << "/" << endpoint << "?";
 
+    // 高德地图API使用key参数而不是appid
+    url << "key=" << apiKey_;
+
     for (auto it = params.begin(); it != params.end(); ++it) {
-        if (it != params.begin()) {
-            url << "&";
-        }
+        url << "&";
         url << it.key() << "=" << it.value().get<std::string>();
     }
 
-    url << "&appid=" << apiKey_;
-    url << "&units=metric"; // 使用摄氏度
-    url << "&lang=zh_cn";   // 中文描述
+    // 注意：高德地图API不支持units和lang参数，已移除
 
     return url.str();
 }
@@ -183,69 +186,84 @@ nlohmann::json WeatherService::checkFlightSafety(const nlohmann::json& weatherDa
     result["score"] = 100; // 安全评分 0-100
 
     try {
-        // 检查主要天气状况
-        if (weatherData.contains("weather") && weatherData["weather"].is_array() &&
-            !weatherData["weather"].empty()) {
-            auto weather = weatherData["weather"][0];
-            std::string main = weather["main"].get<std::string>();
+        // 支持两种格式：高德格式（lives数组）和已格式化的数据
+        std::string condition;
+        double windSpeed = 0.0;
+        int visibility = 10000;
 
-            // 恶劣天气条件
-            if (main == "Thunderstorm") {
+        // 检查是否是高德API格式（lives数组）
+        if (weatherData.contains("lives") && weatherData["lives"].is_array() && !weatherData["lives"].empty()) {
+            auto live = weatherData["lives"][0];
+            condition = live.value("weather", "");
+
+            // 解析风力等级
+            std::string windpower = live.value("windpower", "0");
+            if (windpower.find("≤3") != std::string::npos) {
+                windSpeed = 1.5;
+            } else if (windpower.find("4") != std::string::npos) {
+                windSpeed = 7.5;
+            } else if (windpower.find("5") != std::string::npos) {
+                windSpeed = 10.5;
+            } else if (windpower.find("6") != std::string::npos) {
+                windSpeed = 13.5;
+            } else if (windpower.find("7") != std::string::npos || windpower.find("8") != std::string::npos) {
+                windSpeed = 17.0;
+            }
+        }
+        // 检查是否是已格式化的数据
+        else if (weatherData.contains("condition")) {
+            condition = weatherData.value("condition", "");
+            windSpeed = weatherData.value("wind_speed", 0.0);
+            visibility = weatherData.value("visibility", 10000);
+        }
+
+        // 检查恶劣天气条件（中文）
+        if (condition.find("雷") != std::string::npos || condition.find("暴") != std::string::npos) {
+            result["safe"] = false;
+            result["score"] = 0;
+            result["warnings"].push_back("雷暴天气，禁止飞行");
+        } else if (condition.find("雪") != std::string::npos) {
+            result["safe"] = false;
+            result["score"] = 20;
+            result["warnings"].push_back("降雪天气，不建议飞行");
+        } else if (condition.find("雨") != std::string::npos) {
+            if (condition.find("大雨") != std::string::npos || condition.find("暴雨") != std::string::npos) {
                 result["safe"] = false;
-                result["score"] = 0;
-                result["warnings"].push_back("雷暴天气，禁止飞行");
-            } else if (main == "Snow") {
-                result["safe"] = false;
-                result["score"] = 20;
-                result["warnings"].push_back("降雪天气，不建议飞行");
-            } else if (main == "Rain") {
+                result["score"] = 30;
+                result["warnings"].push_back("强降雨天气，禁止飞行");
+            } else {
                 result["score"] = 50;
                 result["warnings"].push_back("降雨天气，请谨慎飞行");
-            } else if (main == "Fog" || main == "Mist") {
-                result["score"] = 40;
-                result["warnings"].push_back("能见度较低，请谨慎飞行");
             }
+        } else if (condition.find("雾") != std::string::npos || condition.find("霾") != std::string::npos) {
+            result["score"] = 40;
+            result["warnings"].push_back("能见度较低，请谨慎飞行");
         }
 
         // 检查风速
-        if (weatherData.contains("wind") && weatherData["wind"].contains("speed")) {
-            double windSpeed = weatherData["wind"]["speed"].get<double>();
-
-            if (windSpeed > 15) { // 风速大于15m/s
-                result["safe"] = false;
-                result["score"] = std::min(result["score"].get<int>(), 10);
-                result["warnings"].push_back("风速过大（" + std::to_string((int)windSpeed) + " m/s），禁止飞行");
-            } else if (windSpeed > 10) { // 风速10-15m/s
-                result["score"] = std::min(result["score"].get<int>(), 50);
-                result["warnings"].push_back("风速较大（" + std::to_string((int)windSpeed) + " m/s），请谨慎飞行");
-            }
+        if (windSpeed > 15) { // 风速大于15m/s
+            result["safe"] = false;
+            result["score"] = std::min(result["score"].get<int>(), 10);
+            result["warnings"].push_back("风速过大（" + std::to_string((int)windSpeed) + " m/s），禁止飞行");
+        } else if (windSpeed > 10) { // 风速10-15m/s
+            result["score"] = std::min(result["score"].get<int>(), 50);
+            result["warnings"].push_back("风速较大（" + std::to_string((int)windSpeed) + " m/s），请谨慎飞行");
+        } else if (windSpeed > 7) { // 风速7-10m/s
+            result["score"] = std::min(result["score"].get<int>(), 70);
+            result["warnings"].push_back("风速较大，请注意飞行安全");
         }
 
         // 检查能见度
-        if (weatherData.contains("visibility")) {
-            int visibility = weatherData["visibility"].get<int>();
-
-            if (visibility < 1000) { // 能见度小于1km
-                result["safe"] = false;
-                result["score"] = std::min(result["score"].get<int>(), 20);
-                result["warnings"].push_back("能见度过低（" + std::to_string(visibility) + " m），禁止飞行");
-            } else if (visibility < 5000) { // 能见度1-5km
-                result["score"] = std::min(result["score"].get<int>(), 60);
-                result["warnings"].push_back("能见度较低（" + std::to_string(visibility) + " m），请谨慎飞行");
-            }
+        if (visibility < 1000) { // 能见度小于1km
+            result["safe"] = false;
+            result["score"] = std::min(result["score"].get<int>(), 20);
+            result["warnings"].push_back("能见度过低（" + std::to_string(visibility) + " m），禁止飞行");
+        } else if (visibility < 5000) { // 能见度1-5km
+            result["score"] = std::min(result["score"].get<int>(), 60);
+            result["warnings"].push_back("能见度较低（" + std::to_string(visibility / 1000) + " km），请谨慎飞行");
         }
 
-        // 检查云量
-        if (weatherData.contains("clouds") && weatherData["clouds"].contains("all")) {
-            int cloudiness = weatherData["clouds"]["all"].get<int>();
-
-            if (cloudiness > 80) { // 云量大于80%
-                result["score"] = std::min(result["score"].get<int>(), 70);
-                result["warnings"].push_back("云量较大（" + std::to_string(cloudiness) + "%），请注意观察");
-            }
-        }
-
-        // 如果有警告但仍然安全，降低评分
+        // 如果有警告但仍然安全，确保评分不会太高
         if (result["warnings"].size() > 0 && result["safe"].get<bool>()) {
             result["score"] = std::min(result["score"].get<int>(), 70);
         }
@@ -274,16 +292,17 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
             // 天气状况
             formatted["condition"] = live.value("weather", "未知");
 
-            // 温度信息 (高德返回字符串，需要转换)
+            // 温度信息 (高德返回字符串，需要安全转换)
             std::string temp_str = live.value("temperature", "0");
-            formatted["temperature"] = std::stod(temp_str);
-            formatted["feels_like"] = std::stod(temp_str); // 高德不提供体感温度，使用实际温度
-            formatted["temp_min"] = std::stod(temp_str) - 2;
-            formatted["temp_max"] = std::stod(temp_str) + 2;
+            double temp = utils::ParamParser::parseDouble(temp_str, 0.0, -50.0, 60.0);
+            formatted["temperature"] = temp;
+            formatted["feels_like"] = temp; // 高德不提供体感温度，使用实际温度
+            formatted["temp_min"] = temp - 2;
+            formatted["temp_max"] = temp + 2;
 
             // 湿度
             std::string humidity_str = live.value("humidity", "0");
-            formatted["humidity"] = std::stoi(humidity_str);
+            formatted["humidity"] = utils::ParamParser::parseInt(humidity_str, 0, 0, 100);
 
             // 气压 (高德不提供，使用标准值)
             formatted["pressure"] = 1013;
@@ -341,11 +360,16 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
                 formatted["location"] = forecast.value("city", "未知");
                 formatted["condition"] = cast.value("dayweather", "未知");
 
+                // 安全地转换温度字符串
                 std::string temp = cast.value("daytemp", "0");
-                formatted["temperature"] = std::stod(temp);
-                formatted["feels_like"] = std::stod(temp);
-                formatted["temp_min"] = std::stod(cast.value("nighttemp", "0"));
-                formatted["temp_max"] = std::stod(temp);
+                std::string nighttemp = cast.value("nighttemp", "0");
+                double day_temp = utils::ParamParser::parseDouble(temp, 0.0, -50.0, 60.0);
+                double night_temp = utils::ParamParser::parseDouble(nighttemp, 0.0, -50.0, 60.0);
+                formatted["temperature"] = day_temp;
+                formatted["feels_like"] = day_temp;
+                formatted["temp_min"] = night_temp;
+                formatted["temp_max"] = day_temp;
+
                 formatted["humidity"] = 50; // 默认值
                 formatted["pressure"] = 1013;
 
@@ -355,6 +379,7 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
                 if (windpower.find("1-3") != std::string::npos) wind_speed = 3.0;
                 else if (windpower.find("4-5") != std::string::npos) wind_speed = 9.0;
                 else if (windpower.find("6-7") != std::string::npos) wind_speed = 15.0;
+                else if (windpower.find("8-9") != std::string::npos) wind_speed = 20.0;
                 formatted["wind_speed"] = wind_speed;
                 formatted["wind_direction"] = 0;
 
@@ -369,6 +394,7 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
                 else if (condition.find("阴") != std::string::npos) icon = "03d";
                 else if (condition.find("雨") != std::string::npos) icon = "10d";
                 else if (condition.find("雪") != std::string::npos) icon = "13d";
+                else if (condition.find("雾") != std::string::npos || condition.find("霾") != std::string::npos) icon = "50d";
                 formatted["icon"] = icon;
 
                 formatted["timestamp"] = std::time(nullptr);
@@ -376,12 +402,9 @@ nlohmann::json WeatherService::formatWeatherData(const nlohmann::json& weatherDa
         }
 
         // 添加飞行安全评估（仅在有数据时）
+        // 直接使用格式化后的数据，checkFlightSafety已经支持这种格式
         if (!formatted.empty()) {
-            auto tempWeatherData = formatted; // 使用格式化后的数据进行安全评估
-            tempWeatherData["wind"]["speed"] = formatted.value("wind_speed", 0.0);
-            tempWeatherData["main"]["temp"] = formatted.value("temperature", 0.0);
-            tempWeatherData["visibility"] = formatted.value("visibility", 10000);
-            formatted["flight_safety"] = checkFlightSafety(tempWeatherData);
+            formatted["flight_safety"] = checkFlightSafety(formatted);
         }
 
     } catch (const std::exception& e) {

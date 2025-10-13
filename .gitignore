@@ -73,9 +73,15 @@ vcpkg/
 config/secrets/
 config.json
 server.json
+backend/config/server.json
 *.key
 *.pem
 *.p12
+*.crt
+*.pfx
+# 但保留模板文件
+!backend/config/server.json.template
+!backend/config/README.md
 
 # 测试覆盖率
 coverage/

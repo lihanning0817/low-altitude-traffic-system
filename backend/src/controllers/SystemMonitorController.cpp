@@ -1,5 +1,6 @@
 #include "SystemMonitorController.h"
 #include "config/Config.h"
+#include "utils/ParamParser.h"
 #include <spdlog/spdlog.h>
 #include <regex>
 #include <iomanip>
@@ -138,10 +139,13 @@ http::response<http::string_body> SystemMonitorController::getUsersList(const ht
         std::optional<models::UserRole> role_filter = std::nullopt;
 
         if (params.find("offset") != params.end()) {
-            offset = std::stoi(params["offset"]);
+            // 使用ParamParser安全解析，防止异常和无效值
+            offset = utils::ParamParser::parseInt(params["offset"], 0, 0, std::nullopt);
         }
         if (params.find("limit") != params.end()) {
-            limit = std::min(std::stoi(params["limit"]), 100); // 最大100条
+            // 使用ParamParser安全解析，限制范围在1-100之间
+            int parsed_limit = utils::ParamParser::parseInt(params["limit"], 50, 1, 100);
+            limit = parsed_limit;
         }
         if (params.find("role") != params.end()) {
             std::string role_str = params["role"];
@@ -163,9 +167,10 @@ http::response<http::string_body> SystemMonitorController::getUsersList(const ht
         for (const auto& user : users) {
             auto user_json = user.toJson(false); // false表示不包含密码哈希
 
-            // 添加最后登录时间等额外信息
-            // 这里可以从日志或其他表查询最后登录时间
-            user_json["last_login"] = nullptr; // 暂时设为null，实际项目中应查询
+            // 确保last_login字段存在（如果User::toJson没有设置，则设为null）
+            if (!user_json.contains("last_login")) {
+                user_json["last_login"] = nlohmann::json(); // 设置为null
+            }
 
             users_json.push_back(user_json);
         }

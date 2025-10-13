@@ -1,4 +1,6 @@
 #include "RouteService.h"
+#include "utils/CurlHandle.h"
+#include "utils/ParamParser.h"
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <iomanip>
@@ -221,31 +223,33 @@ RouteService::HttpResponse RouteService::httpGet(const std::string& url) {
     HttpResponse response;
     response.status_code = 0;
 
-    CURL* curl = curl_easy_init();
-    if (!curl) {
+    // 使用RAII包装的CurlHandle，自动管理CURL资源
+    utils::CurlHandle curl;
+
+    if (!curl.isValid()) {
         throw std::runtime_error("Failed to initialize CURL");
     }
 
     // 设置CURL选项
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);  // 30秒超时
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // 跟随重定向
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // 简化SSL验证
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl.get(), CURLOPT_TIMEOUT, 30L);  // 30秒超时
+    curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);  // 跟随重定向
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L);  // 简化SSL验证
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
 
     // 执行请求
-    CURLcode res = curl_easy_perform(curl);
+    CURLcode res = curl.perform();
 
     if (res == CURLE_OK) {
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.status_code);
+        curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &response.status_code);
     } else {
-        spdlog::error("CURL error: {}", curl_easy_strerror(res));
+        spdlog::error("CURL error: {}", utils::CurlHandle::getErrorString(res));
         response.status_code = 0;
     }
 
-    curl_easy_cleanup(curl);
+    // CurlHandle析构时会自动清理资源
     return response;
 }
 
@@ -256,15 +260,16 @@ size_t RouteService::writeCallback(void* contents, size_t size, size_t nmemb, Ht
 }
 
 std::string RouteService::urlEncode(const std::string& input) {
-    CURL* curl = curl_easy_init();
-    if (!curl) {
+    // 使用RAII包装的CurlHandle
+    utils::CurlHandle curl;
+    if (!curl.isValid()) {
         return input;
     }
 
-    char* encoded = curl_easy_escape(curl, input.c_str(), static_cast<int>(input.length()));
+    char* encoded = curl_easy_escape(curl.get(), input.c_str(), static_cast<int>(input.length()));
     std::string result(encoded);
     curl_free(encoded);
-    curl_easy_cleanup(curl);
+    // CurlHandle析构时会自动清理资源
 
     return result;
 }
@@ -342,12 +347,14 @@ nlohmann::json RouteService::parseRouteResponse(const nlohmann::json& response) 
                         std::string lng_str, lat_str;
 
                         if (std::getline(point_ss, lng_str, ',') && std::getline(point_ss, lat_str)) {
-                            try {
-                                double lng = std::stod(lng_str);
-                                double lat = std::stod(lat_str);
-                                coordinates.push_back({lng, lat});
-                            } catch (const std::exception& e) {
-                                spdlog::warn("Failed to parse coordinate: {} - {}", point, e.what());
+                            // 使用ParamParser安全解析坐标，避免异常
+                            auto lng_opt = utils::ParamParser::parseOptionalDouble(lng_str);
+                            auto lat_opt = utils::ParamParser::parseOptionalDouble(lat_str);
+
+                            if (lng_opt.has_value() && lat_opt.has_value()) {
+                                coordinates.push_back({lng_opt.value(), lat_opt.value()});
+                            } else {
+                                spdlog::warn("Failed to parse coordinate: {}", point);
                             }
                         }
                     }
@@ -366,22 +373,16 @@ nlohmann::json RouteService::parseRouteResponse(const nlohmann::json& response) 
 
         // 处理distance字段
         if (path.contains("distance")) {
-            try {
-                if (path["distance"].is_string()) {
-                    distance_str = path["distance"].get<std::string>();
-                    distance_meters = std::stod(distance_str);
-                    spdlog::debug("Distance (string): {} -> {} meters", distance_str, distance_meters);
-                } else if (path["distance"].is_number()) {
-                    distance_meters = path["distance"].get<double>();
-                    distance_str = std::to_string(static_cast<int>(distance_meters));
-                    spdlog::debug("Distance (number): {} meters", distance_meters);
-                } else {
-                    spdlog::warn("Distance field is not string or number, type: {}", path["distance"].type_name());
-                }
-            } catch (const std::exception& e) {
-                spdlog::error("Failed to parse distance: {} - {}", e.what(), path["distance"].dump());
-                distance_str = "0";
-                distance_meters = 0.0;
+            if (path["distance"].is_string()) {
+                distance_str = path["distance"].get<std::string>();
+                distance_meters = utils::ParamParser::parseDouble(distance_str, 0.0, 0.0, 1000000.0);
+                spdlog::debug("Distance (string): {} -> {} meters", distance_str, distance_meters);
+            } else if (path["distance"].is_number()) {
+                distance_meters = path["distance"].get<double>();
+                distance_str = std::to_string(static_cast<int>(distance_meters));
+                spdlog::debug("Distance (number): {} meters", distance_meters);
+            } else {
+                spdlog::warn("Distance field is not string or number, type: {}", path["distance"].type_name());
             }
         } else {
             spdlog::warn("No distance field found in path");
@@ -389,20 +390,15 @@ nlohmann::json RouteService::parseRouteResponse(const nlohmann::json& response) 
 
         // 处理duration字段
         if (path.contains("duration")) {
-            try {
-                if (path["duration"].is_string()) {
-                    std::string duration_str = path["duration"].get<std::string>();
-                    duration_seconds = std::stoi(duration_str);
-                    spdlog::debug("Duration (string): {} -> {} seconds", duration_str, duration_seconds);
-                } else if (path["duration"].is_number()) {
-                    duration_seconds = path["duration"].get<int>();
-                    spdlog::debug("Duration (number): {} seconds", duration_seconds);
-                } else {
-                    spdlog::warn("Duration field is not string or number, type: {}", path["duration"].type_name());
-                }
-            } catch (const std::exception& e) {
-                spdlog::error("Failed to parse duration: {} - {}", e.what(), path["duration"].dump());
-                duration_seconds = 0;
+            if (path["duration"].is_string()) {
+                std::string duration_str = path["duration"].get<std::string>();
+                duration_seconds = utils::ParamParser::parseInt(duration_str, 0, 0, 86400);
+                spdlog::debug("Duration (string): {} -> {} seconds", duration_str, duration_seconds);
+            } else if (path["duration"].is_number()) {
+                duration_seconds = path["duration"].get<int>();
+                spdlog::debug("Duration (number): {} seconds", duration_seconds);
+            } else {
+                spdlog::warn("Duration field is not string or number, type: {}", path["duration"].type_name());
             }
         } else {
             spdlog::warn("No duration field found in path");

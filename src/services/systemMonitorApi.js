@@ -548,6 +548,7 @@ class SystemMonitorApiService {
   getUserRoleText(role) {
     const roleMap = {
       'admin': '管理员',
+      'operator': '操作员',
       'user': '普通用户'
     }
     return roleMap[role] || role
@@ -565,6 +566,7 @@ class SystemMonitorApiService {
   getUserRoleColor(role) {
     const colorMap = {
       'admin': '#F56C6C',
+      'operator': '#E6A23C',
       'user': '#67C23A'
     }
     return colorMap[role] || '#909399'
