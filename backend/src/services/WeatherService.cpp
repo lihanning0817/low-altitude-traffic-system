@@ -37,8 +37,16 @@ std::string WeatherService::makeHttpRequest(const std::string& url) {
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl.get(), CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl.get(), CURLOPT_CONNECTTIMEOUT, 10L);
-    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L); // 开发环境可以关闭SSL验证
-    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
+
+    // 启用SSL验证以提高安全性
+    // 验证服务器证书的真实性（防止中间人攻击）
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 1L);
+    // 验证服务器证书中的主机名（防止DNS欺骗）
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 2L);
+
+    // 如果系统CA证书路径不标准，可以手动指定证书路径
+    // curl_easy_setopt(curl.get(), CURLOPT_CAINFO, "/path/to/ca-bundle.crt");
+
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L); // 跟随重定向
     curl_easy_setopt(curl.get(), CURLOPT_VERBOSE, 0L);
 

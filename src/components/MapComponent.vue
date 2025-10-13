@@ -440,16 +440,28 @@ const showContextMenu = (e) => {
     console.log('显示菜单，坐标:', e.lnglat) // 调试日志
     contextMenu.lnglat = e.lnglat
 
-    // 使用高德地图 v2.0 推荐的方法将地图坐标转换为屏幕坐标
+    // 使用高德地图 v2.0 推荐的方法将地图坐标转换为容器内坐标
     const pixel = map.lngLatToContainer(e.lnglat)
-    console.log('屏幕坐标:', pixel) // 调试日志
+    console.log('容器内坐标:', pixel) // 调试日志
 
     // 确保坐标有效
     if (pixel && typeof pixel.x === 'number' && typeof pixel.y === 'number') {
-      contextMenu.x = Math.max(0, Math.min(pixel.x, window.innerWidth - 200)) // 防止菜单超出屏幕
-      contextMenu.y = Math.max(0, Math.min(pixel.y, window.innerHeight - 200))
+      // 获取地图容器相对于页面的偏移量
+      const mapElement = mapContainer.value
+      const rect = mapElement.getBoundingClientRect()
+
+      // 计算菜单在页面中的绝对位置（容器坐标 + 容器偏移）
+      const pageX = pixel.x + rect.left + window.scrollX
+      const pageY = pixel.y + rect.top + window.scrollY
+
+      console.log('地图容器偏移:', rect.left, rect.top) // 调试日志
+      console.log('页面滚动:', window.scrollX, window.scrollY) // 调试日志
+
+      // 防止菜单超出屏幕（考虑菜单宽度200px和高度）
+      contextMenu.x = Math.max(0, Math.min(pageX, window.innerWidth + window.scrollX - 200))
+      contextMenu.y = Math.max(0, Math.min(pageY, window.innerHeight + window.scrollY - 200))
       contextMenu.visible = true
-      console.log('菜单位置:', contextMenu.x, contextMenu.y) // 调试日志
+      console.log('最终菜单位置:', contextMenu.x, contextMenu.y) // 调试日志
 
       // 添加全局点击事件监听，点击其他地方时隐藏菜单
       nextTick(() => {
@@ -661,24 +673,49 @@ const planRoute = async () => {
       const path = result.data.coordinates
       console.log('路线坐标点数量:', path ? path.length : 0)
 
-      if (path && path.length > 0) {
-        routePolyline = new AMap.Polyline({
-          path: path,
-          strokeColor: '#00AA00',
-          strokeWeight: 6,
-          strokeOpacity: 0.8
-        })
-
-        map.add(routePolyline)
-
-        // 调整地图视野
-        map.setFitView([routePolyline])
-
-        ElMessage.success('路线规划完成')
-      } else {
-        console.error('路线坐标数据为空')
-        ElMessage.error('路线数据异常，无法绘制路线')
+      // 验证路线坐标数据
+      if (!path || !Array.isArray(path) || path.length < 2) {
+        console.error('路线坐标数据无效:', path)
+        ElMessage.error('路线数据异常：至少需要2个坐标点')
+        return
       }
+
+      // 验证每个坐标点的格式
+      const isValidCoordinate = (coord) => {
+        if (!coord || typeof coord !== 'object') return false
+        const lng = typeof coord.lng === 'number' ? coord.lng : (typeof coord[0] === 'number' ? coord[0] : null)
+        const lat = typeof coord.lat === 'number' ? coord.lat : (typeof coord[1] === 'number' ? coord[1] : null)
+
+        // 经度范围: -180 ~ 180, 纬度范围: -90 ~ 90
+        return lng !== null && lat !== null &&
+               lng >= -180 && lng <= 180 &&
+               lat >= -90 && lat <= 90
+      }
+
+      const validPath = path.filter(isValidCoordinate)
+      if (validPath.length < 2) {
+        console.error('有效坐标点不足:', validPath.length)
+        ElMessage.error(`路线坐标验证失败：仅有${validPath.length}个有效坐标点`)
+        return
+      }
+
+      if (validPath.length < path.length) {
+        console.warn(`已过滤${path.length - validPath.length}个无效坐标点`)
+      }
+
+      routePolyline = new AMap.Polyline({
+        path: validPath,
+        strokeColor: '#00AA00',
+        strokeWeight: 6,
+        strokeOpacity: 0.8
+      })
+
+      map.add(routePolyline)
+
+      // 调整地图视野
+      map.setFitView([routePolyline])
+
+      ElMessage.success(`路线规划完成（${validPath.length}个坐标点）`)
     } else {
       console.error('路线规划API返回错误:', result)
       ElMessage.error(result.error || '路线规划失败，请检查参数')
@@ -963,8 +1000,32 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  console.log('[MapComponent] 组件卸载，清理地图资源')
+
+  // 清理所有标记
+  if (startMarker) {
+    map.remove(startMarker)
+    startMarker = null
+  }
+  if (endMarker) {
+    map.remove(endMarker)
+    endMarker = null
+  }
+  waypointMarkers.forEach(marker => {
+    if (marker) map.remove(marker)
+  })
+  waypointMarkers = []
+
+  // 清理路线
+  if (routePolyline) {
+    map.remove(routePolyline)
+    routePolyline = null
+  }
+
+  // 销毁地图实例
   if (map) {
     map.destroy()
+    map = null
   }
 })
 </script>

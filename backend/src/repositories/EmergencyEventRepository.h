@@ -61,6 +61,17 @@ public:
     );
 
     /**
+     * @brief 获取符合条件的事件总数
+     * @param status 状态过滤（可选）
+     * @param severity 严重程度过滤（可选）
+     * @return 事件总数
+     */
+    int64_t countEvents(
+        std::optional<std::string> status = std::nullopt,
+        std::optional<std::string> severity = std::nullopt
+    );
+
+    /**
      * @brief 更新事件状态
      * @param id 事件ID
      * @param status 新状态

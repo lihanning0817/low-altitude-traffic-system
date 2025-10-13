@@ -66,8 +66,15 @@ http::response<http::string_body> SystemMonitorController::getSystemInfo(const h
             std::chrono::system_clock::now() - uptime
         );
         std::stringstream ss;
-        std::tm* gmt_tm = std::gmtime(&start_time_t);
-        ss << std::put_time(gmt_tm, "%Y-%m-%d %H:%M:%S UTC");
+
+        // 使用线程安全的 gmtime_s (Windows) / gmtime_r (POSIX)
+        std::tm gmt_tm = {};
+#ifdef _WIN32
+        gmtime_s(&gmt_tm, &start_time_t);  // Windows 线程安全版本
+#else
+        gmtime_r(&start_time_t, &gmt_tm);  // POSIX 线程安全版本
+#endif
+        ss << std::put_time(&gmt_tm, "%Y-%m-%d %H:%M:%S UTC");
 
         nlohmann::json system_info = {
             {"name", config.getString("system.name", "低空交通系统")},

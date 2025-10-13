@@ -767,10 +767,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Temperature, Wind, Cloud, Warning, Location, Refresh,
+  Temperature, Wind, Cloudy, Warning, Location, Refresh,
   Map, Check
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
@@ -798,86 +798,29 @@ const selectedRoute = ref('')
 const forecastTimeRange = ref([])
 const currentLocation = ref({ lat: 39.9042, lon: 116.4074 }) // 默认北京坐标
 
+// 用于跟踪正在进行的HTTP请求的AbortController集合
+const activeRequests = new Set()
+
+// 创建一个包装器来跟踪Promise请求
+const trackRequest = async (promise) => {
+  const controller = new AbortController()
+  activeRequests.add(controller)
+
+  try {
+    const result = await promise
+    return result
+  } finally {
+    activeRequests.delete(controller)
+  }
+}
+
 const routeStart = ref('')
 const routeEnd = ref('')
 const routeAltitude = ref(100)
 const routeTime = ref(new Date().toISOString())
 const routePreview = ref([])
 
-// 模拟数据
-const mockWeatherData = {
-  coord: { lat: 39.90923, lng: 116.397428 },
-  weather: [
-    {
-      id: 800,
-      main: "Clear",
-      description: "晴朗",
-      icon: "01d"
-    }
-  ],
-  main: {
-    temp: 18.5,
-    feels_like: 17.2,
-    temp_min: 16.8,
-    temp_max: 20.1,
-    pressure: 1013,
-    humidity: 65
-  },
-  visibility: 10000,
-  wind: {
-    speed: 3.5,
-    deg: 180
-  },
-  clouds: {
-    all: 10
-  },
-  dt: Math.floor(Date.now() / 1000),
-  sys: {
-    type: 1,
-    id: 9412,
-    country: "CN",
-    sunrise: Math.floor(Date.now() / 1000) + 21600,
-    sunset: Math.floor(Date.now() / 1000) + 64800
-  },
-  timezone: 28800,
-  id: 1816670,
-  name: "北京",
-  cod: 200
-}
-
-const mockRiskAssessment = {
-  overallRisk: 'medium',
-  risks: [
-    {
-      type: 'wind',
-      level: 'medium',
-      value: 3.5,
-      threshold: 15,
-      description: '风速较高: 3.5 m/s'
-    },
-    {
-      type: 'temperature',
-      level: 'low',
-      value: 18.5,
-      threshold: -10,
-      description: '温度适宜: 18.5°C'
-    }
-  ],
-  warnings: [
-    {
-      type: 'moderate_weather',
-      level: 'medium',
-      condition: 'Clear',
-      description: '检测到不利天气条件，请谨慎飞行'
-    }
-  ],
-  recommendations: [
-    '天气条件良好，适合飞行',
-    '建议保持在较低高度以减少风的影响',
-    '注意无人机电池性能受温度影响'
-  ]
-}
-
+// Mock forecast data for fallback when API fails
 const mockForecast = [
   {
     dt: Math.floor(Date.now() / 1000),
@@ -1657,29 +1600,44 @@ const loadRouteWeatherData = () => {
     return
   }
 
-  // 确定起始日期
-  let startDate = null
-  if (forecastTimeRange.value && forecastTimeRange.value.length > 0) {
-    // 如果用户选择了日期范围，使用起始日期
-    startDate = new Date(forecastTimeRange.value[0])
-    console.log('[WeatherIntegration] 使用选定起始日期:', forecastTimeRange.value[0])
-  } else {
-    // 否则使用今天
-    startDate = new Date()
-    console.log('[WeatherIntegration] 使用今天作为起始日期')
+  // 设置标志，防止watch触发无限循环
+  isLoadingRouteWeather = true
+
+  try {
+    // 确定起始日期
+    let startDate = null
+    if (forecastTimeRange.value && forecastTimeRange.value.length > 0) {
+      // 如果用户选择了日期范围，使用起始日期
+      startDate = new Date(forecastTimeRange.value[0])
+      console.log('[WeatherIntegration] 使用选定起始日期:', forecastTimeRange.value[0])
+    } else {
+      // 否则使用今天
+      startDate = new Date()
+      console.log('[WeatherIntegration] 使用今天作为起始日期')
+    }
+
+    console.log('[WeatherIntegration] 加载航线天气:', selectedRoute.value, '起始日期:', startDate)
+
+    // 生成从起始日期开始的未来5天天气预报
+    routeWeather.value = generateMockRouteWeather(startDate)
+
+    const dateStr = `${startDate.getMonth() + 1}月${startDate.getDate()}日`
+    ElMessage.success(`已加载航线 ${selectedRoute.value} 从${dateStr}开始的5天天气预报`)
+  } finally {
+    // 使用nextTick确保在DOM更新后才清除标志
+    nextTick(() => {
+      isLoadingRouteWeather = false
+    })
   }
-
-  console.log('[WeatherIntegration] 加载航线天气:', selectedRoute.value, '起始日期:', startDate)
-
-  // 生成从起始日期开始的未来5天天气预报
-  routeWeather.value = generateMockRouteWeather(startDate)
-
-  const dateStr = `${startDate.getMonth() + 1}月${startDate.getDate()}日`
-  ElMessage.success(`已加载航线 ${selectedRoute.value} 从${dateStr}开始的5天天气预报`)
 }
+
+// 防止watch无限循环的标志
+let isLoadingRouteWeather = false
 
 // 监听航线选择变化
 watch(selectedRoute, (newRoute) => {
+  if (isLoadingRouteWeather) return
+
   if (newRoute) {
     loadRouteWeatherData()
   } else {
@@ -1687,12 +1645,27 @@ watch(selectedRoute, (newRoute) => {
   }
 })
 
-// 监听日期范围变化
+// 监听日期范围变化（深度监听数组内容变化）
 watch(forecastTimeRange, (newRange) => {
+  if (isLoadingRouteWeather) return
+
   // 只有在已选择航线的情况下才重新加载数据
   if (selectedRoute.value) {
     loadRouteWeatherData()
   }
+}, { deep: true })
+
+// 组件卸载时取消所有未完成的HTTP请求，防止内存泄漏
+onBeforeUnmount(() => {
+  console.log('[WeatherIntegration] 组件卸载，取消所有待处理的HTTP请求:', activeRequests.size)
+
+  // 取消所有活动请求
+  activeRequests.forEach(controller => {
+    controller.abort()
+  })
+
+  // 清空请求集合
+  activeRequests.clear()
 })
 
 // 初始化数据

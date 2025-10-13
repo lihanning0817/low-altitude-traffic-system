@@ -159,6 +159,41 @@ std::vector<models::EmergencyEvent> EmergencyEventRepository::getAllEvents(
     }
 }
 
+int64_t EmergencyEventRepository::countEvents(
+    std::optional<std::string> status,
+    std::optional<std::string> severity
+) {
+    try {
+        auto& db = database::DatabaseManager::getInstance();
+
+        std::stringstream sql;
+        sql << "SELECT COUNT(*) as total FROM low_altitude_traffic_system.emergency_events WHERE 1=1";
+
+        std::vector<mysqlx::Value> params;
+
+        if (status.has_value()) {
+            sql << " AND status = ?";
+            params.push_back(status.value());
+        }
+
+        if (severity.has_value()) {
+            sql << " AND severity = ?";
+            params.push_back(severity.value());
+        }
+
+        auto result = db.executePreparedQuery(sql.str(), params);
+
+        if (auto row = result->fetchRow()) {
+            return row[0].get<int64_t>();
+        }
+
+        return 0;
+    } catch (const std::exception& e) {
+        spdlog::error("[EmergencyEventRepository] Error counting events: {}", e.what());
+        throw;
+    }
+}
+
 bool EmergencyEventRepository::updateEventStatus(int64_t id, models::EmergencyStatus status) {
     try {
         auto& db = database::DatabaseManager::getInstance();
@@ -393,21 +428,32 @@ models::EmergencyEvent EmergencyEventRepository::createEventFromRow(mysqlx::Row&
 
         spdlog::debug("[EmergencyEventRepository] Reading field 13 (responded_at)");
         if (!row[13].isNull()) {
-            event.responded_at = std::chrono::system_clock::now();
+            // 从MySQL TIMESTAMP转换为Unix时间戳（秒）
+            uint64_t timestamp = row[13].get<uint64_t>();
+            event.responded_at = std::chrono::system_clock::from_time_t(static_cast<time_t>(timestamp));
         }
 
         spdlog::debug("[EmergencyEventRepository] Reading field 14 (resolved_at)");
         if (!row[14].isNull()) {
-            event.resolved_at = std::chrono::system_clock::now();
+            uint64_t timestamp = row[14].get<uint64_t>();
+            event.resolved_at = std::chrono::system_clock::from_time_t(static_cast<time_t>(timestamp));
         }
 
         spdlog::debug("[EmergencyEventRepository] Reading field 15 (created_at)");
-        // Skip reading timestamp, just use current time
-        event.created_at = std::chrono::system_clock::now();
+        if (!row[15].isNull()) {
+            uint64_t timestamp = row[15].get<uint64_t>();
+            event.created_at = std::chrono::system_clock::from_time_t(static_cast<time_t>(timestamp));
+        } else {
+            event.created_at = std::chrono::system_clock::now();
+        }
 
         spdlog::debug("[EmergencyEventRepository] Reading field 16 (updated_at)");
-        // Skip reading timestamp, just use current time
-        event.updated_at = std::chrono::system_clock::now();
+        if (!row[16].isNull()) {
+            uint64_t timestamp = row[16].get<uint64_t>();
+            event.updated_at = std::chrono::system_clock::from_time_t(static_cast<time_t>(timestamp));
+        } else {
+            event.updated_at = std::chrono::system_clock::now();
+        }
 
         spdlog::debug("[EmergencyEventRepository] Successfully created event from row");
 

@@ -25,20 +25,35 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.token}`
     }
 
+    // 设置超时时间（默认30秒）
+    const timeout = options.timeout || 30000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     const config = {
       method: options.method || 'GET',
       headers,
+      signal: controller.signal,
       ...options.body && { body: JSON.stringify(options.body) }
     }
 
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(url, config);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`请求超时 (${timeout}ms)`);
+      }
+      throw error;
     }
-    
-    return await response.json();
   }
 
   // 系统健康检查
