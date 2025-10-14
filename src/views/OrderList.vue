@@ -81,9 +81,9 @@ export default {
       // 跳转到实时任务追踪页面
       this.$router.push(`/task-tracking/${orderId}`)
     },
-    viewDetails(orderId) {
+    viewDetails() {
       // 查看订单详情（这里可以跳转到详情页）
-      console.log('View details for order:', orderId)
+      // TODO: 实现订单详情页面跳转
     }
   }
 }

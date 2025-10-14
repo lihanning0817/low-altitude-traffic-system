@@ -1,5 +1,6 @@
 #include "FlightTaskController.h"
 #include "../utils/JsonUtils.h"
+#include "../utils/ParamParser.h"
 #include <iostream>
 #include <sstream>
 #include <regex>
@@ -47,28 +48,12 @@ namespace controllers
 
             if (query_params.find("limit") != query_params.end())
             {
-                try
-                {
-                    limit = std::stoi(query_params["limit"]);
-                    limit = std::min(std::max(limit, 1), 1000); // 限制在1-1000之间
-                }
-                catch (const std::exception &)
-                {
-                    limit = 100;
-                }
+                limit = utils::ParamParser::parseInt(query_params["limit"], 100, 1, 1000);
             }
 
             if (query_params.find("offset") != query_params.end())
             {
-                try
-                {
-                    offset = std::stoi(query_params["offset"]);
-                    offset = std::max(offset, 0); // 最小为0
-                }
-                catch (const std::exception &)
-                {
-                    offset = 0;
-                }
+                offset = utils::ParamParser::parseInt(query_params["offset"], 0, 0, std::nullopt);
             }
 
             std::cout << "[FlightTaskController] Query params - status: '" << status_filter
@@ -217,13 +202,9 @@ namespace controllers
             int64_t user_id = user_id_opt.value();
             std::cout << "[FlightTaskController] Authenticated user ID: " << user_id << std::endl;
 
-            // 验证任务ID格式
-            int64_t task_id_num;
-            try
-            {
-                task_id_num = std::stoll(task_id);
-            }
-            catch (const std::exception &)
+            // 验证任务ID格式并使用ParamParser安全解析
+            int64_t task_id_num = utils::ParamParser::parseLongLong(task_id, -1, 1, std::nullopt);
+            if (task_id_num <= 0)
             {
                 logApiCall(user_id, "PUT", "/api/v1/tasks/" + task_id, false, "Invalid task ID format");
                 return utils::HttpResponse::createErrorResponse("任务ID格式错误");
@@ -364,13 +345,9 @@ namespace controllers
             int64_t user_id = user_id_opt.value();
             std::cout << "[FlightTaskController] Authenticated user ID: " << user_id << std::endl;
 
-            // 验证任务ID格式
-            int64_t task_id_num;
-            try
-            {
-                task_id_num = std::stoll(task_id);
-            }
-            catch (const std::exception &)
+            // 验证任务ID格式并使用ParamParser安全解析
+            int64_t task_id_num = utils::ParamParser::parseLongLong(task_id, -1, 1, std::nullopt);
+            if (task_id_num <= 0)
             {
                 logApiCall(user_id, "DELETE", "/api/v1/tasks/" + task_id, false, "Invalid task ID format");
                 return utils::HttpResponse::createErrorResponse("任务ID格式错误");
@@ -427,13 +404,9 @@ namespace controllers
             int64_t user_id = user_id_opt.value();
             std::cout << "[FlightTaskController] Authenticated user ID: " << user_id << std::endl;
 
-            // 验证任务ID格式
-            int64_t task_id_num;
-            try
-            {
-                task_id_num = std::stoll(task_id);
-            }
-            catch (const std::exception &)
+            // 验证任务ID格式并使用ParamParser安全解析
+            int64_t task_id_num = utils::ParamParser::parseLongLong(task_id, -1, 1, std::nullopt);
+            if (task_id_num <= 0)
             {
                 logApiCall(user_id, "GET", "/api/v1/tasks/" + task_id, false, "Invalid task ID format");
                 return utils::HttpResponse::createErrorResponse("任务ID格式错误");

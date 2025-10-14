@@ -44,6 +44,12 @@ export default createStore({
     flightTasks: [],
     currentTask: null,
 
+    // 🔒 并发请求控制 - 防止数据不一致
+    pendingRequests: {
+      flightTasks: null,  // AbortController for fetchFlightTasks
+      devices: null       // AbortController for fetchDevices
+    },
+
     // 设备相关
     devices: [],
     activeDevices: 0,
@@ -86,6 +92,9 @@ export default createStore({
     // 系统状态
     loading: false,
     systemStatus: 'online',
+
+    // 🔒 BUG #6: 表单状态跟踪 - 防止Token过期数据丢失
+    hasUnsavedChanges: false,
 
     // 系统监控相关
     systemMonitor: {
@@ -465,6 +474,26 @@ export default createStore({
         drones: null,
         users: null
       }
+    },
+
+    // 🔒 并发请求控制相关
+    SET_PENDING_REQUEST(state, { type, controller }) {
+      state.pendingRequests[type] = controller
+    },
+
+    CLEAR_PENDING_REQUEST(state, type) {
+      state.pendingRequests[type] = null
+    },
+
+    // 🔒 BUG #6: 表单状态跟踪相关 - 防止Token过期数据丢失
+    SET_HAS_UNSAVED_CHANGES(state, value) {
+      state.hasUnsavedChanges = value
+      console.log('[Vuex] hasUnsavedChanges 状态更新:', value)
+    },
+
+    CLEAR_UNSAVED_CHANGES(state) {
+      state.hasUnsavedChanges = false
+      console.log('[Vuex] hasUnsavedChanges 已清除')
     }
   },
 
@@ -643,7 +672,7 @@ export default createStore({
     },
 
     // 获取当前用户信息
-    async getCurrentUser({ commit, dispatch }) {
+    async getCurrentUser({ commit }) {
       try {
         const response = await authApi.getCurrentUser()
 
@@ -703,23 +732,49 @@ export default createStore({
       }
     },
 
-    async fetchFlightTasks({ commit, dispatch }) {
+    async fetchFlightTasks({ commit, dispatch, state }) {
       try {
+        // 🔒 防止并发请求: 如果有pending请求,先取消
+        if (state.pendingRequests.flightTasks) {
+          console.log('[Vuex] 取消之前的fetchFlightTasks请求')
+          state.pendingRequests.flightTasks.abort()
+          commit('CLEAR_PENDING_REQUEST', 'flightTasks')
+        }
+
+        // 创建新的AbortController
+        const abortController = new AbortController()
+        commit('SET_PENDING_REQUEST', { type: 'flightTasks', controller: abortController })
+
         commit('SET_LOADING', true)
 
-        // 调用FlightTask API获取飞行任务
-        const response = await flightTaskApi.getFlightTasks()
+        // 调用FlightTask API获取飞行任务，传入signal
+        const response = await flightTaskApi.getFlightTasks({}, abortController.signal)
 
         if (response.success) {
           const tasks = response.data.tasks || []
           // 格式化任务数据
           const formattedTasks = tasks.map(task => flightTaskApi.formatTask(task))
           commit('SET_FLIGHT_TASKS', formattedTasks)
+
+          // 请求成功，清除pending状态
+          commit('CLEAR_PENDING_REQUEST', 'flightTasks')
+
           return formattedTasks
         } else {
+          // 请求失败，清除pending状态
+          commit('CLEAR_PENDING_REQUEST', 'flightTasks')
           throw new Error(response.message || '获取任务列表失败')
         }
       } catch (error) {
+        // 清除pending状态
+        commit('CLEAR_PENDING_REQUEST', 'flightTasks')
+
+        // 如果是取消错误，不显示通知
+        if (error.canceled) {
+          console.log('[Vuex] fetchFlightTasks请求已取消')
+          return []
+        }
+
         console.error('获取任务列表失败:', error)
         dispatch('addNotification', {
           type: 'error',
@@ -989,7 +1044,7 @@ export default createStore({
       commit('TOGGLE_THEME')
     },
 
-    initTheme({ commit, state }) {
+    initTheme({ commit }) {
       // 在应用启动时初始化主题
       const savedTheme = storage.get('theme') || 'light'
 
@@ -1001,7 +1056,7 @@ export default createStore({
     },
 
     // 路径规划相关
-    async planRoute({ commit, dispatch }, { start, end, useAMap = true }) {
+    async planRoute({ commit }, { start, end, useAMap = true }) {
       try {
         let route;
         if (useAMap && window.AMap) {
@@ -1031,11 +1086,7 @@ export default createStore({
           throw new Error('无法找到合适的路径');
         }
       } catch (error) {
-        dispatch('addNotification', {
-          type: 'error',
-          title: '路径规划失败',
-          message: error.message
-        });
+        ElMessage.error('路径规划失败: ' + error.message);
         throw error;
       }
     },
@@ -1351,6 +1402,22 @@ export default createStore({
      */
     clearSystemMonitorCache({ commit }) {
       commit('CLEAR_SYSTEM_MONITOR_CACHE')
+    },
+
+    // 🔒 BUG #6: 表单状态管理 - 防止Token过期数据丢失
+    /**
+     * 设置未保存更改标志
+     * @param {boolean} value - 是否有未保存的更改
+     */
+    setUnsavedChanges({ commit }, value) {
+      commit('SET_HAS_UNSAVED_CHANGES', value)
+    },
+
+    /**
+     * 清除未保存更改标志
+     */
+    clearUnsavedChanges({ commit }) {
+      commit('CLEAR_UNSAVED_CHANGES')
     }
   }
 })

@@ -210,10 +210,9 @@ class RoutePlanner {
   /**
    * 实时路径优化
    */
-  optimizeRoute(realTimeTraffic, weatherConditions) {
+  optimizeRoute() {
     // 根据实时交通和天气调整路径权重
-    // 这里只是一个示例实现
-    console.log('优化路径中...', realTimeTraffic, weatherConditions);
+    // TODO: 实现基于实时交通和天气的路径权重调整算法
     return {
       optimized: true,
       message: '路径已根据实时条件优化'

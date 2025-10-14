@@ -1,119 +1,94 @@
 <template>
-  <!-- 使用公共的 AuthLayout 组件，统一白色留白风格 -->
+  <!-- 使用公共的 AuthLayout 组件 -->
   <AuthLayout>
     <!-- 自定义标题 -->
     <template #title>
-      <h1 class="auth-title">创建您的智能低空交通系统账号</h1>
+      <h1 class="auth-title">
+        创建您的智能低空交通系统账号
+      </h1>
     </template>
 
     <!-- 注册表单 -->
     <template #form>
-      <form class="register-form" @submit.prevent="handleRegister">
-        <!-- 用户名输入框 -->
-        <div class="form-group">
-          <input
-            v-model="registerData.username"
-            type="text"
-            placeholder="用户名"
-            class="form-input"
-            required
-          />
-        </div>
+      <form
+        class="register-form"
+        @submit.prevent="handleRegister"
+      >
+        <AppleInput
+          v-model="registerData.username"
+          type="text"
+          placeholder="用户名"
+          required
+          class="form-field"
+        />
 
-        <!-- 邮箱输入框 -->
-        <div class="form-group">
-          <input
-            v-model="registerData.email"
-            type="email"
-            placeholder="邮箱地址"
-            class="form-input"
-            required
-          />
-        </div>
+        <AppleInput
+          v-model="registerData.email"
+          type="email"
+          placeholder="邮箱地址"
+          required
+          class="form-field"
+        />
 
-        <!-- 真实姓名输入框 -->
-        <div class="form-group">
-          <input
-            v-model="registerData.full_name"
-            type="text"
-            placeholder="真实姓名"
-            class="form-input"
-            required
-          />
-        </div>
+        <AppleInput
+          v-model="registerData.full_name"
+          type="text"
+          placeholder="真实姓名"
+          required
+          class="form-field"
+        />
 
-        <!-- 密码输入框 -->
-        <div class="form-group">
-          <input
-            v-model="registerData.password"
-            type="password"
-            placeholder="密码"
-            class="form-input"
-            required
-          />
-        </div>
+        <AppleInput
+          v-model="registerData.password"
+          type="password"
+          placeholder="密码"
+          required
+          class="form-field"
+        />
 
-        <!-- 确认密码输入框 -->
-        <div class="form-group">
-          <input
-            v-model="registerData.confirmPassword"
-            type="password"
-            placeholder="确认密码"
-            class="form-input"
-            required
-          />
-        </div>
+        <AppleInput
+          v-model="registerData.confirmPassword"
+          type="password"
+          placeholder="确认密码"
+          required
+          class="form-field"
+        />
 
-        <!-- 角色选择下拉框 -->
-        <div class="form-group">
+        <div class="form-field">
           <select
             v-model="registerData.role"
             class="form-select"
           >
-            <option value="">选择角色（可选）</option>
-            <option value="admin">管理员</option>
-            <option value="operator">操作员</option>
-            <option value="viewer">观察员</option>
+            <option value="">
+              选择角色(可选)
+            </option>
+            <option value="admin">
+              管理员
+            </option>
+            <option value="operator">
+              操作员
+            </option>
+            <option value="viewer">
+              观察员
+            </option>
           </select>
         </div>
 
-        <!-- 注册按钮 -->
-        <button
+        <AppleButton
           type="submit"
+          variant="primary"
+          size="large"
+          :loading="loading"
           class="register-button"
-          :disabled="loading"
         >
-          <div class="button-content">
-            <!-- Loading 图标 -->
-            <div v-if="loading" class="loading-spinner">
-              <svg
-                class="spinner-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-dasharray="31.416"
-                  stroke-dashoffset="31.416"
-                />
-              </svg>
-            </div>
-            <!-- 按钮文字 -->
-            <span class="button-text">{{ loading ? '注册中...' : '立即注册' }}</span>
-          </div>
-        </button>
+          {{ loading ? '注册中...' : '立即注册' }}
+        </AppleButton>
       </form>
     </template>
 
     <!-- 底部登录链接 -->
     <template #bottomLink>
-      <span>已有账号？</span>
+      <span>已有账号?</span>
       <button
         type="button"
         class="login-link-button"
@@ -132,6 +107,7 @@ import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import authApi from '@/services/authApi'
 import AuthLayout from './AuthLayout.vue'
+import { AppleButton, AppleInput } from '@/components/apple'
 
 const router = useRouter()
 const store = useStore()
@@ -148,7 +124,7 @@ const registerData = reactive({
   role: ''
 })
 
-// 注册处理函数 - 与登录页面保持一致的验证风格
+// 注册处理函数
 const handleRegister = async () => {
   // 基础表单验证
   if (!registerData.username || !registerData.email || !registerData.password || !registerData.confirmPassword || !registerData.full_name) {
@@ -204,19 +180,47 @@ const handleRegister = async () => {
     })
 
     if (response.success) {
-      ElMessage.success('注册成功！即将跳转到登录页面')
+      ElMessage.success('注册成功!正在自动登录...')
 
-      // 延迟跳转到登录页面
-      setTimeout(() => {
-        router.push('/login')
-      }, 1500)
+      try {
+        // 自动登录
+        const loginResponse = await authApi.login({
+          username: registerData.username,
+          password: registerData.password
+        })
+
+        if (loginResponse.success) {
+          // 保存用户信息到store
+          const user = loginResponse.data.user
+          await store.dispatch('setUser', user)
+
+          ElMessage.success('登录成功!即将跳转到仪表盘')
+
+          // 延迟跳转到仪表盘
+          setTimeout(() => {
+            router.replace('/dashboard')
+          }, 1000)
+        } else {
+          // 自动登录失败,跳转到登录页
+          ElMessage.warning('注册成功,但自动登录失败,请手动登录')
+          setTimeout(() => {
+            router.push('/login')
+          }, 1500)
+        }
+      } catch (loginError) {
+        console.error('自动登录失败:', loginError)
+        ElMessage.warning('注册成功,但自动登录失败,请手动登录')
+        setTimeout(() => {
+          router.push('/login')
+        }, 1500)
+      }
     } else {
       ElMessage.error(response.message || '注册失败')
     }
 
   } catch (error) {
     console.error('注册错误:', error)
-    const errorMessage = error.message || error.error_code || '注册失败，请检查网络连接'
+    const errorMessage = error.message || error.error_code || '注册失败,请检查网络连接'
     ElMessage.error(errorMessage)
   } finally {
     loading.value = false
@@ -225,56 +229,40 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-/* Apple-style form styling - 与登录页面保持完全一致 */
+/* 使用 Apple 设计系统 */
 .auth-title {
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--color-text-primary);
   margin: 0;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-compact);
 }
 
 .register-form {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
-.form-group {
-  margin-bottom: 16px;
+.form-field {
+  margin-bottom: var(--space-4);
 }
 
-.form-input,
+/* 下拉选择框样式 */
 .form-select {
   width: 100%;
   height: 44px;
-  padding: 0 16px;
-  font-size: 16px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
   font-weight: 400;
-  color: #1d1d1f;
-  background: #ffffff;
-  border: 1px solid #d2d2d7;
-  border-radius: 8px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
   outline: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-input);
   -webkit-appearance: none;
   box-sizing: border-box;
-}
-
-.form-input::placeholder {
-  color: #86868b;
-  font-weight: 400;
-}
-
-.form-input:focus,
-.form-select:focus {
-  border-color: #0071e3;
-  box-shadow:
-    0 0 0 3px rgba(0, 113, 227, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.04);
-  transform: translateY(-1px);
-}
-
-.form-select {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2386868b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 12px center;
   background-repeat: no-repeat;
@@ -282,90 +270,25 @@ const handleRegister = async () => {
   padding-right: 40px;
 }
 
+.form-select:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.form-select:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
+  background-color: var(--color-bg-primary);
+}
+
 .form-select option {
-  color: #1d1d1f;
-  background: #ffffff;
-  padding: 8px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  padding: var(--space-2);
 }
 
 .register-button {
   width: 100%;
-  height: 44px;
-  background: #0071e3;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-  letter-spacing: -0.1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 按钮内容容器 */
-.button-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-}
-
-/* Loading 动画容器 */
-.loading-spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-}
-
-/* Loading 图标 */
-.spinner-icon {
-  width: 100%;
-  height: 100%;
-  color: white;
-  animation: spin 1s linear infinite;
-}
-
-/* 旋转动画 */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-    stroke-dashoffset: 31.416;
-  }
-  50% {
-    stroke-dashoffset: 15.708;
-  }
-  to {
-    transform: rotate(360deg);
-    stroke-dashoffset: 31.416;
-  }
-}
-
-/* 按钮文字 */
-.button-text {
-  transition: opacity 0.2s ease;
-}
-
-.register-button:hover:not(:disabled) {
-  background: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
-}
-
-.register-button:active:not(:disabled) {
-  transform: scale(0.98);
-  transition: transform 0.1s;
-}
-
-.register-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .login-link-button {
@@ -388,7 +311,6 @@ const handleRegister = async () => {
 
 /* Responsive design */
 @media (max-width: 480px) {
-  .form-input,
   .form-select,
   .register-button {
     height: 48px;
@@ -406,31 +328,17 @@ const handleRegister = async () => {
     color: #f2f2f7;
   }
 
-  .form-input,
   .form-select {
     background: #2c2c2e;
     border: 1px solid #48484a;
     color: #f2f2f7;
   }
 
-  .form-input::placeholder {
-    color: #98989d;
-  }
-
-  .form-input:focus,
   .form-select:focus {
     border-color: #0a84ff;
     box-shadow:
       0 0 0 3px rgba(10, 132, 255, 0.1),
       0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  .register-button {
-    background: #0a84ff;
-  }
-
-  .register-button:hover:not(:disabled) {
-    background: #0056cc;
   }
 
   .login-link-button {

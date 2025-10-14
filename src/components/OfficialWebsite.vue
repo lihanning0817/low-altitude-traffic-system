@@ -1,60 +1,127 @@
 <template>
   <div class="official-website">
     <!-- Navigation Bar -->
-    <nav class="navbar" :class="{ 'scrolled': isScrolled }">
+    <nav
+      class="navbar"
+      :class="{ 'scrolled': isScrolled }"
+    >
       <div class="nav-container">
         <div class="nav-brand">
-          <img :src="`/logo.png?v=${Date.now()}`" alt="智能低空交通系统" class="nav-logo" />
+          <img
+            :src="`/logo.png?v=${Date.now()}`"
+            alt="智能低空交通系统"
+            class="nav-logo"
+          >
         </div>
 
         <!-- Desktop Menu -->
         <div class="nav-menu">
-          <a href="#hero" class="nav-link">首页</a>
-          <a href="#info" class="nav-link">方案</a>
-          <a href="#features" class="nav-link">技术</a>
-          <a href="#footer" class="nav-link">关于</a>
-          <button class="login-btn" @click="goToLogin">登录</button>
+          <a
+            href="#hero"
+            class="nav-link"
+          >首页</a>
+          <a
+            href="#info"
+            class="nav-link"
+          >方案</a>
+          <a
+            href="#features"
+            class="nav-link"
+          >技术</a>
+          <a
+            href="#footer"
+            class="nav-link"
+          >关于</a>
+          <button
+            class="login-btn"
+            @click="goToLogin"
+          >
+            登录
+          </button>
         </div>
 
         <!-- Mobile Menu Toggle -->
         <label class="hamburger">
-          <input type="checkbox" ref="mobileToggle">
-          <span></span>
-          <span></span>
-          <span></span>
+          <input
+            ref="mobileToggle"
+            type="checkbox"
+          >
+          <span />
+          <span />
+          <span />
           <div class="mobile-menu">
-            <a href="#hero" @click="closeMobileMenu">首页</a>
-            <a href="#info" @click="closeMobileMenu">方案</a>
-            <a href="#features" @click="closeMobileMenu">技术</a>
-            <a href="#footer" @click="closeMobileMenu">关于</a>
-            <button class="mobile-login-btn" @click="goToLogin">登录</button>
+            <a
+              href="#hero"
+              @click="closeMobileMenu"
+            >首页</a>
+            <a
+              href="#info"
+              @click="closeMobileMenu"
+            >方案</a>
+            <a
+              href="#features"
+              @click="closeMobileMenu"
+            >技术</a>
+            <a
+              href="#footer"
+              @click="closeMobileMenu"
+            >关于</a>
+            <button
+              class="mobile-login-btn"
+              @click="goToLogin"
+            >登录</button>
           </div>
         </label>
       </div>
     </nav>
 
     <!-- Hero Section -->
-    <section id="hero" class="hero">
-      <div class="hero-background"></div>
+    <section
+      id="hero"
+      class="hero"
+    >
+      <div class="hero-background" />
       <div class="hero-content">
-        <h1 class="hero-title">智能低空交通管理</h1>
-        <p class="hero-subtitle">为城市空中交通提供全方位解决方案，让未来出行更安全、更高效</p>
+        <h1 class="hero-title">
+          智能低空交通管理
+        </h1>
+        <p class="hero-subtitle">
+          为城市空中交通提供全方位解决方案，让未来出行更安全、更高效
+        </p>
         <div class="hero-actions">
-          <button class="cta-primary">了解更多</button>
-          <button class="cta-secondary">观看演示</button>
+          <button class="cta-primary">
+            了解更多
+          </button>
+          <button class="cta-secondary">
+            观看演示
+          </button>
         </div>
       </div>
     </section>
 
     <!-- Info Hierarchy -->
-    <section id="info" class="info-section">
+    <section
+      id="info"
+      class="info-section"
+    >
       <div class="container">
         <div class="info-grid">
           <div class="info-card">
             <div class="info-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M9 12l2 2 4-4"/>
-                <circle cx="12" cy="12" r="9"/>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M9 12l2 2 4-4" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                />
               </svg>
             </div>
             <h3>安全可靠</h3>
@@ -63,9 +130,20 @@
 
           <div class="info-card">
             <div class="info-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12,6 12,12 16,14"/>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+                <polyline points="12,6 12,12 16,14" />
               </svg>
             </div>
             <h3>实时监控</h3>
@@ -74,8 +152,15 @@
 
           <div class="info-card">
             <div class="info-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" />
               </svg>
             </div>
             <h3>高效智能</h3>
@@ -84,9 +169,20 @@
 
           <div class="info-card">
             <div class="info-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                />
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" />
               </svg>
             </div>
             <h3>精准定位</h3>
@@ -97,12 +193,18 @@
     </section>
 
     <!-- Feature Areas -->
-    <section id="features" class="features-section">
+    <section
+      id="features"
+      class="features-section"
+    >
       <div class="container">
         <!-- Feature 1 -->
         <div class="feature-row">
           <div class="feature-image">
-            <img src="https://images.unsplash.com/photo-1551731409-43eb3e517a1a?w=800&q=80" alt="空中交通管理" />
+            <img
+              src="https://images.unsplash.com/photo-1551731409-43eb3e517a1a?w=800&q=80"
+              alt="空中交通管理"
+            >
           </div>
           <div class="feature-content">
             <h2>全域空中交通管理</h2>
@@ -118,7 +220,10 @@
         <!-- Feature 2 -->
         <div class="feature-row reverse">
           <div class="feature-image">
-            <img src="https://images.unsplash.com/photo-1473773508845-188df298d2d1?w=800&q=80" alt="实时监控系统" />
+            <img
+              src="https://images.unsplash.com/photo-1473773508845-188df298d2d1?w=800&q=80"
+              alt="实时监控系统"
+            >
           </div>
           <div class="feature-content">
             <h2>智能监控预警系统</h2>
@@ -134,7 +239,10 @@
         <!-- Feature 3 -->
         <div class="feature-row">
           <div class="feature-image">
-            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80" alt="数据分析平台" />
+            <img
+              src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80"
+              alt="数据分析平台"
+            >
           </div>
           <div class="feature-content">
             <h2>大数据分析平台</h2>
@@ -150,7 +258,10 @@
     </section>
 
     <!-- Footer -->
-    <footer id="footer" class="footer">
+    <footer
+      id="footer"
+      class="footer"
+    >
       <div class="container">
         <div class="footer-grid">
           <div class="footer-column">
@@ -205,6 +316,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { AppleButton } from '@/components/apple'
 
 const router = useRouter()
 const isScrolled = ref(false)

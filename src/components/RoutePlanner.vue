@@ -362,9 +362,9 @@ const initMap = () => {
     })
 
     // 添加点击事件监听器
-    map.on('click', (e) => {
+    map.on('click', () => {
       // 这里可以处理地图点击事件，例如选择起点/终点
-      console.log('Map clicked at:', e.lnglat.lng, e.lnglat.lat)
+      // TODO: 实现地图点击选择起点/终点功能
     })
 
 // 将地图实例存储到组件数据中，以便后续使用

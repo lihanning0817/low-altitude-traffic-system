@@ -165,8 +165,13 @@ std::vector<models::FlightTask> FlightTaskRepository::findByStatus(
         }
         std::cout << std::endl;
 
-        // 构建查询 - 包含用户自己的任务和管理员的任务，以及创建者信息
-        std::string query = "SELECT t.*, u.username as creator_username, u.role as creator_role FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id WHERE t.status = ?";
+        // 构建查询 - 包含用户自己的任务和管理员的任务，以及创建者信息,使用DATE_FORMAT转换DATETIME字段
+        std::string query = "SELECT t.id, t.name, t.description, t.route, t.status, t.user_id, "
+                           "DATE_FORMAT(t.scheduled_time, '%Y-%m-%d %H:%i:%s') as scheduled_time, "
+                           "DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') as created_at, "
+                           "DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') as updated_at, "
+                           "u.username as creator_username, u.role as creator_role "
+                           "FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id WHERE t.status = ?";
         std::vector<mysqlx::Value> params;
         params.push_back(status_str);
 
@@ -204,8 +209,13 @@ std::vector<models::FlightTask> FlightTaskRepository::findAll(
         }
         std::cout << std::endl;
 
-        // 构建查询 - 包含创建者信息
-        std::string query = "SELECT t.*, u.username as creator_username, u.role as creator_role FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id";
+        // 构建查询 - 包含创建者信息,使用DATE_FORMAT转换DATETIME字段
+        std::string query = "SELECT t.id, t.name, t.description, t.route, t.status, t.user_id, "
+                           "DATE_FORMAT(t.scheduled_time, '%Y-%m-%d %H:%i:%s') as scheduled_time, "
+                           "DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') as created_at, "
+                           "DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') as updated_at, "
+                           "u.username as creator_username, u.role as creator_role "
+                           "FROM " + TABLE_NAME + " t LEFT JOIN low_altitude_traffic_system.users u ON t.user_id = u.id";
         std::vector<mysqlx::Value> params;
 
         if (user_id.has_value()) {

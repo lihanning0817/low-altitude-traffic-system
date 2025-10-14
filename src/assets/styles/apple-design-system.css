@@ -1,0 +1,480 @@
+/**
+ * Apple Design System - 设计规范
+ * 对标 Apple.com 的极简美学设计语言
+ * 版本: 1.0
+ * 创建日期: 2025-10-14
+ */
+
+/* ========================================
+   1. 设计原则
+   ======================================== */
+/*
+  1. 极简主义 - 减少视觉噪音,突出核心内容
+  2. 留白充足 - 呼吸感与空间感
+  3. 优雅过渡 - 流畅的动画与交互
+  4. 统一性 - 一致的视觉语言
+  5. 可访问性 - 高对比度与可读性
+*/
+
+/* ========================================
+   2. 色彩系统 - Apple 浅色主题
+   ======================================== */
+
+:root {
+  /* 主色调 - 纯净的白色与灰色 */
+  --apple-white: #ffffff;
+  --apple-black: #1d1d1f;
+  --apple-gray-50: #fafafc;
+  --apple-gray-100: #f5f5f7;
+  --apple-gray-200: #e8e8ed;
+  --apple-gray-300: #d2d2d7;
+  --apple-gray-400: #b0b0b8;
+  --apple-gray-500: #86868b;
+  --apple-gray-600: #6e6e73;
+  --apple-gray-700: #515154;
+  --apple-gray-800: #3a3a3c;
+  --apple-gray-900: #1d1d1f;
+
+  /* 系统颜色 */
+  --apple-blue: #0071e3;
+  --apple-blue-light: #2997ff;
+  --apple-blue-dark: #0051ba;
+
+  --apple-green: #30d158;
+  --apple-green-light: #30d158;
+  --apple-green-dark: #248a3d;
+
+  --apple-yellow: #ffd60a;
+  --apple-yellow-light: #ffd426;
+  --apple-yellow-dark: #d29d00;
+
+  --apple-orange: #ff9f0a;
+  --apple-orange-light: #ff9f0a;
+  --apple-orange-dark: #c77700;
+
+  --apple-red: #ff3b30;
+  --apple-red-light: #ff453a;
+  --apple-red-dark: #d70015;
+
+  --apple-purple: #bf5af2;
+  --apple-purple-light: #bf5af2;
+  --apple-purple-dark: #9f4cc4;
+
+  --apple-pink: #ff2d55;
+  --apple-pink-light: #ff375f;
+  --apple-pink-dark: #d5001b;
+
+  /* 主题颜色映射 */
+  --color-bg-primary: var(--apple-white);
+  --color-bg-secondary: var(--apple-gray-50);
+  --color-bg-tertiary: var(--apple-gray-100);
+  --color-bg-elevated: var(--apple-white);
+  --color-bg-overlay: rgba(0, 0, 0, 0.3);
+
+  --color-text-primary: var(--apple-black);
+  --color-text-secondary: var(--apple-gray-600);
+  --color-text-tertiary: var(--apple-gray-500);
+  --color-text-quaternary: var(--apple-gray-400);
+  --color-text-inverted: var(--apple-white);
+
+  --color-border-primary: var(--apple-gray-300);
+  --color-border-secondary: var(--apple-gray-200);
+  --color-border-tertiary: var(--apple-gray-100);
+
+  --color-fill-primary: var(--apple-blue);
+  --color-fill-secondary: var(--apple-gray-500);
+  --color-fill-tertiary: var(--apple-gray-300);
+
+  /* 状态颜色 */
+  --color-success: var(--apple-green);
+  --color-warning: var(--apple-orange);
+  --color-error: var(--apple-red);
+  --color-info: var(--apple-blue);
+
+  /* 交互颜色 */
+  --color-link: var(--apple-blue);
+  --color-link-hover: var(--apple-blue-dark);
+  --color-focus: var(--apple-blue-light);
+}
+
+/* 暗色模式(可选) */
+.dark-mode {
+  --color-bg-primary: var(--apple-black);
+  --color-bg-secondary: #2c2c2e;
+  --color-bg-tertiary: #3a3a3c;
+  --color-bg-elevated: #1c1c1e;
+
+  --color-text-primary: var(--apple-white);
+  --color-text-secondary: var(--apple-gray-400);
+  --color-text-tertiary: var(--apple-gray-500);
+  --color-text-quaternary: var(--apple-gray-600);
+
+  --color-border-primary: var(--apple-gray-700);
+  --color-border-secondary: var(--apple-gray-800);
+}
+
+/* ========================================
+   3. 字体系统 - SF Pro Display
+   ======================================== */
+
+:root {
+  /* 字体家族 - Apple 系统字体栈 */
+  --font-family-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                         'Helvetica Neue', 'Helvetica', 'PingFang SC', 'Hiragino Sans GB',
+                         'Microsoft YaHei', Arial, sans-serif;
+  --font-family-mono: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+
+  /* 字重 */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 字号系统 - 遵循 Apple 的类型比例 */
+  --font-size-xs: 0.6875rem;    /* 11px */
+  --font-size-sm: 0.8125rem;    /* 13px */
+  --font-size-base: 0.9375rem;  /* 15px */
+  --font-size-md: 1rem;         /* 16px */
+  --font-size-lg: 1.0625rem;    /* 17px */
+  --font-size-xl: 1.1875rem;    /* 19px */
+  --font-size-2xl: 1.375rem;    /* 22px */
+  --font-size-3xl: 1.6875rem;   /* 27px */
+  --font-size-4xl: 2rem;        /* 32px */
+  --font-size-5xl: 2.5rem;      /* 40px */
+  --font-size-6xl: 3rem;        /* 48px */
+  --font-size-7xl: 3.5rem;      /* 56px */
+  --font-size-8xl: 4rem;        /* 64px */
+  --font-size-9xl: 5rem;        /* 80px */
+
+  /* 行高 */
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.2;
+  --line-height-normal: 1.47059;  /* Apple 标准行高 */
+  --line-height-relaxed: 1.6;
+  --line-height-loose: 1.8;
+
+  /* 字间距 */
+  --letter-spacing-tight: -0.022em;   /* Apple Large Title */
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.011em;     /* Apple Body */
+}
+
+/* ========================================
+   4. 间距系统 - 8px 基准
+   ======================================== */
+
+:root {
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
+
+  /* 容器最大宽度 */
+  --container-xs: 20rem;     /* 320px */
+  --container-sm: 30rem;     /* 480px */
+  --container-md: 45rem;     /* 720px */
+  --container-lg: 60rem;     /* 960px */
+  --container-xl: 71.25rem;  /* 1140px - Apple 标准宽度 */
+  --container-2xl: 80rem;    /* 1280px */
+  --container-3xl: 90rem;    /* 1440px */
+}
+
+/* ========================================
+   5. 圆角系统
+   ======================================== */
+
+:root {
+  --radius-none: 0;
+  --radius-xs: 0.25rem;      /* 4px */
+  --radius-sm: 0.375rem;     /* 6px */
+  --radius-base: 0.5rem;     /* 8px */
+  --radius-md: 0.625rem;     /* 10px */
+  --radius-lg: 0.75rem;      /* 12px */
+  --radius-xl: 1rem;         /* 16px */
+  --radius-2xl: 1.25rem;     /* 20px */
+  --radius-3xl: 1.5rem;      /* 24px */
+  --radius-full: 9999px;
+}
+
+/* ========================================
+   6. 阴影系统 - Apple 风格阴影
+   ======================================== */
+
+:root {
+  /* 基础阴影 */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+               0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+               0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+               0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-2xl: 0 30px 60px -15px rgba(0, 0, 0, 0.3);
+
+  /* Apple 特有的卡片阴影 */
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* Apple 浮动元素阴影 */
+  --shadow-elevated: 0 12px 24px rgba(0, 0, 0, 0.1),
+                     0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 32px 64px rgba(0, 0, 0, 0.16);
+
+  /* 内阴影 */
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* ========================================
+   7. 动画与过渡 - Apple 缓动函数
+   ======================================== */
+
+:root {
+  /* 时长 */
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+
+  /* Apple 标准缓动函数 */
+  --easing-default: cubic-bezier(0.4, 0, 0.2, 1);       /* 通用 */
+  --easing-in: cubic-bezier(0.4, 0, 1, 1);              /* 进入 */
+  --easing-out: cubic-bezier(0, 0, 0.2, 1);             /* 退出 */
+  --easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);        /* 进入退出 */
+  --easing-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);  /* 弹性 */
+  --easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);   /* 弹跳 */
+
+  /* 组合过渡 */
+  --transition-fast: all var(--duration-fast) var(--easing-default);
+  --transition-normal: all var(--duration-normal) var(--easing-default);
+  --transition-slow: all var(--duration-slow) var(--easing-default);
+
+  --transition-transform: transform var(--duration-normal) var(--easing-out);
+  --transition-opacity: opacity var(--duration-fast) var(--easing-default);
+  --transition-color: color var(--duration-fast) var(--easing-default),
+                      background-color var(--duration-fast) var(--easing-default);
+}
+
+/* ========================================
+   8. Z-index 分层系统
+   ======================================== */
+
+:root {
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-notification: 1080;
+  --z-maximum: 9999;
+}
+
+/* ========================================
+   9. 毛玻璃效果 (Glassmorphism)
+   ======================================== */
+
+:root {
+  /* Apple 风格的毛玻璃背景 */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-dark: rgba(30, 30, 30, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* 毛玻璃模糊度 */
+  --glass-blur: blur(20px);
+  --glass-blur-light: blur(10px);
+  --glass-blur-heavy: blur(40px);
+}
+
+.glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* ========================================
+   10. 断点系统 - 响应式设计
+   ======================================== */
+
+:root {
+  --breakpoint-xs: 375px;    /* iPhone SE */
+  --breakpoint-sm: 640px;    /* Mobile */
+  --breakpoint-md: 768px;    /* Tablet */
+  --breakpoint-lg: 1024px;   /* Desktop */
+  --breakpoint-xl: 1280px;   /* Large Desktop */
+  --breakpoint-2xl: 1440px;  /* Extra Large */
+  --breakpoint-3xl: 1920px;  /* Ultra Wide */
+}
+
+/* ========================================
+   11. 辅助工具类
+   ======================================== */
+
+/* 文本溢出省略 */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 隐藏滚动条但保持功能 */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* 平滑滚动 */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* 用户选择控制 */
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.select-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 焦点样式 */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   12. 打印样式
+   ======================================== */
+
+@media print {
+  :root {
+    --color-bg-primary: white;
+    --color-text-primary: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* ========================================
+   13. 无障碍增强
+   ======================================== */
+
+/* 提高对比度模式 */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text-primary: #000000;
+    --color-bg-primary: #ffffff;
+    --color-border-primary: #000000;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ========================================
+   14. 性能优化
+   ======================================== */
+
+/* 硬件加速 */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* ========================================
+   15. 使用说明
+   ======================================== */
+
+/*
+  使用方法:
+
+  1. 颜色使用:
+     background-color: var(--color-bg-primary);
+     color: var(--color-text-primary);
+
+  2. 间距使用:
+     padding: var(--space-4) var(--space-6);
+     margin: var(--space-8) 0;
+
+  3. 圆角使用:
+     border-radius: var(--radius-lg);
+
+  4. 阴影使用:
+     box-shadow: var(--shadow-card);
+
+  5. 过渡使用:
+     transition: var(--transition-normal);
+
+  6. 字体使用:
+     font-family: var(--font-family-primary);
+     font-size: var(--font-size-lg);
+     font-weight: var(--font-weight-semibold);
+*/

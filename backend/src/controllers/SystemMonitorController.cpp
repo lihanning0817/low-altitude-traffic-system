@@ -1,5 +1,6 @@
 #include "SystemMonitorController.h"
 #include "config/Config.h"
+#include "config/MockData.h"
 #include "utils/ParamParser.h"
 #include <spdlog/spdlog.h>
 #include <regex>
@@ -328,61 +329,8 @@ std::unordered_map<std::string, std::string> SystemMonitorController::parseQuery
 }
 
 nlohmann::json SystemMonitorController::getMockDroneData() {
-    // Mock数据，实际项目中应该从数据库查询
-    return nlohmann::json::array({
-        {
-            {"id", 1},
-            {"drone_id", "DJI-001"},
-            {"name", "Phantom 4 Pro"},
-            {"model", "Phantom 4 Pro"},
-            {"status", "active"},
-            {"battery", 85.5},
-            {"location", {
-                {"lat", 39.904200},
-                {"lng", 116.407396}
-            }},
-            {"last_update", std::time(nullptr) - 300} // 5分钟前更新
-        },
-        {
-            {"id", 2},
-            {"drone_id", "DJI-002"},
-            {"name", "Mavic 3"},
-            {"model", "Mavic 3"},
-            {"status", "active"},
-            {"battery", 72.3},
-            {"location", {
-                {"lat", 39.914200},
-                {"lng", 116.417396}
-            }},
-            {"last_update", std::time(nullptr) - 120} // 2分钟前更新
-        },
-        {
-            {"id", 3},
-            {"drone_id", "DJI-003"},
-            {"name", "Mini 3 Pro"},
-            {"model", "Mini 3 Pro"},
-            {"status", "maintenance"},
-            {"battery", 0.0},
-            {"location", {
-                {"lat", 39.924200},
-                {"lng", 116.427396}
-            }},
-            {"last_update", std::time(nullptr) - 3600} // 1小时前更新
-        },
-        {
-            {"id", 4},
-            {"drone_id", "DJI-004"},
-            {"name", "Air 2S"},
-            {"model", "Air 2S"},
-            {"status", "inactive"},
-            {"battery", 45.8},
-            {"location", {
-                {"lat", 39.934200},
-                {"lng", 116.437396}
-            }},
-            {"last_update", std::time(nullptr) - 1800} // 30分钟前更新
-        }
-    });
+    // 从配置文件中获取Mock数据
+    return config::getMockDroneData();
 }
 
 std::chrono::seconds SystemMonitorController::getSystemUptime() {

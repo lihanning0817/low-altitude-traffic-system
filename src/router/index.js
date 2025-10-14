@@ -3,8 +3,8 @@ import store from '@/store'
 import HomePage from '@/views/HomePage.vue'
 import LoginPage from '@/views/LoginPage.vue'
 import HomeDashboard from '@/views/HomeDashboard.vue'
-import LoginDashboard from '@/views/LoginDashboard.vue'
-import RegisterDashboard from '@/views/RegisterDashboard.vue'
+// import LoginDashboard from '@/views/LoginDashboard.vue'
+// import RegisterDashboard from '@/views/RegisterDashboard.vue'
 import RegisterPage from '@/components/RegisterPage.vue'
 import AdminLogin from '@/views/AdminLogin.vue'
 import AdminDashboard from '@/views/AdminDashboard.vue'
@@ -122,20 +122,58 @@ const router = createRouter({
   routes
 })
 
+/**
+ * 从JWT Token中安全地解析用户角色
+ * @param {string} token - JWT access_token
+ * @returns {string} 用户角色 ('admin', 'user', 'operator', 'viewer', 'guest')
+ */
+function getRoleFromToken(token) {
+  if (!token) return 'guest'
+
+  try {
+    // JWT格式: header.payload.signature
+    const parts = token.split('.')
+    if (parts.length !== 3) {
+      console.warn('Invalid JWT format')
+      return 'guest'
+    }
+
+    // 解析payload (Base64编码)
+    const payload = JSON.parse(atob(parts[1]))
+
+    // 验证token是否过期
+    if (payload.exp) {
+      const now = Math.floor(Date.now() / 1000)
+      if (payload.exp < now) {
+        console.warn('Token已过期')
+        return 'guest'
+      }
+    }
+
+    // 返回角色,默认为guest
+    return payload.role || 'guest'
+  } catch (error) {
+    console.error('解析JWT Token失败:', error)
+    return 'guest'
+  }
+}
+
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   try {
     // 轻量级认证状态检查，避免API调用
-    const hasToken = !!localStorage.getItem('access_token')
+    const token = localStorage.getItem('access_token')
+    const hasToken = !!token
     const storedUser = localStorage.getItem('user')
     let hasUser = false
-    let userRole = 'guest'
+
+    // 🔒 安全修复: 从JWT Token解析角色,而不是信任localStorage
+    let userRole = getRoleFromToken(token)
 
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser)
         hasUser = !!user
-        userRole = user.role || 'guest'
 
         // 确保store中有用户信息
         if (!store.state.user && hasUser) {

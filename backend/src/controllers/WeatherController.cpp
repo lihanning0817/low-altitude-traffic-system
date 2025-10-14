@@ -1,7 +1,9 @@
 #include "WeatherController.h"
 #include "utils/HttpResponse.h"
+#include "utils/ParamParser.h"
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 #include <regex>
 
 namespace controllers {
@@ -48,6 +50,33 @@ std::optional<int64_t> WeatherController::validateTokenAndGetUserId(
     return std::nullopt;
 }
 
+// URL解码辅助函数
+static std::string urlDecode(const std::string& str) {
+    std::string result;
+    result.reserve(str.length());
+
+    for (size_t i = 0; i < str.length(); ++i) {
+        if (str[i] == '%' && i + 2 < str.length()) {
+            // 解析十六进制编码
+            int hex_value = 0;
+            std::istringstream iss(str.substr(i + 1, 2));
+            if (iss >> std::hex >> hex_value) {
+                result += static_cast<char>(hex_value);
+                i += 2;
+            } else {
+                result += str[i];
+            }
+        } else if (str[i] == '+') {
+            // '+' 表示空格
+            result += ' ';
+        } else {
+            result += str[i];
+        }
+    }
+
+    return result;
+}
+
 std::map<std::string, std::string> WeatherController::parseQueryParams(
     const http::request<http::string_body>& req
 ) {
@@ -63,8 +92,8 @@ std::map<std::string, std::string> WeatherController::parseQueryParams(
         while (std::getline(ss, param, '&')) {
             size_t eq_pos = param.find('=');
             if (eq_pos != std::string::npos) {
-                std::string key = param.substr(0, eq_pos);
-                std::string value = param.substr(eq_pos + 1);
+                std::string key = urlDecode(param.substr(0, eq_pos));
+                std::string value = urlDecode(param.substr(eq_pos + 1));
                 params[key] = value;
             }
         }
@@ -94,6 +123,14 @@ http::response<http::string_body> WeatherController::getCurrentWeather(
 
         std::string city = params["city"];
         std::string country = params.count("country") ? params["country"] : "";
+
+        // 调试: 输出城市参数的十六进制表示
+        std::cout << "[WeatherController] City parameter (raw): " << city << std::endl;
+        std::cout << "[WeatherController] City parameter (hex): ";
+        for (unsigned char c : city) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)c << " ";
+        }
+        std::cout << std::dec << std::endl;
 
         // 获取天气数据
         auto weatherData = weatherService_->getCurrentWeatherByCity(city, country);
@@ -129,8 +166,14 @@ http::response<http::string_body> WeatherController::getCurrentWeatherByCoords(
             return utils::HttpResponse::createErrorResponse("缺少坐标参数");
         }
 
-        double lat = std::stod(params["lat"]);
-        double lon = std::stod(params["lon"]);
+        // 使用ParamParser安全解析坐标，限制合理范围
+        double lat = utils::ParamParser::parseDouble(params["lat"], 0.0, -90.0, 90.0);
+        double lon = utils::ParamParser::parseDouble(params["lon"], 0.0, -180.0, 180.0);
+
+        // 验证坐标有效性（避免解析失败时的默认值0.0被误用）
+        if (lat == 0.0 && lon == 0.0 && params["lat"] != "0" && params["lat"] != "0.0") {
+            return utils::HttpResponse::createErrorResponse("坐标参数格式错误");
+        }
 
         // 获取天气数据
         auto weatherData = weatherService_->getCurrentWeatherByCoords(lat, lon);
@@ -169,8 +212,14 @@ http::response<http::string_body> WeatherController::getForecast(
             return utils::HttpResponse::createErrorResponse("缺少坐标参数");
         }
 
-        double lat = std::stod(params["lat"]);
-        double lon = std::stod(params["lon"]);
+        // 使用ParamParser安全解析坐标，限制合理范围
+        double lat = utils::ParamParser::parseDouble(params["lat"], 0.0, -90.0, 90.0);
+        double lon = utils::ParamParser::parseDouble(params["lon"], 0.0, -180.0, 180.0);
+
+        // 验证坐标有效性（避免解析失败时的默认值0.0被误用）
+        if (lat == 0.0 && lon == 0.0 && params["lat"] != "0" && params["lat"] != "0.0") {
+            return utils::HttpResponse::createErrorResponse("坐标参数格式错误");
+        }
 
         // 获取天气预报数据
         auto forecastData = weatherService_->getForecastByCoords(lat, lon);
@@ -241,8 +290,14 @@ http::response<http::string_body> WeatherController::checkFlightSafety(
             return utils::HttpResponse::createErrorResponse("缺少坐标参数");
         }
 
-        double lat = std::stod(params["lat"]);
-        double lon = std::stod(params["lon"]);
+        // 使用ParamParser安全解析坐标，限制合理范围
+        double lat = utils::ParamParser::parseDouble(params["lat"], 0.0, -90.0, 90.0);
+        double lon = utils::ParamParser::parseDouble(params["lon"], 0.0, -180.0, 180.0);
+
+        // 验证坐标有效性（避免解析失败时的默认值0.0被误用）
+        if (lat == 0.0 && lon == 0.0 && params["lat"] != "0" && params["lat"] != "0.0") {
+            return utils::HttpResponse::createErrorResponse("坐标参数格式错误");
+        }
 
         // 获取当前天气
         auto weatherData = weatherService_->getCurrentWeatherByCoords(lat, lon);

@@ -3,12 +3,15 @@
     <button
       class="toggle-btn"
       :class="{ 'dark': isDarkMode }"
-      @click="toggleTheme"
       :aria-label="isDarkMode ? '切换到浅色模式' : '切换到深色模式'"
+      @click="toggleTheme"
     >
       <div class="toggle-track">
         <div class="toggle-thumb">
-          <el-icon :size="14" class="toggle-icon">
+          <el-icon
+            :size="14"
+            class="toggle-icon"
+          >
             <component :is="iconComponent" />
           </el-icon>
         </div>
@@ -20,13 +23,13 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
-import { Moon, Sun } from '@element-plus/icons-vue'
+import { Moon, Sunny } from '@element-plus/icons-vue'
 
 const store = useStore()
 const isDarkMode = computed(() => store.state.theme === 'dark')
 
 const iconComponent = computed(() => {
-  return isDarkMode.value ? Sun : Moon
+  return isDarkMode.value ? Sunny : Moon
 })
 
 // 组件挂载时初始化主题

@@ -38,8 +38,8 @@ export default {
     };
   },
   mounted() {
-    const taskId = this.$route.params.id;
-    console.log('任务ID:', taskId);
+    // const taskId = this.$route.params.id;
+    // TODO: 根据taskId加载任务详情
   }
 };
 </script>

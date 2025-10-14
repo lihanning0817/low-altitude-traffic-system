@@ -328,19 +328,18 @@ class AMapTrafficManagement {
    * 飞行器标记点击事件处理
    * @param {Object} flight - 飞行器信息
    */
-  onFlightMarkerClick(flight) {
+  onFlightMarkerClick() {
     // 这里可以显示飞行器详细信息
-    console.log('飞行器点击:', flight);
-    // 实际项目中可以弹出信息窗口显示详细信息
+    // TODO: 实现信息窗口显示飞行器详细信息
   }
 
   /**
    * 交通数据更新事件处理
    * @param {Object} trafficData - 交通数据
    */
-  onTrafficDataUpdate(trafficData) {
+  onTrafficDataUpdate() {
     // 这里可以更新UI显示交通状况
-    console.log('交通数据更新:', trafficData);
+    // TODO: 实现UI更新交通数据展示
   }
 
   /**

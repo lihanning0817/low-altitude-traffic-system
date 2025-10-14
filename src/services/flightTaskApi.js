@@ -56,12 +56,22 @@ class FlightTaskApiService {
    * @param {string} params.status - 任务状态筛选 (pending/ongoing/completed)
    * @param {number} params.limit - 分页限制
    * @param {number} params.offset - 分页偏移
+   * @param {AbortSignal} signal - AbortController信号，用于取消请求
    */
-  async getFlightTasks(params = {}) {
+  async getFlightTasks(params = {}, signal = null) {
     try {
-      const response = await this.api.get('', { params })
+      const config = { params }
+      if (signal) {
+        config.signal = signal
+      }
+      const response = await this.api.get('', config)
       return response.data
     } catch (error) {
+      // 如果是用户主动取消，不显示错误
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        console.log('请求已取消')
+        throw { success: false, message: '请求已取消', canceled: true }
+      }
       console.error('获取任务列表失败:', error)
       throw this.processError(error)
     }

@@ -1,5 +1,6 @@
 #include "EmergencyController.h"
 #include "utils/HttpResponse.h"
+#include "utils/ParamParser.h"
 #include <iostream>
 #include <sstream>
 
@@ -207,8 +208,8 @@ http::response<http::string_body> EmergencyController::getAllEvents(
         // 解析查询参数
         auto params = parseQueryParams(req);
 
-        int page = params.count("page") ? std::stoi(params["page"]) : 1;
-        int page_size = params.count("page_size") ? std::stoi(params["page_size"]) : 20;
+        int page = utils::ParamParser::parseInt(params.count("page") ? params["page"] : "", 1, 1, 1000);
+        int page_size = utils::ParamParser::parseInt(params.count("page_size") ? params["page_size"] : "", 20, 1, 100);
 
         std::optional<std::string> status = params.count("status") ?
             std::optional<std::string>(params["status"]) : std::nullopt;

@@ -4,60 +4,102 @@
 
     <div class="test-section">
       <h3>后端服务状态</h3>
-      <el-button @click="testHealth" type="primary" :loading="loading.health">
+      <el-button
+        type="primary"
+        :loading="loading.health"
+        @click="testHealth"
+      >
         测试健康检查
       </el-button>
-      <div v-if="results.health" class="result">
+      <div
+        v-if="results.health"
+        class="result"
+      >
         <pre>{{ JSON.stringify(results.health, null, 2) }}</pre>
       </div>
     </div>
 
     <div class="test-section">
       <h3>系统信息</h3>
-      <el-button @click="testSystemInfo" type="info" :loading="loading.info">
+      <el-button
+        type="info"
+        :loading="loading.info"
+        @click="testSystemInfo"
+      >
         获取系统信息
       </el-button>
-      <div v-if="results.info" class="result">
+      <div
+        v-if="results.info"
+        class="result"
+      >
         <pre>{{ JSON.stringify(results.info, null, 2) }}</pre>
       </div>
     </div>
 
     <div class="test-section">
       <h3>无人机数据</h3>
-      <el-button @click="testDrones" type="success" :loading="loading.drones">
+      <el-button
+        type="success"
+        :loading="loading.drones"
+        @click="testDrones"
+      >
         获取无人机列表
       </el-button>
-      <div v-if="results.drones" class="result">
+      <div
+        v-if="results.drones"
+        class="result"
+      >
         <pre>{{ JSON.stringify(results.drones, null, 2) }}</pre>
       </div>
     </div>
 
     <div class="test-section">
       <h3>任务数据</h3>
-      <el-button @click="testTasks" type="warning" :loading="loading.tasks">
+      <el-button
+        type="warning"
+        :loading="loading.tasks"
+        @click="testTasks"
+      >
         获取任务列表
       </el-button>
-      <div v-if="results.tasks" class="result">
+      <div
+        v-if="results.tasks"
+        class="result"
+      >
         <pre>{{ JSON.stringify(results.tasks, null, 2) }}</pre>
       </div>
     </div>
 
     <div class="test-section">
       <h3>用户数据</h3>
-      <el-button @click="testUsers" type="danger" :loading="loading.users">
+      <el-button
+        type="danger"
+        :loading="loading.users"
+        @click="testUsers"
+      >
         获取用户列表
       </el-button>
-      <div v-if="results.users" class="result">
+      <div
+        v-if="results.users"
+        class="result"
+      >
         <pre>{{ JSON.stringify(results.users, null, 2) }}</pre>
       </div>
     </div>
 
     <div class="test-section">
       <h3>综合测试</h3>
-      <el-button @click="runAllTests" type="primary" :loading="allTesting">
+      <el-button
+        type="primary"
+        :loading="allTesting"
+        @click="runAllTests"
+      >
         运行所有测试
       </el-button>
-      <div v-if="testSummary" class="summary">
+      <div
+        v-if="testSummary"
+        class="summary"
+      >
         <el-alert
           :type="testSummary.success ? 'success' : 'error'"
           :title="testSummary.message"
@@ -66,9 +108,16 @@
       </div>
     </div>
 
-    <div v-if="errors.length > 0" class="errors">
+    <div
+      v-if="errors.length > 0"
+      class="errors"
+    >
       <h3>错误信息</h3>
-      <div v-for="(error, index) in errors" :key="index" class="error">
+      <div
+        v-for="(error, index) in errors"
+        :key="index"
+        class="error"
+      >
         {{ error }}
       </div>
     </div>

@@ -10,6 +10,10 @@ class AuthApiService {
     this.accessToken = localStorage.getItem('access_token')
     this.refreshToken = localStorage.getItem('refresh_token')
 
+    // 🔒 Token刷新控制 - 防止并发刷新
+    this.isRefreshing = false
+    this.refreshQueue = []
+
     // 创建axios实例
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -54,7 +58,7 @@ class AuthApiService {
       async (error) => {
         const originalRequest = error.config
 
-        // 401错误处理 - 自动登出并跳转到登录页
+        // 401错误处理 - 自动刷新Token (防止并发刷新)
         if (error.response?.status === 401) {
           if (!originalRequest._retry) {
             originalRequest._retry = true
@@ -62,16 +66,42 @@ class AuthApiService {
             // 尝试刷新token
             if (this.refreshToken) {
               try {
+                // 🔒 防止并发刷新: 如果正在刷新,加入队列等待
+                if (this.isRefreshing) {
+                  return new Promise((resolve, reject) => {
+                    this.refreshQueue.push((token) => {
+                      originalRequest.headers.Authorization = `Bearer ${token}`
+                      resolve(this.api(originalRequest))
+                    })
+                  })
+                }
+
+                // 标记正在刷新
+                this.isRefreshing = true
+
+                // 执行Token刷新
                 const response = await this.refreshAccessToken()
                 if (response.success) {
-                  this.setAccessToken(response.data.access_token)
-                  originalRequest.headers.Authorization = `Bearer ${this.accessToken}`
+                  const newToken = response.data.access_token
+                  this.setAccessToken(newToken)
+
+                  // 处理队列中的所有等待请求
+                  this.refreshQueue.forEach(callback => callback(newToken))
+                  this.refreshQueue = []
+
+                  // 重试原始请求
+                  originalRequest.headers.Authorization = `Bearer ${newToken}`
                   return this.api(originalRequest)
                 }
               } catch (refreshError) {
                 console.error('Token刷新失败:', refreshError)
+                // 清空队列
+                this.refreshQueue = []
                 this.handleAuthError()
                 return Promise.reject(refreshError)
+              } finally {
+                // 重置刷新状态
+                this.isRefreshing = false
               }
             } else {
               // 没有refresh token，直接登出
@@ -241,23 +271,86 @@ class AuthApiService {
 
   /**
    * 处理认证错误 - 401错误时自动登出并跳转
+   * 🔒 BUG #6修复: 改进Token过期处理,避免数据丢失
    */
-  handleAuthError() {
-    this.clearTokens()
-
+  async handleAuthError() {
     // 延迟跳转，确保消息显示 - 使用动态导入避免循环依赖
-    setTimeout(async () => {
-      // 动态导入router避免循环依赖
+    try {
+      // 动态导入router和store避免循环依赖
       const { default: router } = await import('@/router')
+      const { default: store } = await import('@/store')
       const currentPath = router.currentRoute.value.path
 
-      // 只有在非登录相关页面时才显示错误提示和跳转
-      if (currentPath !== '/login' && currentPath !== '/register') {
-        ElMessage.error('登录已过期，请重新登录')
-        router.push('/login')
-      }
       // 如果已经在登录页面，则清除token但不显示提示
-    }, 100)
+      if (currentPath === '/login' || currentPath === '/register') {
+        this.clearTokens()
+        return
+      }
+
+      // 🔒 检查是否有未保存的数据 (简化版本:检查表单是否有修改)
+      // 注意: 实际项目中可以在Vuex store中维护一个formDirty状态
+      const hasUnsavedChanges = store.state.hasUnsavedChanges || false
+
+      if (hasUnsavedChanges) {
+        // 有未保存数据时,使用MessageBox提示用户
+        const { ElMessageBox } = await import('element-plus')
+
+        try {
+          await ElMessageBox.confirm(
+            '登录已过期,您有未保存的数据。点击"确定"将跳转到登录页面,未保存的数据将丢失。',
+            '登录过期提示',
+            {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning',
+              distinguishCancelAndClose: true
+            }
+          )
+
+          // 用户确认,清除token并跳转
+          this.clearTokens()
+          router.push({
+            path: '/login',
+            query: { redirect: currentPath }
+          })
+        } catch (error) {
+          // 用户取消,不做任何操作
+          // 但仍然清除token (因为token已经无效)
+          this.clearTokens()
+          console.log('用户取消跳转,但Token已清除')
+        }
+      } else {
+        // 没有未保存数据,直接清除并跳转
+        this.clearTokens()
+
+        // 显示友好提示
+        ElMessage({
+          message: '登录已过期,请重新登录',
+          type: 'warning',
+          duration: 3000
+        })
+
+        // 跳转到登录页,并记录当前页面以便登录后返回
+        setTimeout(() => {
+          router.push({
+            path: '/login',
+            query: { redirect: currentPath }
+          })
+        }, 300)
+      }
+    } catch (error) {
+      // 如果导入失败或其他错误,降级处理
+      console.error('handleAuthError执行失败:', error)
+      this.clearTokens()
+
+      // 延迟跳转,确保token已清除
+      setTimeout(() => {
+        // 尝试直接跳转
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+      }, 100)
+    }
   }
 
   /**

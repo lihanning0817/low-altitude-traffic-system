@@ -1,25 +1,33 @@
 <template>
   <div class="profile-settings">
     <div class="settings-container">
-      <h2 class="settings-title">个人设置</h2>
+      <h2 class="settings-title">
+        个人设置
+      </h2>
 
       <!-- 用户信息卡片 -->
-      <el-card class="user-info-card" v-loading="userLoading">
+      <el-card
+        v-loading="userLoading"
+        class="user-info-card"
+      >
         <template #header>
           <div class="card-header">
             <h3>基本信息</h3>
             <el-button
               type="primary"
               size="small"
-              @click="refreshUserInfo"
               :loading="userLoading"
+              @click="refreshUserInfo"
             >
               刷新
             </el-button>
           </div>
         </template>
 
-        <div v-if="user" class="user-info">
+        <div
+          v-if="user"
+          class="user-info"
+        >
           <div class="info-item">
             <label>用户名：</label>
             <span>{{ user.username }}</span>
@@ -34,11 +42,15 @@
           </div>
           <div class="info-item">
             <label>角色：</label>
-            <el-tag :type="getRoleTagType(user.role)">{{ getRoleDisplayName(user.role) }}</el-tag>
+            <el-tag :type="getRoleTagType(user.role)">
+              {{ getRoleDisplayName(user.role) }}
+            </el-tag>
           </div>
           <div class="info-item">
             <label>状态：</label>
-            <el-tag :type="getStatusTagType(user.status)">{{ getStatusDisplayName(user.status) }}</el-tag>
+            <el-tag :type="getStatusTagType(user.status)">
+              {{ getStatusDisplayName(user.status) }}
+            </el-tag>
           </div>
           <div class="info-item">
             <label>注册时间：</label>
@@ -50,7 +62,10 @@
           </div>
         </div>
 
-        <div v-else class="no-user">
+        <div
+          v-else
+          class="no-user"
+        >
           <el-empty description="无法获取用户信息" />
         </div>
       </el-card>
@@ -68,7 +83,10 @@
           label-width="120px"
           class="password-form"
         >
-          <el-form-item label="当前密码" prop="old_password">
+          <el-form-item
+            label="当前密码"
+            prop="old_password"
+          >
             <el-input
               v-model="passwordData.old_password"
               type="password"
@@ -78,7 +96,10 @@
             />
           </el-form-item>
 
-          <el-form-item label="新密码" prop="new_password">
+          <el-form-item
+            label="新密码"
+            prop="new_password"
+          >
             <el-input
               v-model="passwordData.new_password"
               type="password"
@@ -88,7 +109,10 @@
             />
           </el-form-item>
 
-          <el-form-item label="确认新密码" prop="confirm_password">
+          <el-form-item
+            label="确认新密码"
+            prop="confirm_password"
+          >
             <el-input
               v-model="passwordData.confirm_password"
               type="password"
@@ -101,12 +125,14 @@
           <el-form-item>
             <el-button
               type="primary"
-              @click="handleChangePassword"
               :loading="passwordLoading"
+              @click="handleChangePassword"
             >
               修改密码
             </el-button>
-            <el-button @click="resetPasswordForm">重置</el-button>
+            <el-button @click="resetPasswordForm">
+              重置
+            </el-button>
           </el-form-item>
         </el-form>
       </el-card>

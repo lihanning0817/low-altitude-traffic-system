@@ -68,7 +68,6 @@ export default {
   methods: {
     submitServiceForm() {
       // 这里应该调用后端API提交服务预约
-      console.log('Service form submitted:', this.serviceForm)
       // 模拟提交成功，跳转到任务追踪页
       this.$router.push('/task-tracking')
     }

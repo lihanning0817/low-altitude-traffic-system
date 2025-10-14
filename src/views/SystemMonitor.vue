@@ -8,13 +8,18 @@
         </el-icon>
         系统监控
       </h1>
-      <p class="page-description">实时监控系统状态、无人机设备和用户活动</p>
+      <p class="page-description">
+        实时监控系统状态、无人机设备和用户活动
+      </p>
     </div>
 
     <!-- 系统状态卡片区域 -->
     <div class="status-cards">
       <!-- 健康状态卡片 -->
-      <el-card class="status-card health-card" shadow="hover">
+      <el-card
+        class="status-card health-card"
+        shadow="hover"
+      >
         <template #header>
           <div class="card-header">
             <el-icon class="card-icon">
@@ -24,17 +29,23 @@
             <el-button
               type="text"
               size="small"
-              @click="refreshHealthStatus"
               :loading="healthLoading"
+              @click="refreshHealthStatus"
             >
               <el-icon><Refresh /></el-icon>
             </el-button>
           </div>
         </template>
 
-        <div class="health-content" v-if="healthData">
+        <div
+          v-if="healthData"
+          class="health-content"
+        >
           <div class="health-indicator">
-            <div class="status-light" :class="getHealthStatusClass(healthData.overall)"></div>
+            <div
+              class="status-light"
+              :class="getHealthStatusClass(healthData.overall)"
+            />
             <span class="status-text">{{ getHealthStatusText(healthData.overall) }}</span>
           </div>
 
@@ -45,32 +56,58 @@
             </div>
             <div class="detail-item">
               <span class="label">数据库:</span>
-              <el-tag :type="getServiceTagType(healthData.services.database)" size="small">
+              <el-tag
+                :type="getServiceTagType(healthData.services.database)"
+                size="small"
+              >
                 {{ getServiceStatusText(healthData.services.database) }}
               </el-tag>
             </div>
             <div class="detail-item">
               <span class="label">外部API:</span>
-              <el-tag :type="getServiceTagType(healthData.services.externalApis)" size="small">
+              <el-tag
+                :type="getServiceTagType(healthData.services.externalApis)"
+                size="small"
+              >
                 {{ getServiceStatusText(healthData.services.externalApis) }}
               </el-tag>
             </div>
           </div>
         </div>
 
-        <div class="loading-state" v-else-if="healthLoading">
-          <el-skeleton :rows="3" animated />
+        <div
+          v-else-if="healthLoading"
+          class="loading-state"
+        >
+          <el-skeleton
+            :rows="3"
+            animated
+          />
         </div>
 
-        <div class="error-state" v-else>
-          <el-empty description="健康状态数据加载失败" :image-size="60">
-            <el-button type="primary" @click="refreshHealthStatus">重新加载</el-button>
+        <div
+          v-else
+          class="error-state"
+        >
+          <el-empty
+            description="健康状态数据加载失败"
+            :image-size="60"
+          >
+            <el-button
+              type="primary"
+              @click="refreshHealthStatus"
+            >
+              重新加载
+            </el-button>
           </el-empty>
         </div>
       </el-card>
 
       <!-- 系统信息卡片 -->
-      <el-card class="status-card info-card" shadow="hover">
+      <el-card
+        class="status-card info-card"
+        shadow="hover"
+      >
         <template #header>
           <div class="card-header">
             <el-icon class="card-icon">
@@ -80,15 +117,18 @@
             <el-button
               type="text"
               size="small"
-              @click="refreshSystemInfo"
               :loading="infoLoading"
+              @click="refreshSystemInfo"
             >
               <el-icon><Refresh /></el-icon>
             </el-button>
           </div>
         </template>
 
-        <div class="info-content" v-if="systemInfo">
+        <div
+          v-if="systemInfo"
+          class="info-content"
+        >
           <div class="info-details">
             <div class="detail-item">
               <span class="label">系统名称:</span>
@@ -96,11 +136,19 @@
             </div>
             <div class="detail-item">
               <span class="label">版本:</span>
-              <el-tag type="primary" size="small">{{ systemInfo.version }}</el-tag>
+              <el-tag
+                type="primary"
+                size="small"
+              >
+                {{ systemInfo.version }}
+              </el-tag>
             </div>
             <div class="detail-item">
               <span class="label">环境:</span>
-              <el-tag :type="getEnvironmentTagType(systemInfo.environment)" size="small">
+              <el-tag
+                :type="getEnvironmentTagType(systemInfo.environment)"
+                size="small"
+              >
                 {{ getEnvironmentText(systemInfo.environment) }}
               </el-tag>
             </div>
@@ -111,20 +159,40 @@
           </div>
         </div>
 
-        <div class="loading-state" v-else-if="infoLoading">
-          <el-skeleton :rows="3" animated />
+        <div
+          v-else-if="infoLoading"
+          class="loading-state"
+        >
+          <el-skeleton
+            :rows="3"
+            animated
+          />
         </div>
 
-        <div class="error-state" v-else>
-          <el-empty description="系统信息加载失败" :image-size="60">
-            <el-button type="primary" @click="refreshSystemInfo">重新加载</el-button>
+        <div
+          v-else
+          class="error-state"
+        >
+          <el-empty
+            description="系统信息加载失败"
+            :image-size="60"
+          >
+            <el-button
+              type="primary"
+              @click="refreshSystemInfo"
+            >
+              重新加载
+            </el-button>
           </el-empty>
         </div>
       </el-card>
     </div>
 
     <!-- 数据展示区域 -->
-    <el-card class="data-card" shadow="hover">
+    <el-card
+      class="data-card"
+      shadow="hover"
+    >
       <template #header>
         <div class="card-header">
           <el-icon class="card-icon">
@@ -134,21 +202,35 @@
         </div>
       </template>
 
-      <el-tabs v-model="activeTab" class="data-tabs" @tab-change="handleTabChange">
+      <el-tabs
+        v-model="activeTab"
+        class="data-tabs"
+        @tab-change="handleTabChange"
+      >
         <!-- 无人机数据标签页 -->
-        <el-tab-pane label="无人机监控" name="drones">
+        <el-tab-pane
+          label="无人机监控"
+          name="drones"
+        >
           <template #label>
             <span class="tab-label">
               <el-icon><Drone /></el-icon>
               无人机监控
-              <el-badge :value="dronesData.length" :hidden="dronesData.length === 0" />
+              <el-badge
+                :value="dronesData.length"
+                :hidden="dronesData.length === 0"
+              />
             </span>
           </template>
 
           <div class="tab-content">
             <div class="table-toolbar">
               <div class="toolbar-left">
-                <el-statistic title="总数" :value="dronesData.length" suffix="台" />
+                <el-statistic
+                  title="总数"
+                  :value="dronesData.length"
+                  suffix="台"
+                />
                 <el-statistic
                   title="在线"
                   :value="getActiveDronesCount()"
@@ -160,8 +242,8 @@
                 <el-button
                   type="primary"
                   :icon="Refresh"
-                  @click="refreshDronesData"
                   :loading="dronesLoading"
+                  @click="refreshDronesData"
                 >
                   刷新数据
                 </el-button>
@@ -169,24 +251,45 @@
             </div>
 
             <el-table
-              :data="dronesData"
               v-loading="dronesLoading"
+              :data="dronesData"
               empty-text="暂无无人机数据"
               stripe
               border
               class="data-table"
             >
-              <el-table-column prop="droneId" label="设备ID" width="120" />
-              <el-table-column prop="name" label="设备名称" width="150" />
-              <el-table-column prop="model" label="型号" width="120" />
-              <el-table-column label="状态" width="100">
+              <el-table-column
+                prop="droneId"
+                label="设备ID"
+                width="120"
+              />
+              <el-table-column
+                prop="name"
+                label="设备名称"
+                width="150"
+              />
+              <el-table-column
+                prop="model"
+                label="型号"
+                width="120"
+              />
+              <el-table-column
+                label="状态"
+                width="100"
+              >
                 <template #default="{ row }">
-                  <el-tag :color="row.statusColor" size="small">
+                  <el-tag
+                    :color="row.statusColor"
+                    size="small"
+                  >
                     {{ row.statusText }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="电量" width="120">
+              <el-table-column
+                label="电量"
+                width="120"
+              >
                 <template #default="{ row }">
                   <div class="battery-info">
                     <el-progress
@@ -200,27 +303,47 @@
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="位置" width="200">
+              <el-table-column
+                label="位置"
+                width="200"
+              >
                 <template #default="{ row }">
-                  <div class="location-info" v-if="row.location">
+                  <div
+                    v-if="row.location"
+                    class="location-info"
+                  >
                     <div class="coordinate">
                       <el-icon><LocationInformation /></el-icon>
                       {{ row.location.lat.toFixed(4) }}, {{ row.location.lng.toFixed(4) }}
                     </div>
                   </div>
-                  <span v-else class="no-location">位置未知</span>
+                  <span
+                    v-else
+                    class="no-location"
+                  >位置未知</span>
                 </template>
               </el-table-column>
-              <el-table-column label="最后更新" width="160">
+              <el-table-column
+                label="最后更新"
+                width="160"
+              >
                 <template #default="{ row }">
                   <span class="update-time">
                     {{ formatTimestamp(row.lastUpdate) }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="120" fixed="right">
+              <el-table-column
+                label="操作"
+                width="120"
+                fixed="right"
+              >
                 <template #default="{ row }">
-                  <el-button type="text" size="small" @click="viewDroneDetails(row)">
+                  <el-button
+                    type="text"
+                    size="small"
+                    @click="viewDroneDetails(row)"
+                  >
                     <el-icon><View /></el-icon>
                     详情
                   </el-button>
@@ -231,38 +354,61 @@
         </el-tab-pane>
 
         <!-- 用户数据标签页 - 仅管理员可见 -->
-        <el-tab-pane v-if="isAdmin()" label="用户管理" name="users">
+        <el-tab-pane
+          v-if="isAdmin()"
+          label="用户管理"
+          name="users"
+        >
           <template #label>
             <span class="tab-label">
               <el-icon><User /></el-icon>
               用户管理
-              <el-badge :value="usersPagination.total" :hidden="usersPagination.total === 0" />
+              <el-badge
+                :value="usersPagination.total"
+                :hidden="usersPagination.total === 0"
+              />
             </span>
           </template>
 
           <div class="tab-content">
             <div class="table-toolbar">
               <div class="toolbar-left">
-                <el-statistic title="总用户" :value="usersPagination.total || 0" suffix="人" />
+                <el-statistic
+                  title="总用户"
+                  :value="usersPagination.total || 0"
+                  suffix="人"
+                />
                 <el-select
                   v-model="usersFilter.role"
                   placeholder="筛选角色"
                   clearable
-                  @change="handleRoleFilterChange"
                   style="width: 150px; margin-left: 20px;"
+                  @change="handleRoleFilterChange"
                 >
-                  <el-option label="全部角色" value="" />
-                  <el-option label="管理员" value="admin" />
-                  <el-option label="操作员" value="operator" />
-                  <el-option label="普通用户" value="user" />
+                  <el-option
+                    label="全部角色"
+                    value=""
+                  />
+                  <el-option
+                    label="管理员"
+                    value="admin"
+                  />
+                  <el-option
+                    label="操作员"
+                    value="operator"
+                  />
+                  <el-option
+                    label="普通用户"
+                    value="user"
+                  />
                 </el-select>
               </div>
               <div class="toolbar-right">
                 <el-button
                   type="primary"
                   :icon="Refresh"
-                  @click="refreshUsersData"
                   :loading="usersLoading"
+                  @click="refreshUsersData"
                 >
                   刷新数据
                 </el-button>
@@ -270,48 +416,90 @@
             </div>
 
             <el-table
-              :data="usersData"
               v-loading="usersLoading"
+              :data="usersData"
               empty-text="暂无用户数据"
               stripe
               border
               class="data-table"
             >
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="username" label="用户名" width="150" />
-              <el-table-column prop="fullName" label="姓名" width="120" />
-              <el-table-column prop="email" label="邮箱" width="200" />
-              <el-table-column label="角色" width="100">
+              <el-table-column
+                prop="id"
+                label="ID"
+                width="80"
+              />
+              <el-table-column
+                prop="username"
+                label="用户名"
+                width="150"
+              />
+              <el-table-column
+                prop="fullName"
+                label="姓名"
+                width="120"
+              />
+              <el-table-column
+                prop="email"
+                label="邮箱"
+                width="200"
+              />
+              <el-table-column
+                label="角色"
+                width="100"
+              >
                 <template #default="{ row }">
-                  <el-tag :color="row.roleColor" size="small">
+                  <el-tag
+                    :color="row.roleColor"
+                    size="small"
+                  >
                     {{ row.roleText }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="状态" width="100">
+              <el-table-column
+                label="状态"
+                width="100"
+              >
                 <template #default="{ row }">
-                  <el-tag :color="row.statusColor" size="small">
+                  <el-tag
+                    :color="row.statusColor"
+                    size="small"
+                  >
                     {{ row.statusText }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="创建时间" width="160">
+              <el-table-column
+                label="创建时间"
+                width="160"
+              >
                 <template #default="{ row }">
                   <span class="create-time">
                     {{ formatTimestamp(row.createdAt) }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column label="最后登录" width="160">
+              <el-table-column
+                label="最后登录"
+                width="160"
+              >
                 <template #default="{ row }">
                   <span class="login-time">
                     {{ row.lastLogin ? formatTimestamp(row.lastLogin) : '从未登录' }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="120" fixed="right">
+              <el-table-column
+                label="操作"
+                width="120"
+                fixed="right"
+              >
                 <template #default="{ row }">
-                  <el-button type="text" size="small" @click="viewUserDetails(row)">
+                  <el-button
+                    type="text"
+                    size="small"
+                    @click="viewUserDetails(row)"
+                  >
                     <el-icon><View /></el-icon>
                     详情
                   </el-button>
@@ -320,7 +508,10 @@
             </el-table>
 
             <!-- 分页组件 -->
-            <div class="pagination-wrapper" v-if="usersPagination.total > 0">
+            <div
+              v-if="usersPagination.total > 0"
+              class="pagination-wrapper"
+            >
               <el-pagination
                 v-model:current-page="currentPage"
                 v-model:page-size="pageSize"

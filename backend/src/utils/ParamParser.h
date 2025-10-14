@@ -4,6 +4,7 @@
 #include <optional>
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 
 namespace utils {
 
@@ -100,6 +101,52 @@ public:
             }
 
             return value;
+        } catch (...) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * @brief 安全解析长长整数（int64_t）
+     * @param str 输入字符串
+     * @param defaultValue 默认值（解析失败时返回）
+     * @param minValue 最小值限制（可选）
+     * @param maxValue 最大值限制（可选）
+     * @return int64_t 解析结果或默认值
+     */
+    static int64_t parseLongLong(const std::string& str,
+                                  int64_t defaultValue = 0LL,
+                                  std::optional<int64_t> minValue = std::nullopt,
+                                  std::optional<int64_t> maxValue = std::nullopt) {
+        try {
+            std::string trimmed = trim(str);
+            if (trimmed.empty()) {
+                return defaultValue;
+            }
+
+            if (!isValidInteger(trimmed)) {
+                return defaultValue;
+            }
+
+            size_t pos = 0;
+            int64_t value = std::stoll(trimmed, &pos);
+
+            if (pos != trimmed.length()) {
+                return defaultValue;
+            }
+
+            if (minValue.has_value() && value < minValue.value()) {
+                value = minValue.value();
+            }
+            if (maxValue.has_value() && value > maxValue.value()) {
+                value = maxValue.value();
+            }
+
+            return value;
+        } catch (const std::invalid_argument&) {
+            return defaultValue;
+        } catch (const std::out_of_range&) {
+            return defaultValue;
         } catch (...) {
             return defaultValue;
         }

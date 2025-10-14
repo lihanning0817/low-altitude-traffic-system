@@ -1,3 +1,6 @@
+/* 导入 Apple 设计系统 (优先级最高) */
+@import './apple-design-system.css';
+
 /* 导入变量定义 */
 @import './variables.css';
 

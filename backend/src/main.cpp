@@ -1,5 +1,6 @@
 #include <iostream>
 #include <csignal>
+#include <sstream>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -14,6 +15,9 @@
 #include "controllers/SystemMonitorController.h"
 #include "controllers/WeatherController.h"
 #include "controllers/EmergencyController.h"
+#include "controllers/FlightPermitController.h"
+#include "controllers/ConflictDetectionController.h"
+#include "controllers/EmergencyLandingController.h"
 #include "auth/JwtService.h"
 #include "services/RouteService.h"
 #include "services/WeatherService.h"
@@ -109,6 +113,17 @@ void setupRoutes(server::HttpServer& server) {
     auto emergencyRepo = std::make_shared<repositories::EmergencyEventRepository>();
     auto emergencyController = std::make_shared<controllers::EmergencyController>(emergencyRepo, jwtService);
 
+    // 初始化新的控制器 - 使用数据库会话
+    auto dbSession = std::make_shared<mysqlx::Session>(
+        config.getString("database.host", "localhost"),
+        config.getInt("database.port", 33060),
+        config.getString("database.username", "root"),
+        config.getString("database.password", ""));
+
+    auto permitController = std::make_shared<controllers::FlightPermitController>(dbSession, jwtService);
+    auto conflictController = std::make_shared<controllers::ConflictDetectionController>(dbSession, jwtService);
+    auto landingController = std::make_shared<controllers::EmergencyLandingController>(dbSession, jwtService);
+
     // ========== 认证相关API ==========
 
     // 用户注册
@@ -163,6 +178,13 @@ void setupRoutes(server::HttpServer& server) {
 
     // 获取无人机列表（需要认证）
     server.get("/api/v1/drones", [systemMonitorController](const auto& req, auto& res) {
+        auto response = systemMonitorController->getDronesList(req);
+        res = std::move(response);
+    });
+
+    // 设备管理API别名 - 重定向到drones API (设备管理功能已合并到无人机管理)
+    server.get("/api/v1/devices", [systemMonitorController](const auto& req, auto& res) {
+        spdlog::info("Handling GET /api/v1/devices (redirecting to drones API)");
         auto response = systemMonitorController->getDronesList(req);
         res = std::move(response);
     });
@@ -231,6 +253,7 @@ void setupRoutes(server::HttpServer& server) {
 
     // 获取地图标记点
     server.get("/api/v1/map/markers", [](const auto& req, auto& res) {
+        (void)req;  // 未使用，但保留参数以匹配接口
         try {
             auto& db_manager = database::DatabaseManager::getInstance();
 
@@ -387,6 +410,7 @@ void setupRoutes(server::HttpServer& server) {
 
     // 清除所有标记点
     server.del("/api/v1/map/markers", [](const auto& req, auto& res) {
+        (void)req;  // 未使用，但保留参数以匹配接口
         try {
             auto& db_manager = database::DatabaseManager::getInstance();
 
@@ -521,8 +545,35 @@ void setupRoutes(server::HttpServer& server) {
         }
     });
 
+    // URL解码辅助函数
+    auto urlDecode = [](const std::string& str) -> std::string {
+        std::string result;
+        result.reserve(str.length());
+
+        for (size_t i = 0; i < str.length(); ++i) {
+            if (str[i] == '%' && i + 2 < str.length()) {
+                // 解析十六进制编码
+                int hex_value = 0;
+                std::istringstream iss(str.substr(i + 1, 2));
+                if (iss >> std::hex >> hex_value) {
+                    result += static_cast<char>(hex_value);
+                    i += 2;
+                } else {
+                    result += str[i];
+                }
+            } else if (str[i] == '+') {
+                // '+' 表示空格
+                result += ' ';
+            } else {
+                result += str[i];
+            }
+        }
+
+        return result;
+    };
+
     // 地理编码API
-    server.get("/api/v1/map/geocode", [](const auto& req, auto& res) {
+    server.get("/api/v1/map/geocode", [urlDecode](const auto& req, auto& res) {
         try {
             std::string query_string = std::string(req.target());
             std::string address;
@@ -533,7 +584,10 @@ void setupRoutes(server::HttpServer& server) {
                 size_t start = addr_pos + 8;  // "address="的长度
                 size_t end = query_string.find("&", start);
                 if (end == std::string::npos) end = query_string.length();
-                address = query_string.substr(start, end - start);
+                std::string encoded_address = query_string.substr(start, end - start);
+                // URL解码地址参数
+                address = urlDecode(encoded_address);
+                spdlog::debug("Geocoding request - Encoded: {}, Decoded: {}", encoded_address, address);
             }
 
             if (address.empty()) {
@@ -552,7 +606,8 @@ void setupRoutes(server::HttpServer& server) {
 
             // 创建路线规划服务
             auto& config = config::Config::getInstance();
-            std::string amap_key = config.getString("amap.api_key", "1872806f332dab32a1a3dc895b0ad542");
+            std::string amap_key = config.getString("external_apis.amap.key", "1872806f332dab32a1a3dc895b0ad542");
+            spdlog::debug("Using Amap API key for geocoding: {}", amap_key.substr(0, 8) + "...");
             services::RouteService route_service(amap_key);
 
             // 调用地理编码
@@ -816,7 +871,725 @@ void setupRoutes(server::HttpServer& server) {
         }
     });
 
-    spdlog::info("API routes configured (including FlightTask, Weather, and Emergency APIs)");
+    // ========== 飞行许可API ==========
+
+    // 申请飞行许可
+    server.post("/api/v1/flight-permits", [permitController](const auto& req, auto& res) {
+        auto response = permitController->applyFlightPermit(req);
+        res = std::move(response);
+    });
+
+    // 获取飞行许可列表
+    server.get("/api/v1/flight-permits", [permitController](const auto& req, auto& res) {
+        auto response = permitController->getFlightPermits(req);
+        res = std::move(response);
+    });
+
+    // 审批飞行许可
+    server.post("/api/v1/flight-permits/{id}/approve", [permitController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-permits/(\\d+)/approve");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string permit_id = matches[1].str();
+                auto response = permitController->approveFlightPermit(req, permit_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/flight-permits/{}/approve: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 拒绝飞行许可
+    server.post("/api/v1/flight-permits/{id}/reject", [permitController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-permits/(\\d+)/reject");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string permit_id = matches[1].str();
+                auto response = permitController->rejectFlightPermit(req, permit_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/flight-permits/{}/reject: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // ========== 飞行冲突检测API ==========
+
+    // 飞行注册（自动冲突检测）
+    server.post("/api/v1/flights", [conflictController](const auto& req, auto& res) {
+        auto response = conflictController->registerFlight(req);
+        res = std::move(response);
+    });
+
+    // 获取飞行冲突列表
+    server.get("/api/v1/flight-conflicts", [conflictController](const auto& req, auto& res) {
+        auto response = conflictController->getFlightConflicts(req);
+        res = std::move(response);
+    });
+
+    // 解决飞行冲突
+    server.post("/api/v1/flight-conflicts/{id}/resolve", [conflictController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-conflicts/(\\d+)/resolve");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string conflict_id = matches[1].str();
+                auto response = conflictController->resolveConflict(req, conflict_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/flight-conflicts/{}/resolve: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // ========== 紧急降落点API ==========
+
+    // 获取紧急降落点列表
+    server.get("/api/v1/emergency-landing-points", [landingController](const auto& req, auto& res) {
+        auto response = landingController->getEmergencyLandingPoints(req);
+        res = std::move(response);
+    });
+
+    // 添加紧急降落点（管理员）
+    server.post("/api/v1/emergency-landing-points", [landingController](const auto& req, auto& res) {
+        auto response = landingController->addEmergencyLandingPoint(req);
+        res = std::move(response);
+    });
+
+    // 查找最近的紧急降落点
+    server.get("/api/v1/emergency-landing-points/nearest", [landingController](const auto& req, auto& res) {
+        auto response = landingController->findNearestLandingPoints(req);
+        res = std::move(response);
+    });
+
+    // 更新紧急降落点（管理员）
+    server.put("/api/v1/emergency-landing-points/{id}", [landingController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/emergency-landing-points/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string point_id = matches[1].str();
+                auto response = landingController->updateEmergencyLandingPoint(req, point_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in PUT /api/v1/emergency-landing-points/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // ========== 空域管理API ==========
+
+    // 获取空域列表
+    server.get("/api/v1/airspaces", [jwtService](const auto& req, auto& res) {
+        spdlog::info("Handling GET /api/v1/airspaces");
+        try {
+            auto& db_manager = database::DatabaseManager::getInstance();
+
+            // 查询所有空域
+            auto result = db_manager.executeQuery(
+                "SELECT id, airspace_id, name, type, description, north_lat, south_lat, east_lng, west_lng, "
+                "min_altitude, max_altitude, status, authority, contact_info, max_concurrent_flights, "
+                "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at, "
+                "DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at "
+                "FROM low_altitude_traffic_system.airspaces ORDER BY created_at DESC"
+            );
+
+            nlohmann::json airspaces = nlohmann::json::array();
+
+            if (result) {
+                while (auto row = result->fetchRow()) {
+                    airspaces.push_back({
+                        {"id", static_cast<int>(row[0])},
+                        {"airspace_id", static_cast<std::string>(row[1])},
+                        {"name", static_cast<std::string>(row[2])},
+                        {"type", static_cast<std::string>(row[3])},
+                        {"description", row[4].isNull() ? "" : static_cast<std::string>(row[4])},
+                        {"north_lat", static_cast<double>(row[5])},
+                        {"south_lat", static_cast<double>(row[6])},
+                        {"east_lng", static_cast<double>(row[7])},
+                        {"west_lng", static_cast<double>(row[8])},
+                        {"min_altitude", row[9].isNull() ? 0.0 : static_cast<double>(row[9])},
+                        {"max_altitude", row[10].isNull() ? 300.0 : static_cast<double>(row[10])},
+                        {"status", static_cast<std::string>(row[11])},
+                        {"authority", row[12].isNull() ? "" : static_cast<std::string>(row[12])},
+                        {"contact_info", row[13].isNull() ? "" : static_cast<std::string>(row[13])},
+                        {"max_concurrent_flights", row[14].isNull() ? 10 : static_cast<int>(row[14])},
+                        {"created_at", static_cast<std::string>(row[15])},
+                        {"updated_at", static_cast<std::string>(row[16])}
+                    });
+                }
+            }
+
+            nlohmann::json response = {
+                {"success", true},
+                {"message", "获取空域列表成功"},
+                {"timestamp", std::time(nullptr)},
+                {"data", {
+                    {"airspaces", airspaces},
+                    {"total", airspaces.size()}
+                }}
+            };
+
+            res.result(boost::beast::http::status::ok);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = response.dump();
+            res.prepare_payload();
+
+            spdlog::info("Successfully returned {} airspaces", airspaces.size());
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error retrieving airspaces: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INTERNAL_ERROR"},
+                {"message", "获取空域列表失败"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 获取指定空域详情
+    server.get("/api/v1/airspaces/{id}", [jwtService](const auto& req, auto& res) {
+        spdlog::info("Handling GET /api/v1/airspaces/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取空域ID
+        std::regex id_regex(R"(/api/v1/airspaces/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string airspace_id = matches[1].str();
+            spdlog::info("Extracted airspace ID: {}", airspace_id);
+
+            try {
+                auto& db_manager = database::DatabaseManager::getInstance();
+
+                // 查询指定空域
+                auto result = db_manager.executeQuery(
+                    "SELECT id, airspace_id, name, type, description, north_lat, south_lat, east_lng, west_lng, "
+                    "min_altitude, max_altitude, status, authority, contact_info, max_concurrent_flights, "
+                    "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at, "
+                    "DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at "
+                    "FROM low_altitude_traffic_system.airspaces WHERE id = " + airspace_id
+                );
+
+                if (result && result->hasData()) {
+                    if (auto row = result->fetchRow()) {
+                        nlohmann::json airspace = {
+                        {"id", static_cast<int>(row[0])},
+                        {"airspace_id", static_cast<std::string>(row[1])},
+                        {"name", static_cast<std::string>(row[2])},
+                        {"type", static_cast<std::string>(row[3])},
+                        {"description", row[4].isNull() ? "" : static_cast<std::string>(row[4])},
+                        {"north_lat", static_cast<double>(row[5])},
+                        {"south_lat", static_cast<double>(row[6])},
+                        {"east_lng", static_cast<double>(row[7])},
+                        {"west_lng", static_cast<double>(row[8])},
+                        {"min_altitude", row[9].isNull() ? 0.0 : static_cast<double>(row[9])},
+                        {"max_altitude", row[10].isNull() ? 300.0 : static_cast<double>(row[10])},
+                        {"status", static_cast<std::string>(row[11])},
+                        {"authority", row[12].isNull() ? "" : static_cast<std::string>(row[12])},
+                        {"contact_info", row[13].isNull() ? "" : static_cast<std::string>(row[13])},
+                        {"max_concurrent_flights", row[14].isNull() ? 10 : static_cast<int>(row[14])},
+                        {"created_at", static_cast<std::string>(row[15])},
+                        {"updated_at", static_cast<std::string>(row[16])}
+                    };
+
+                    nlohmann::json response = {
+                        {"success", true},
+                        {"message", "获取空域详情成功"},
+                        {"timestamp", std::time(nullptr)},
+                        {"data", {
+                            {"airspace", airspace}
+                        }}
+                    };
+
+                    res.result(boost::beast::http::status::ok);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = response.dump();
+                    res.prepare_payload();
+
+                    spdlog::info("Successfully returned airspace details for ID: {}", airspace_id);
+                    }
+                } else {
+                    nlohmann::json error_response = {
+                        {"success", false},
+                        {"error_code", "NOT_FOUND"},
+                        {"message", "空域不存在"},
+                        {"timestamp", std::time(nullptr)}
+                    };
+
+                    res.result(boost::beast::http::status::not_found);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = error_response.dump();
+                    res.prepare_payload();
+                }
+
+            } catch (const std::exception& e) {
+                spdlog::error("Error retrieving airspace {}: {}", airspace_id, e.what());
+
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "INTERNAL_ERROR"},
+                    {"message", "获取空域详情失败"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+        } else {
+            spdlog::warn("Invalid airspace ID format in path: {}", target);
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INVALID_PARAMETER"},
+                {"message", "无效的空域ID格式"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::bad_request);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 创建新空域
+    server.post("/api/v1/airspaces", [jwtService](const auto& req, auto& res) {
+        spdlog::info("Handling POST /api/v1/airspaces");
+        try {
+            // 解析请求体JSON
+            auto json_data = nlohmann::json::parse(req.body());
+
+            // 验证必需字段
+            if (!json_data.contains("airspace_id") || !json_data.contains("name") ||
+                !json_data.contains("type") || !json_data.contains("north_lat") ||
+                !json_data.contains("south_lat") || !json_data.contains("east_lng") ||
+                !json_data.contains("west_lng")) {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "MISSING_REQUIRED_FIELDS"},
+                    {"message", "缺少必需字段: airspace_id, name, type, north_lat, south_lat, east_lng, west_lng"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::bad_request);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+                return;
+            }
+
+            std::string airspace_id = json_data["airspace_id"].get<std::string>();
+            std::string name = json_data["name"].get<std::string>();
+            std::string type = json_data["type"].get<std::string>();
+            std::string description = json_data.value("description", "");
+            double north_lat = json_data["north_lat"].get<double>();
+            double south_lat = json_data["south_lat"].get<double>();
+            double east_lng = json_data["east_lng"].get<double>();
+            double west_lng = json_data["west_lng"].get<double>();
+            double min_altitude = json_data.value("min_altitude", 0.0);
+            double max_altitude = json_data.value("max_altitude", 300.0);
+            std::string status = json_data.value("status", "active");
+            std::string authority = json_data.value("authority", "");
+            std::string contact_info = json_data.value("contact_info", "");
+            int max_concurrent_flights = json_data.value("max_concurrent_flights", 10);
+
+            auto& db_manager = database::DatabaseManager::getInstance();
+
+            // 使用预编译语句插入空域
+            std::vector<mysqlx::Value> params = {
+                airspace_id, name, type, description,
+                north_lat, south_lat, east_lng, west_lng,
+                min_altitude, max_altitude, status,
+                authority, contact_info, max_concurrent_flights
+            };
+
+            uint64_t affected_rows = db_manager.executePreparedUpdate(
+                "INSERT INTO low_altitude_traffic_system.airspaces "
+                "(airspace_id, name, type, description, north_lat, south_lat, east_lng, west_lng, "
+                "min_altitude, max_altitude, status, authority, contact_info, max_concurrent_flights, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                params
+            );
+
+            if (affected_rows > 0) {
+                uint64_t new_id = db_manager.getLastInsertId();
+
+                nlohmann::json response = {
+                    {"success", true},
+                    {"message", "创建空域成功"},
+                    {"timestamp", std::time(nullptr)},
+                    {"data", {
+                        {"id", static_cast<int>(new_id)},
+                        {"airspace_id", airspace_id},
+                        {"name", name},
+                        {"type", type},
+                        {"description", description},
+                        {"north_lat", north_lat},
+                        {"south_lat", south_lat},
+                        {"east_lng", east_lng},
+                        {"west_lng", west_lng},
+                        {"min_altitude", min_altitude},
+                        {"max_altitude", max_altitude},
+                        {"status", status},
+                        {"authority", authority},
+                        {"contact_info", contact_info},
+                        {"max_concurrent_flights", max_concurrent_flights}
+                    }}
+                };
+
+                res.result(boost::beast::http::status::created);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = response.dump();
+                res.prepare_payload();
+
+                spdlog::info("Successfully created airspace with ID: {}", new_id);
+            } else {
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "DATABASE_ERROR"},
+                    {"message", "创建空域失败"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+
+        } catch (const nlohmann::json::parse_error& e) {
+            spdlog::error("JSON parse error in airspace creation: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INVALID_JSON"},
+                {"message", std::string("JSON格式错误: ") + e.what()},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::bad_request);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+
+        } catch (const std::exception& e) {
+            spdlog::error("Error creating airspace: {}", e.what());
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INTERNAL_ERROR"},
+                {"message", "创建空域失败"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::internal_server_error);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 更新空域
+    server.put("/api/v1/airspaces/{id}", [jwtService](const auto& req, auto& res) {
+        spdlog::info("Handling PUT /api/v1/airspaces/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取空域ID
+        std::regex id_regex(R"(/api/v1/airspaces/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string airspace_id = matches[1].str();
+            spdlog::info("Extracted airspace ID: {}", airspace_id);
+
+            try {
+                // 解析请求体JSON
+                auto json_data = nlohmann::json::parse(req.body());
+
+                // 构建UPDATE语句
+                std::string update_query = "UPDATE low_altitude_traffic_system.airspaces SET ";
+                std::vector<std::string> updates;
+                std::vector<mysqlx::Value> params;
+
+                if (json_data.contains("name")) {
+                    updates.push_back("name = ?");
+                    params.push_back(json_data["name"].get<std::string>());
+                }
+                if (json_data.contains("type")) {
+                    updates.push_back("type = ?");
+                    params.push_back(json_data["type"].get<std::string>());
+                }
+                if (json_data.contains("description")) {
+                    updates.push_back("description = ?");
+                    params.push_back(json_data["description"].get<std::string>());
+                }
+                if (json_data.contains("north_lat")) {
+                    updates.push_back("north_lat = ?");
+                    params.push_back(json_data["north_lat"].get<double>());
+                }
+                if (json_data.contains("south_lat")) {
+                    updates.push_back("south_lat = ?");
+                    params.push_back(json_data["south_lat"].get<double>());
+                }
+                if (json_data.contains("east_lng")) {
+                    updates.push_back("east_lng = ?");
+                    params.push_back(json_data["east_lng"].get<double>());
+                }
+                if (json_data.contains("west_lng")) {
+                    updates.push_back("west_lng = ?");
+                    params.push_back(json_data["west_lng"].get<double>());
+                }
+                if (json_data.contains("min_altitude")) {
+                    updates.push_back("min_altitude = ?");
+                    params.push_back(json_data["min_altitude"].get<double>());
+                }
+                if (json_data.contains("max_altitude")) {
+                    updates.push_back("max_altitude = ?");
+                    params.push_back(json_data["max_altitude"].get<double>());
+                }
+                if (json_data.contains("status")) {
+                    updates.push_back("status = ?");
+                    params.push_back(json_data["status"].get<std::string>());
+                }
+                if (json_data.contains("authority")) {
+                    updates.push_back("authority = ?");
+                    params.push_back(json_data["authority"].get<std::string>());
+                }
+                if (json_data.contains("contact_info")) {
+                    updates.push_back("contact_info = ?");
+                    params.push_back(json_data["contact_info"].get<std::string>());
+                }
+                if (json_data.contains("max_concurrent_flights")) {
+                    updates.push_back("max_concurrent_flights = ?");
+                    params.push_back(json_data["max_concurrent_flights"].get<int>());
+                }
+
+                updates.push_back("updated_at = NOW()");
+
+                if (updates.empty() || updates.size() == 1) {
+                    nlohmann::json error_response = {
+                        {"success", false},
+                        {"error_code", "NO_FIELDS_TO_UPDATE"},
+                        {"message", "没有可更新的字段"},
+                        {"timestamp", std::time(nullptr)}
+                    };
+
+                    res.result(boost::beast::http::status::bad_request);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = error_response.dump();
+                    res.prepare_payload();
+                    return;
+                }
+
+                // 拼接UPDATE语句
+                for (size_t i = 0; i < updates.size(); ++i) {
+                    update_query += updates[i];
+                    if (i < updates.size() - 1) {
+                        update_query += ", ";
+                    }
+                }
+                update_query += " WHERE id = ?";
+                params.push_back(std::stoi(airspace_id));
+
+                auto& db_manager = database::DatabaseManager::getInstance();
+                uint64_t affected_rows = db_manager.executePreparedUpdate(update_query, params);
+
+                if (affected_rows > 0) {
+                    nlohmann::json response = {
+                        {"success", true},
+                        {"message", "更新空域成功"},
+                        {"timestamp", std::time(nullptr)},
+                        {"data", {
+                            {"id", std::stoi(airspace_id)},
+                            {"updated_fields", json_data}
+                        }}
+                    };
+
+                    res.result(boost::beast::http::status::ok);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = response.dump();
+                    res.prepare_payload();
+
+                    spdlog::info("Successfully updated airspace ID: {}", airspace_id);
+                } else {
+                    nlohmann::json error_response = {
+                        {"success", false},
+                        {"error_code", "NOT_FOUND"},
+                        {"message", "空域不存在或无更新"},
+                        {"timestamp", std::time(nullptr)}
+                    };
+
+                    res.result(boost::beast::http::status::not_found);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = error_response.dump();
+                    res.prepare_payload();
+                }
+
+            } catch (const nlohmann::json::parse_error& e) {
+                spdlog::error("JSON parse error in airspace update: {}", e.what());
+
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "INVALID_JSON"},
+                    {"message", std::string("JSON格式错误: ") + e.what()},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::bad_request);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+
+            } catch (const std::exception& e) {
+                spdlog::error("Error updating airspace {}: {}", airspace_id, e.what());
+
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "INTERNAL_ERROR"},
+                    {"message", "更新空域失败"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+        } else {
+            spdlog::warn("Invalid airspace ID format in path: {}", target);
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INVALID_PARAMETER"},
+                {"message", "无效的空域ID格式"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::bad_request);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    // 删除空域
+    server.del("/api/v1/airspaces/{id}", [jwtService](const auto& req, auto& res) {
+        spdlog::info("Handling DELETE /api/v1/airspaces/{{id}}");
+        std::string target = std::string(req.target());
+
+        // 提取空域ID
+        std::regex id_regex(R"(/api/v1/airspaces/(\d+)(?:\?.*)?$)");
+        std::smatch matches;
+        if (std::regex_match(target, matches, id_regex) && matches.size() > 1) {
+            std::string airspace_id = matches[1].str();
+            spdlog::info("Extracted airspace ID: {}", airspace_id);
+
+            try {
+                auto& db_manager = database::DatabaseManager::getInstance();
+
+                // 删除空域
+                std::vector<mysqlx::Value> params = {std::stoi(airspace_id)};
+                uint64_t affected_rows = db_manager.executePreparedUpdate(
+                    "DELETE FROM low_altitude_traffic_system.airspaces WHERE id = ?",
+                    params
+                );
+
+                if (affected_rows > 0) {
+                    nlohmann::json response = {
+                        {"success", true},
+                        {"message", "删除空域成功"},
+                        {"timestamp", std::time(nullptr)},
+                        {"data", {
+                            {"id", std::stoi(airspace_id)},
+                            {"deleted", true}
+                        }}
+                    };
+
+                    res.result(boost::beast::http::status::ok);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = response.dump();
+                    res.prepare_payload();
+
+                    spdlog::info("Successfully deleted airspace ID: {}", airspace_id);
+                } else {
+                    nlohmann::json error_response = {
+                        {"success", false},
+                        {"error_code", "NOT_FOUND"},
+                        {"message", "空域不存在"},
+                        {"timestamp", std::time(nullptr)}
+                    };
+
+                    res.result(boost::beast::http::status::not_found);
+                    res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                    res.body() = error_response.dump();
+                    res.prepare_payload();
+                }
+
+            } catch (const std::exception& e) {
+                spdlog::error("Error deleting airspace {}: {}", airspace_id, e.what());
+
+                nlohmann::json error_response = {
+                    {"success", false},
+                    {"error_code", "INTERNAL_ERROR"},
+                    {"message", "删除空域失败"},
+                    {"timestamp", std::time(nullptr)}
+                };
+
+                res.result(boost::beast::http::status::internal_server_error);
+                res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+                res.body() = error_response.dump();
+                res.prepare_payload();
+            }
+        } else {
+            spdlog::warn("Invalid airspace ID format in path: {}", target);
+
+            nlohmann::json error_response = {
+                {"success", false},
+                {"error_code", "INVALID_PARAMETER"},
+                {"message", "无效的空域ID格式"},
+                {"timestamp", std::time(nullptr)}
+            };
+
+            res.result(boost::beast::http::status::bad_request);
+            res.set(boost::beast::http::field::content_type, "application/json; charset=utf-8");
+            res.body() = error_response.dump();
+            res.prepare_payload();
+        }
+    });
+
+    spdlog::info("API routes configured (including FlightTask, Weather, Emergency, FlightPermit, Conflict, EmergencyLanding and Airspace APIs)");
 }
 
 int main(int argc, char* argv[]) {

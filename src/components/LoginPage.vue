@@ -3,81 +3,68 @@
   <AuthLayout>
     <!-- 自定义标题 -->
     <template #title>
-      <h1 class="auth-title">智能低空交通系统</h1>
+      <h1 class="auth-title">
+        智能低空交通系统
+      </h1>
     </template>
 
     <!-- 登录表单 -->
     <template #form>
-      <form class="login-form" @submit.prevent="handleLogin">
-        <div class="form-group">
-          <input
-            v-model="loginData.username"
-            type="text"
-            placeholder="用户名"
-            class="form-input"
-            required
-          />
-        </div>
+      <form
+        class="login-form"
+        @submit.prevent="handleLogin"
+      >
+        <AppleInput
+          v-model="loginData.username"
+          type="text"
+          placeholder="用户名"
+          required
+          class="form-field"
+        />
 
-        <div class="form-group">
-          <input
-            v-model="loginData.password"
-            type="password"
-            placeholder="密码"
-            class="form-input"
-            required
-          />
-        </div>
+        <AppleInput
+          v-model="loginData.password"
+          type="password"
+          placeholder="密码"
+          required
+          class="form-field"
+        />
 
-        <div class="form-group">
+        <div class="form-field">
           <select
             v-model="loginData.role"
             class="form-select"
-            required
           >
-            <option value="">请选择身份</option>
-            <option value="admin">管理员</option>
-            <option value="user">普通用户</option>
+            <option value="">
+              自动识别身份
+            </option>
+            <option value="admin">
+              管理员
+            </option>
+            <option value="user">
+              普通用户
+            </option>
           </select>
         </div>
 
-        <button
+        <AppleButton
           type="submit"
+          variant="primary"
+          size="large"
+          :loading="loading"
           class="login-button"
-          :disabled="loading"
         >
-          <div class="button-content">
-            <!-- Loading 图标 -->
-            <div v-if="loading" class="loading-spinner">
-              <svg
-                class="spinner-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-dasharray="31.416"
-                  stroke-dashoffset="31.416"
-                />
-              </svg>
-            </div>
-            <!-- 按钮文字 -->
-            <span class="button-text">{{ loading ? '登录中...' : '登录' }}</span>
-          </div>
-        </button>
+          {{ loading ? '登录中...' : '登录' }}
+        </AppleButton>
       </form>
     </template>
 
     <!-- 测试账号信息 -->
     <template #extra>
       <div class="test-accounts">
-        <p class="test-title">测试账号</p>
+        <p class="test-title">
+          测试账号
+        </p>
         <div class="test-account-list">
           <div class="test-account">
             <strong>管理员:</strong> admin / admin123
@@ -110,13 +97,14 @@ import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import authApi from '@/services/authApi'
 import AuthLayout from './AuthLayout.vue'
+import { AppleButton, AppleInput } from '@/components/apple'
 
 const router = useRouter()
 const route = useRoute()
 const store = useStore()
 
 const loading = ref(false)
-const loginForm = ref(null)
+// const loginForm = ref(null)
 
 const loginData = reactive({
   username: '',
@@ -126,24 +114,24 @@ const loginData = reactive({
 
 // 角色选择现在是必填的
 
-const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在3到20个字符', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-  ],
-  role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
-  ]
-}
+// const rules = {
+//   username: [
+//     { required: true, message: '请输入用户名', trigger: 'blur' },
+//     { min: 3, max: 20, message: '用户名长度在3到20个字符', trigger: 'blur' }
+//   ],
+//   password: [
+//     { required: true, message: '请输入密码', trigger: 'blur' },
+//     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+//   ],
+//   role: [
+//     { required: true, message: '请选择角色', trigger: 'change' }
+//   ]
+// }
 
 const handleLogin = async () => {
   // Basic validation
-  if (!loginData.username || !loginData.password || !loginData.role) {
-    ElMessage.error('请填写用户名、密码和身份')
+  if (!loginData.username || !loginData.password) {
+    ElMessage.error('请填写用户名和密码')
     return
   }
 
@@ -157,7 +145,8 @@ const handleLogin = async () => {
     return
   }
 
-  if (!['admin', 'user'].includes(loginData.role)) {
+  // role是可选的，如果提供了则验证有效性
+  if (loginData.role && !['admin', 'user'].includes(loginData.role)) {
     ElMessage.error('请选择有效的身份')
     return
   }
@@ -168,11 +157,18 @@ const handleLogin = async () => {
     // 所有用户（包括testuser）都通过真实后端API登录
 
     // 调用真实的后端API（包括admin账户）
-    const response = await authApi.login({
+    // 只在role不为空时才包含role字段，让后端自动识别
+    const payload = {
       username: loginData.username,
-      password: loginData.password,
-      role: loginData.role
-    })
+      password: loginData.password
+    }
+
+    // 如果用户手动选择了角色，则包含在请求中
+    if (loginData.role) {
+      payload.role = loginData.role
+    }
+
+    const response = await authApi.login(payload)
 
     console.log('登录响应:', response)
 
@@ -187,9 +183,10 @@ const handleLogin = async () => {
       const redirect = route.query.redirect || '/dashboard'
       console.log('准备跳转到:', redirect)
 
+      // 🔒 BUG #9: 使用replace代替push,避免后退时重定向循环
       // 使用setTimeout确保状态更新完成后再跳转
       setTimeout(() => {
-        router.push(redirect)
+        router.replace(redirect)
       }, 100)
     } else {
       ElMessage.error(response?.message || '登录失败')
@@ -217,56 +214,40 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-/* Apple-style form styling - 与注册页面完全一致 */
+/* 使用 Apple 设计系统 */
 .auth-title {
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--color-text-primary);
   margin: 0;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-compact);
 }
 
 .login-form {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
-.form-group {
-  margin-bottom: 16px;
+.form-field {
+  margin-bottom: var(--space-4);
 }
 
-.form-input,
+/* 下拉选择框样式（使用设计系统） */
 .form-select {
   width: 100%;
   height: 44px;
-  padding: 0 16px;
-  font-size: 16px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
   font-weight: 400;
-  color: #1d1d1f;
-  background: #ffffff;
-  border: 1px solid #d2d2d7;
-  border-radius: 8px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
   outline: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-input);
   -webkit-appearance: none;
   box-sizing: border-box;
-}
-
-.form-input::placeholder {
-  color: #86868b;
-  font-weight: 400;
-}
-
-.form-input:focus,
-.form-select:focus {
-  border-color: #0071e3;
-  box-shadow:
-    0 0 0 3px rgba(0, 113, 227, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.04);
-  transform: translateY(-1px);
-}
-
-.form-select {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2386868b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 12px center;
   background-repeat: no-repeat;
@@ -274,90 +255,25 @@ const handleLogin = async () => {
   padding-right: 40px;
 }
 
+.form-select:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.form-select:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
+  background-color: var(--color-bg-primary);
+}
+
 .form-select option {
-  color: #1d1d1f;
-  background: #ffffff;
-  padding: 8px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  padding: var(--space-2);
 }
 
 .login-button {
   width: 100%;
-  height: 44px;
-  background: #0071e3;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-  letter-spacing: -0.1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 按钮内容容器 */
-.button-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-}
-
-/* Loading 动画容器 */
-.loading-spinner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-}
-
-/* Loading 图标 */
-.spinner-icon {
-  width: 100%;
-  height: 100%;
-  color: white;
-  animation: spin 1s linear infinite;
-}
-
-/* 旋转动画 */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-    stroke-dashoffset: 31.416;
-  }
-  50% {
-    stroke-dashoffset: 15.708;
-  }
-  to {
-    transform: rotate(360deg);
-    stroke-dashoffset: 31.416;
-  }
-}
-
-/* 按钮文字 */
-.button-text {
-  transition: opacity 0.2s ease;
-}
-
-.login-button:hover:not(:disabled) {
-  background: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
-}
-
-.login-button:active:not(:disabled) {
-  transform: scale(0.98);
-  transition: transform 0.1s;
-}
-
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* 测试账号样式 */

@@ -11,8 +11,8 @@
           <el-button
             type="success"
             size="large"
-            @click="autoLocate"
             :loading="locating"
+            @click="autoLocate"
           >
             <el-icon><Location /></el-icon>
             自动定位
@@ -45,7 +45,7 @@
               size="24"
               color="#fff"
             >
-              <Temperature />
+              <Odometer />
             </el-icon>
           </div>
           <div class="stat-content">
@@ -67,7 +67,7 @@
               size="24"
               color="#fff"
             >
-              <Wind />
+              <WindPower />
             </el-icon>
           </div>
           <div class="stat-content">
@@ -89,7 +89,7 @@
               size="24"
               color="#fff"
             >
-              <Cloud />
+              <Cloudy />
             </el-icon>
           </div>
           <div class="stat-content">
@@ -115,9 +115,15 @@
             </el-icon>
           </div>
           <div class="stat-content">
-            <h3 v-if="riskAssessment && riskAssessment.overallRisk">{{ getRiskLevelText(riskAssessment.overallRisk) }}</h3>
-            <h3 v-else-if="loading">加载中...</h3>
-            <h3 v-else>--</h3>
+            <h3 v-if="riskAssessment && riskAssessment.overallRisk">
+              {{ getRiskLevelText(riskAssessment.overallRisk) }}
+            </h3>
+            <h3 v-else-if="loading">
+              加载中...
+            </h3>
+            <h3 v-else>
+              --
+            </h3>
             <p>飞行风险等级</p>
           </div>
         </SmartCard>
@@ -377,8 +383,12 @@
             >
               <template #default="{ row }">
                 <div>
-                  <div style="font-weight: 500;">{{ row.dayName }}</div>
-                  <div style="font-size: 12px; color: #909399;">{{ row.dateStr }}</div>
+                  <div style="font-weight: 500;">
+                    {{ row.dayName }}
+                  </div>
+                  <div style="font-size: 12px; color: #909399;">
+                    {{ row.dateStr }}
+                  </div>
                 </div>
               </template>
             </el-table-column>
@@ -488,7 +498,12 @@
       <template #header>
         <div class="card-header">
           <span class="card-title">当日每时段天气变化表（3h）</span>
-          <el-tag type="info" size="small">每3小时更新</el-tag>
+          <el-tag
+            type="info"
+            size="small"
+          >
+            每3小时更新
+          </el-tag>
         </div>
       </template>
 
@@ -719,7 +734,7 @@
                   size="48"
                   color="#909399"
                 >
-                  <Map />
+                  <MapLocation />
                 </el-icon>
                 <p>路线预览地图</p>
               </div>
@@ -770,11 +785,16 @@
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Temperature, Wind, Cloudy, Warning, Location, Refresh,
-  Map, Check
+  Warning, Location, Refresh, Check, MapLocation, Odometer, WindPower, Cloudy
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
 import weatherApi from '@/services/weatherApi'
+import {
+  mockForecast,
+  generateMockRouteWeather,
+  mockCurrentWeather,
+  mockFlightSafetyData
+} from '@/config/mockWeatherData'
 
 // const store = useStore()
 
@@ -802,314 +822,23 @@ const currentLocation = ref({ lat: 39.9042, lon: 116.4074 }) // 默认北京坐�
 const activeRequests = new Set()
 
 // 创建一个包装器来跟踪Promise请求
-const trackRequest = async (promise) => {
-  const controller = new AbortController()
-  activeRequests.add(controller)
+// const trackRequest = async (promise) => {
+//   const controller = new AbortController()
+//   activeRequests.add(controller)
 
-  try {
-    const result = await promise
-    return result
-  } finally {
-    activeRequests.delete(controller)
-  }
-}
+//   try {
+//     const result = await promise
+//     return result
+//   } finally {
+//     activeRequests.delete(controller)
+//   }
+// }
 
 const routeStart = ref('')
 const routeEnd = ref('')
 const routeAltitude = ref(100)
 const routeTime = ref(new Date().toISOString())
 const routePreview = ref([])
-
-// Mock forecast data for fallback when API fails
-const mockForecast = [
-  {
-    dt: Math.floor(Date.now() / 1000),
-    dt_txt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 18.5,
-      temp_min: 16.8,
-      temp_max: 20.1,
-      pressure: 1013,
-      humidity: 65
-    },
-    weather: [
-      {
-        id: 800,
-        main: "Clear",
-        description: "晴朗",
-        icon: "01d"
-      }
-    ],
-    clouds: {
-      all: 10
-    },
-    wind: {
-      speed: 3.5,
-      deg: 180,
-      gust: 5.2
-    },
-    visibility: 10000,
-    pop: 0.1
-  },
-  {
-    dt: Math.floor((Date.now() + 3600000) / 1000),
-    dt_txt: new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 19.2,
-      temp_min: 17.5,
-      temp_max: 21.0,
-      pressure: 1012,
-      humidity: 62
-    },
-    weather: [
-      {
-        id: 801,
-        main: "Few clouds",
-        description: "少云",
-        icon: "02d"
-      }
-    ],
-    clouds: {
-      all: 20
-    },
-    wind: {
-      speed: 4.1,
-      deg: 175,
-      gust: 6.1
-    },
-    visibility: 9800,
-    pop: 0.15
-  },
-  {
-    dt: Math.floor((Date.now() + 7200000) / 1000),
-    dt_txt: new Date(Date.now() + 7200000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 19.8,
-      temp_min: 18.1,
-      temp_max: 21.5,
-      pressure: 1011,
-      humidity: 58
-    },
-    weather: [
-      {
-        id: 802,
-        main: "Scattered clouds",
-        description: "多云",
-        icon: "03d"
-      }
-    ],
-    clouds: {
-      all: 40
-    },
-    wind: {
-      speed: 4.8,
-      deg: 170,
-      gust: 6.8
-    },
-    visibility: 9500,
-    pop: 0.2
-  },
-  {
-    dt: Math.floor((Date.now() + 10800000) / 1000),
-    dt_txt: new Date(Date.now() + 10800000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 20.1,
-      temp_min: 18.5,
-      temp_max: 22.0,
-      pressure: 1010,
-      humidity: 55
-    },
-    weather: [
-      {
-        id: 803,
-        main: "Broken clouds",
-        description: "阴天",
-        icon: "04d"
-      }
-    ],
-    clouds: {
-      all: 60
-    },
-    wind: {
-      speed: 5.2,
-      deg: 165,
-      gust: 7.5
-    },
-    visibility: 9200,
-    pop: 0.3
-  },
-  {
-    dt: Math.floor((Date.now() + 14400000) / 1000),
-    dt_txt: new Date(Date.now() + 14400000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 19.5,
-      temp_min: 17.8,
-      temp_max: 21.5,
-      pressure: 1009,
-      humidity: 58
-    },
-    weather: [
-      {
-        id: 804,
-        main: "Overcast",
-        description: "阴",
-        icon: "04n"
-      }
-    ],
-    clouds: {
-      all: 80
-    },
-    wind: {
-      speed: 4.5,
-      deg: 160,
-      gust: 6.5
-    },
-    visibility: 8500,
-    pop: 0.4
-  },
-  {
-    dt: Math.floor((Date.now() + 18000000) / 1000),
-    dt_txt: new Date(Date.now() + 18000000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 18.2,
-      temp_min: 16.5,
-      temp_max: 20.0,
-      pressure: 1008,
-      humidity: 65
-    },
-    weather: [
-      {
-        id: 800,
-        main: "Clear",
-        description: "晴朗",
-        icon: "01n"
-      }
-    ],
-    clouds: {
-      all: 10
-    },
-    wind: {
-      speed: 3.8,
-      deg: 170,
-      gust: 5.8
-    },
-    visibility: 10000,
-    pop: 0.1
-  },
-  {
-    dt: Math.floor((Date.now() + 21600000) / 1000),
-    dt_txt: new Date(Date.now() + 21600000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 17.8,
-      temp_min: 15.9,
-      temp_max: 19.5,
-      pressure: 1007,
-      humidity: 68
-    },
-    weather: [
-      {
-        id: 801,
-        main: "Few clouds",
-        description: "少云",
-        icon: "02n"
-      }
-    ],
-    clouds: {
-      all: 20
-    },
-    wind: {
-      speed: 4.2,
-      deg: 175,
-      gust: 6.2
-    },
-    visibility: 9800,
-    pop: 0.15
-  },
-  {
-    dt: Math.floor((Date.now() + 25200000) / 1000),
-    dt_txt: new Date(Date.now() + 25200000).toISOString().replace('T', ' ').substring(0, 19),
-    main: {
-      temp: 17.5,
-      temp_min: 15.5,
-      temp_max: 19.0,
-      pressure: 1006,
-      humidity: 70
-    },
-    weather: [
-      {
-        id: 802,
-        main: "Scattered clouds",
-        description: "多云",
-        icon: "03n"
-      }
-    ],
-    clouds: {
-      all: 40
-    },
-    wind: {
-      speed: 4.6,
-      deg: 180,
-      gust: 6.7
-    },
-    visibility: 9500,
-    pop: 0.2
-  }
-]
-
-// 生成未来5天的航线天气预报Mock数据
-const generateMockRouteWeather = (startDate = null) => {
-  const baseDate = startDate ? new Date(startDate) : new Date()
-  const weatherConditions = [
-    { condition: '晴朗', icon: '01d', temp_max: 22, temp_min: 15, wind: 3.5, humidity: 55, score: 95, risk: 'low' },
-    { condition: '少云', icon: '02d', temp_max: 21, temp_min: 14, wind: 4.2, humidity: 60, score: 88, risk: 'low' },
-    { condition: '多云', icon: '03d', temp_max: 20, temp_min: 13, wind: 5.5, humidity: 65, score: 72, risk: 'low_medium' },
-    { condition: '阴天', icon: '04d', temp_max: 18, temp_min: 12, wind: 6.8, humidity: 70, score: 58, risk: 'medium' },
-    { condition: '小雨', icon: '10d', temp_max: 16, temp_min: 11, wind: 8.2, humidity: 80, score: 45, risk: 'medium' }
-  ]
-
-  return weatherConditions.map((weather, index) => {
-    const date = new Date(baseDate)
-    date.setDate(date.getDate() + index)
-
-    // 计算相对于今天的天数差
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const targetDate = new Date(date)
-    targetDate.setHours(0, 0, 0, 0)
-    const daysDiff = Math.floor((targetDate - today) / (1000 * 60 * 60 * 24))
-
-    let dayName = ''
-    if (daysDiff === 0) {
-      dayName = '今天'
-    } else if (daysDiff === 1) {
-      dayName = '明天'
-    } else if (daysDiff === 2) {
-      dayName = '后天'
-    } else if (daysDiff > 0) {
-      dayName = `${daysDiff}天后`
-    } else if (daysDiff === -1) {
-      dayName = '昨天'
-    } else {
-      dayName = `${Math.abs(daysDiff)}天前`
-    }
-
-    const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`
-
-    return {
-      date: date.getTime(),
-      dayName: dayName,
-      dateStr: dateStr,
-      condition: weather.condition,
-      icon: weather.icon,
-      temp_max: weather.temp_max,
-      temp_min: weather.temp_min,
-      wind_speed: weather.wind.toFixed(1),
-      humidity: weather.humidity,
-      safety_score: weather.score,
-      risk_level: weather.risk
-    }
-  })
-}
 
 // 计算属性
 const weatherLocation = computed(() => {
@@ -1255,24 +984,8 @@ const refreshWeatherData = async () => {
 
 // 使用Mock数据的降级函数
 const useMockData = () => {
-  currentWeather.value = {
-    weather: {
-      location: '北京',
-      temperature: 18.5,
-      feels_like: 17.2,
-      temp_min: 16.8,
-      temp_max: 20.1,
-      humidity: 65,
-      pressure: 1013,
-      wind_speed: 3.5,
-      wind_direction: 180,
-      visibility: 10000,
-      cloudiness: 10,
-      condition: '晴朗',
-      icon: '01d',
-      timestamp: Math.floor(Date.now() / 1000)
-    }
-  }
+  // 从配置文件导入的Mock数据
+  currentWeather.value = mockCurrentWeather
 
   forecast.value = mockForecast.slice(0, 8).map(item => ({
     timestamp: item.dt,
@@ -1292,14 +1005,7 @@ const useMockData = () => {
     }
   }))
 
-  flightSafetyData.value = {
-    safety: {
-      safe: true,
-      score: 85,
-      warnings: ['演示模式：天气条件良好']
-    },
-    weather: currentWeather.value.weather
-  }
+  flightSafetyData.value = mockFlightSafetyData
 
   buildRiskAssessment(flightSafetyData.value)
 }
@@ -1469,29 +1175,29 @@ const getRiskIconClass = (level) => {
   return level === 'high' ? 'risk-icon-high' : level === 'medium' ? 'risk-icon-medium' : 'risk-icon-low'
 }
 
-const getWindDirection = (deg) => {
-  if (!deg) return '未知'
-  const directions = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
-  const index = Math.round(deg / 45) % 8
-  return directions[index]
-}
+// const getWindDirection = (deg) => {
+//   if (!deg) return '未知'
+//   const directions = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
+//   const index = Math.round(deg / 45) % 8
+//   return directions[index]
+// }
 
 const getWeatherIconUrl = (iconCode) => {
   return `https://openweathermap.org/img/wn/${iconCode}@2x.png`
 }
 
-const getDayName = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
-  const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  return days[date.getDay()]
-}
+// const getDayName = (timestamp) => {
+//   if (!timestamp) return ''
+//   const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
+//   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+//   return days[date.getDay()]
+// }
 
-const getDate = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
-  return `${date.getMonth() + 1}月${date.getDate()}日`
-}
+// const getDate = (timestamp) => {
+//   if (!timestamp) return ''
+//   const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
+//   return `${date.getMonth() + 1}月${date.getDate()}日`
+// }
 
 const getTimeSlot = (index) => {
   // 每个时段为3小时，从当前时间开始
@@ -1536,11 +1242,11 @@ const getTimeSlotDate = (index) => {
   return `${dayName} ${dateStr}`
 }
 
-const getTempClass = (temp) => {
-  if (temp < 0) return 'temp-cold'
-  if (temp > 30) return 'temp-hot'
-  return 'temp-normal'
-}
+// const getTempClass = (temp) => {
+//   if (temp < 0) return 'temp-cold'
+//   if (temp > 30) return 'temp-hot'
+//   return 'temp-normal'
+// }
 
 const getRowClass = ({ row }) => {
   if (row.risk_level === 'high') return 'risk-high'
@@ -1646,7 +1352,7 @@ watch(selectedRoute, (newRoute) => {
 })
 
 // 监听日期范围变化（深度监听数组内容变化）
-watch(forecastTimeRange, (newRange) => {
+watch(forecastTimeRange, () => {
   if (isLoadingRouteWeather) return
 
   // 只有在已选择航线的情况下才重新加载数据

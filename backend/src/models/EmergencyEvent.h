@@ -43,26 +43,50 @@ enum class EmergencyStatus {
 
 /**
  * @brief 紧急事件模型类
+ *
+ * 成员按大小排序以优化内存对齐：
+ * 1. 8字节成员 (int64_t)
+ * 2. 时间戳 (time_point)
+ * 3. 字符串和JSON (通常32字节)
+ * 4. optional<int64_t> (16字节)
+ * 5. optional<string> (40字节)
+ * 6. optional<time_point> (16字节)
+ * 7. 枚举 (4字节)
  */
 class EmergencyEvent {
 public:
+    // 8字节成员
     int64_t id;                                    // 事件ID
-    std::string event_code;                        // 事件编号
     int64_t task_id;                               // 关联任务ID
+
+    // 时间戳 (通常8字节)
+    std::chrono::system_clock::time_point created_at;  // 创建时间
+    std::chrono::system_clock::time_point updated_at;  // 更新时间
+
+    // 字符串 (通常32字节)
+    std::string event_code;                        // 事件编号
+    std::string title;                             // 事件标题
+
+    // JSON (通常16-24字节)
+    nlohmann::json location;                       // 事件位置 {lat, lon}
+
+    // optional<int64_t> (16字节)
     std::optional<int64_t> drone_id;               // 关联无人机ID（可选）
+    std::optional<int64_t> responded_by;           // 响应人员ID
+
+    // optional<time_point> (16字节)
+    std::optional<std::chrono::system_clock::time_point> responded_at;  // 响应时间
+    std::optional<std::chrono::system_clock::time_point> resolved_at;   // 解决时间
+
+    // optional<string> (40字节)
+    std::optional<std::string> description;        // 事件描述（可选）
+    std::optional<std::string> response_action;    // 响应措施
+    std::optional<std::string> response_notes;     // 响应备注
+
+    // 枚举 (4字节)
     EmergencyType type;                            // 事件类型
     EmergencySeverity severity;                    // 严重程度
     EmergencyStatus status;                        // 事件状态
-    std::string title;                             // 事件标题
-    std::optional<std::string> description;        // 事件描述（可选）
-    nlohmann::json location;                       // 事件位置 {lat, lon}
-    std::optional<std::string> response_action;    // 响应措施
-    std::optional<std::string> response_notes;     // 响应备注
-    std::optional<int64_t> responded_by;           // 响应人员ID
-    std::optional<std::chrono::system_clock::time_point> responded_at;  // 响应时间
-    std::optional<std::chrono::system_clock::time_point> resolved_at;   // 解决时间
-    std::chrono::system_clock::time_point created_at;  // 创建时间
-    std::chrono::system_clock::time_point updated_at;  // 更新时间
 
     /**
      * @brief 默认构造函数

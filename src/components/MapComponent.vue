@@ -6,43 +6,74 @@
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 地图容器 -->
-      <SmartCard hover-effect class="map-container">
-        <el-card shadow="never" class="map-card">
+      <SmartCard
+        hover-effect
+        class="map-container"
+      >
+        <el-card
+          shadow="never"
+          class="map-card"
+        >
           <!-- 地图工具面板 -->
           <div class="map-tools">
             <div class="zoom-controls">
-              <el-button circle size="small" @click="zoomIn">
+              <el-button
+                circle
+                size="small"
+                @click="zoomIn"
+              >
                 <el-icon><Plus /></el-icon>
               </el-button>
-              <el-button circle size="small" @click="zoomOut">
+              <el-button
+                circle
+                size="small"
+                @click="zoomOut"
+              >
                 <el-icon><Minus /></el-icon>
               </el-button>
             </div>
 
             <div class="layer-control">
               <el-dropdown @command="changeMapType">
-                <el-button circle size="small">
+                <el-button
+                  circle
+                  size="small"
+                >
                   <el-icon><Grid /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="satellite">卫星图</el-dropdown-item>
-                    <el-dropdown-item command="roadmap">路线图</el-dropdown-item>
-                    <el-dropdown-item command="hybrid">混合图</el-dropdown-item>
+                    <el-dropdown-item command="satellite">
+                      卫星图
+                    </el-dropdown-item>
+                    <el-dropdown-item command="roadmap">
+                      路线图
+                    </el-dropdown-item>
+                    <el-dropdown-item command="hybrid">
+                      混合图
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
             </div>
 
             <div class="location-control">
-              <el-button circle size="small" @click="getCurrentLocation">
+              <el-button
+                circle
+                size="small"
+                @click="getCurrentLocation"
+              >
                 <el-icon><LocationInformation /></el-icon>
               </el-button>
             </div>
           </div>
 
           <!-- 地图主体 -->
-          <div id="map" ref="mapContainer" class="map-view" />
+          <div
+            id="map"
+            ref="mapContainer"
+            class="map-view"
+          />
 
           <!-- 地图信息面板 -->
           <div class="map-info-panel">
@@ -70,20 +101,32 @@
             class="context-menu"
             @click.stop
           >
-            <div class="menu-item" @click="setRoutePoint('start')">
+            <div
+              class="menu-item"
+              @click="setRoutePoint('start')"
+            >
               <el-icon><Flag /></el-icon>
               <span>设置为起点</span>
             </div>
-            <div class="menu-item" @click="setRoutePoint('waypoint')">
+            <div
+              class="menu-item"
+              @click="setRoutePoint('waypoint')"
+            >
               <el-icon><Location /></el-icon>
               <span>设置为途经点</span>
             </div>
-            <div class="menu-item" @click="setRoutePoint('end')">
+            <div
+              class="menu-item"
+              @click="setRoutePoint('end')"
+            >
               <el-icon><Position /></el-icon>
               <span>设置为终点</span>
             </div>
-            <div class="menu-divider"></div>
-            <div class="menu-item danger" @click="clearRoute">
+            <div class="menu-divider" />
+            <div
+              class="menu-item danger"
+              @click="clearRoute"
+            >
               <el-icon><Delete /></el-icon>
               <span>清除路线</span>
             </div>
@@ -94,15 +137,26 @@
       <!-- 右侧侧边栏 -->
       <div class="right-sidebar">
         <!-- 设备状态面板 -->
-        <SmartCard hover-effect class="device-panel">
-          <el-card shadow="never" class="device-card">
+        <SmartCard
+          hover-effect
+          class="device-panel"
+        >
+          <el-card
+            shadow="never"
+            class="device-card"
+          >
             <template #header>
               <div class="panel-header">
                 <span class="panel-title">设备状态</span>
-                <el-tag type="success">{{ devices.length }} 在线</el-tag>
+                <el-tag type="success">
+                  {{ devices.length }} 在线
+                </el-tag>
               </div>
             </template>
-            <div ref="deviceListRef" class="device-list">
+            <div
+              ref="deviceListRef"
+              class="device-list"
+            >
               <div
                 v-for="device in devices"
                 :key="device.id"
@@ -111,13 +165,20 @@
                 @click="selectDevice(device)"
               >
                 <div class="device-icon">
-                  <el-icon :size="20" :color="getDeviceColor(device.status)">
+                  <el-icon
+                    :size="20"
+                    :color="getDeviceColor(device.status)"
+                  >
                     <component :is="getDeviceIcon(device.type)" />
                   </el-icon>
                 </div>
                 <div class="device-info">
-                  <div class="device-name">{{ device.name }}</div>
-                  <div class="device-status">{{ device.status }}</div>
+                  <div class="device-name">
+                    {{ device.name }}
+                  </div>
+                  <div class="device-status">
+                    {{ device.status }}
+                  </div>
                 </div>
                 <div class="device-signal">
                   <el-progress
@@ -134,12 +195,24 @@
         </SmartCard>
 
         <!-- 路线规划面板 -->
-        <SmartCard hover-effect class="route-panel" v-if="routeData.start || routeData.end || routeData.waypoints.length > 0">
-          <el-card shadow="never" class="route-card">
+        <SmartCard
+          v-if="routeData.start || routeData.end || routeData.waypoints.length > 0"
+          hover-effect
+          class="route-panel"
+        >
+          <el-card
+            shadow="never"
+            class="route-card"
+          >
             <template #header>
               <div class="panel-header">
                 <span class="panel-title">路线规划</span>
-                <el-button size="small" type="primary" @click="planRoute" :disabled="!canPlanRoute">
+                <el-button
+                  size="small"
+                  type="primary"
+                  :disabled="!canPlanRoute"
+                  @click="planRoute"
+                >
                   规划路线
                 </el-button>
               </div>
@@ -147,11 +220,18 @@
 
             <!-- 路线点位信息 -->
             <div class="route-points">
-              <div v-if="routeData.start" class="route-point start">
+              <div
+                v-if="routeData.start"
+                class="route-point start"
+              >
                 <div class="point-header">
                   <el-icon><Flag /></el-icon>
                   <span>起点</span>
-                  <el-button size="small" text @click="clearRoutePoint('start')">
+                  <el-button
+                    size="small"
+                    text
+                    @click="clearRoutePoint('start')"
+                  >
                     <el-icon><Close /></el-icon>
                   </el-button>
                 </div>
@@ -160,11 +240,19 @@
                 </div>
               </div>
 
-              <div v-for="(waypoint, index) in routeData.waypoints" :key="index" class="route-point waypoint">
+              <div
+                v-for="(waypoint, index) in routeData.waypoints"
+                :key="index"
+                class="route-point waypoint"
+              >
                 <div class="point-header">
                   <el-icon><Location /></el-icon>
                   <span>途经点 {{ index + 1 }}</span>
-                  <el-button size="small" text @click="clearWaypoint(index)">
+                  <el-button
+                    size="small"
+                    text
+                    @click="clearWaypoint(index)"
+                  >
                     <el-icon><Close /></el-icon>
                   </el-button>
                 </div>
@@ -173,11 +261,18 @@
                 </div>
               </div>
 
-              <div v-if="routeData.end" class="route-point end">
+              <div
+                v-if="routeData.end"
+                class="route-point end"
+              >
                 <div class="point-header">
                   <el-icon><Position /></el-icon>
                   <span>终点</span>
-                  <el-button size="small" text @click="clearRoutePoint('end')">
+                  <el-button
+                    size="small"
+                    text
+                    @click="clearRoutePoint('end')"
+                  >
                     <el-icon><Close /></el-icon>
                   </el-button>
                 </div>
@@ -188,8 +283,13 @@
             </div>
 
             <!-- 路线信息 -->
-            <div v-if="routeInfo" class="route-info">
-              <div class="info-title">路线概要</div>
+            <div
+              v-if="routeInfo"
+              class="route-info"
+            >
+              <div class="info-title">
+                路线概要
+              </div>
               <div class="info-details">
                 <div class="detail-item">
                   <span class="detail-label">总距离:</span>
@@ -210,16 +310,34 @@
             <div class="route-options">
               <el-form label-width="60px">
                 <el-form-item label="策略">
-                  <el-select v-model="routeOptions.strategy" size="small">
-                    <el-option label="最快路线" value="0" />
-                    <el-option label="最短路线" value="1" />
-                    <el-option label="避免拥堵" value="2" />
+                  <el-select
+                    v-model="routeOptions.strategy"
+                    size="small"
+                  >
+                    <el-option
+                      label="最快路线"
+                      value="0"
+                    />
+                    <el-option
+                      label="最短路线"
+                      value="1"
+                    />
+                    <el-option
+                      label="避免拥堵"
+                      value="2"
+                    />
                   </el-select>
                 </el-form-item>
                 <el-form-item label="避让">
                   <el-checkbox-group v-model="routeOptions.restrictions">
-                    <el-checkbox label="避免收费" size="small" />
-                    <el-checkbox label="避免高速" size="small" />
+                    <el-checkbox
+                      label="避免收费"
+                      size="small"
+                    />
+                    <el-checkbox
+                      label="避免高速"
+                      size="small"
+                    />
                   </el-checkbox-group>
                 </el-form-item>
               </el-form>
@@ -230,11 +348,20 @@
     </div>
 
     <!-- 控制面板 -->
-    <SmartCard hover-effect class="control-panel">
-      <el-card shadow="never" class="control-card">
+    <SmartCard
+      hover-effect
+      class="control-panel"
+    >
+      <el-card
+        shadow="never"
+        class="control-card"
+      >
         <div class="control-content">
           <!-- 左侧工具栏 -->
-          <MapToolbar :current-tool="currentTool" @tool-change="setTool" />
+          <MapToolbar
+            :current-tool="currentTool"
+            @tool-change="setTool"
+          />
 
           <!-- 中央控制区 -->
           <MapControls
@@ -245,19 +372,32 @@
           />
 
           <!-- 右侧操作区 -->
-          <MapActions @fullscreen="showFullScreen" @settings="showSettings = true" />
+          <MapActions
+            @fullscreen="showFullScreen"
+            @settings="showSettings = true"
+          />
         </div>
       </el-card>
     </SmartCard>
 
     <!-- 设置对话框 -->
-    <el-dialog v-model="showSettings" title="地图设置" width="500px">
+    <el-dialog
+      v-model="showSettings"
+      title="地图设置"
+      width="500px"
+    >
       <el-form label-width="120px">
         <el-form-item label="地图类型">
           <el-radio-group v-model="mapType">
-            <el-radio value="roadmap">路线图</el-radio>
-            <el-radio value="satellite">卫星图</el-radio>
-            <el-radio value="hybrid">混合图</el-radio>
+            <el-radio value="roadmap">
+              路线图
+            </el-radio>
+            <el-radio value="satellite">
+              卫星图
+            </el-radio>
+            <el-radio value="hybrid">
+              混合图
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="显示交通">
@@ -268,8 +408,15 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showSettings = false">取消</el-button>
-        <el-button type="primary" @click="applySettings">应用</el-button>
+        <el-button @click="showSettings = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="applySettings"
+        >
+          应用
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -277,9 +424,10 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { ElMessage, ElLoading } from 'element-plus'
+// import { ElMessageBox } from 'element-plus'
 import {
-  Plus, Minus, Grid, LocationInformation, Position, VideoCamera, Radar,
+  Plus, Minus, Grid, LocationInformation, Position, VideoCamera,
   Flag, Location, Delete, Close
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
@@ -953,7 +1101,7 @@ const getDeviceIcon = (type) => {
   const iconMap = {
     'drone': Position,
     'camera': VideoCamera,
-    'radar': Radar
+    'radar': Position // Radar图标不存在,使用Position代替
   }
   return iconMap[type] || Position
 }

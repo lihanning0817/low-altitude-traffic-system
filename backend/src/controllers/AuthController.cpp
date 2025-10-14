@@ -40,7 +40,9 @@ http::response<http::string_body> AuthController::login(const http::request<http
 
         std::string username = loginData["username"].get<std::string>();
         std::string password = loginData["password"].get<std::string>();
-        std::string expectedRole = loginData["role"].get<std::string>();
+
+        // role参数改为可选,如果提供则用于验证
+        std::string expectedRole = loginData.value("role", "");
 
         // 检查用户是否被锁定
         if (isUserLocked(username)) {
@@ -70,9 +72,9 @@ http::response<http::string_body> AuthController::login(const http::request<http
             return utils::HttpResponse::createErrorResponse("用户名或密码错误", 401, "UNAUTHORIZED");
         }
 
-        // 验证用户角色是否匹配
+        // 如果前端提供了role参数,验证角色是否匹配
         std::string actualRole = models::User::roleToString(user.getRole());
-        if (actualRole != expectedRole) {
+        if (!expectedRole.empty() && actualRole != expectedRole) {
             logLoginAttempt(username, false, "未知");
             incrementFailedLoginCount(username);
             spdlog::warn("用户 {} 角色不匹配: 期望 {}, 实际 {}", username, expectedRole, actualRole);
@@ -403,13 +405,17 @@ std::pair<bool, std::string> AuthController::validateLoginRequest(const nlohmann
         return {false, "缺少密码参数"};
     }
 
-    if (!loginData.contains("role") || !loginData["role"].is_string()) {
-        return {false, "缺少身份参数"};
+    // role参数改为可选,不再强制要求
+    // 如果提供了role参数,则进行验证
+    if (loginData.contains("role") && loginData["role"].is_string()) {
+        std::string role = loginData["role"].get<std::string>();
+        if (!role.empty() && role != "admin" && role != "user" && role != "operator") {
+            return {false, "身份参数无效"};
+        }
     }
 
     std::string username = loginData["username"].get<std::string>();
     std::string password = loginData["password"].get<std::string>();
-    std::string role = loginData["role"].get<std::string>();
 
     if (username.empty()) {
         return {false, "用户名不能为空"};
@@ -417,14 +423,6 @@ std::pair<bool, std::string> AuthController::validateLoginRequest(const nlohmann
 
     if (password.empty()) {
         return {false, "密码不能为空"};
-    }
-
-    if (role.empty()) {
-        return {false, "身份不能为空"};
-    }
-
-    if (role != "admin" && role != "user" && role != "operator") {
-        return {false, "身份参数无效"};
     }
 
     return {true, ""};

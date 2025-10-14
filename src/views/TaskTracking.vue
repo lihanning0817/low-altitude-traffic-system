@@ -41,22 +41,38 @@ export default {
   name: 'TaskTracking',
   data() {
     return {
-      progress: 65
+      progress: 65,
+      progressInterval: null  // 🔒 保存定时器ID,用于清理
     }
   },
   mounted() {
     // 模拟进度更新
     this.simulateProgress()
   },
+  beforeUnmount() {
+    // 🔒 组件卸载前清理定时器,防止内存泄漏
+    this.clearProgressInterval()
+  },
   methods: {
     simulateProgress() {
-      const interval = setInterval(() => {
+      // 清理之前的定时器（如果存在）
+      this.clearProgressInterval()
+
+      // 创建新的定时器并保存引用
+      this.progressInterval = setInterval(() => {
         if (this.progress < 100) {
           this.progress += 5
         } else {
-          clearInterval(interval)
+          this.clearProgressInterval()
         }
       }, 2000)
+    },
+    clearProgressInterval() {
+      // 清理定时器并重置引用
+      if (this.progressInterval) {
+        clearInterval(this.progressInterval)
+        this.progressInterval = null
+      }
     }
   }
 }

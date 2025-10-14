@@ -110,7 +110,7 @@
       >
         <div class="stat-item">
           <div class="stat-icon">
-            <el-icon><Chart /></el-icon>
+            <el-icon><TrendCharts /></el-icon>
           </div>
           <div class="stat-value">
             {{ systemStatusText }}
@@ -202,7 +202,7 @@
             @click="navigateTo('map')"
           >
             <el-icon size="36">
-              <Map />
+              <MapLocation />
             </el-icon>
             <div class="action-label">
               地图监控
@@ -217,7 +217,7 @@
             @click="navigateTo('route-planner')"
           >
             <el-icon size="36">
-              <Path />
+              <Guide />
             </el-icon>
             <div class="action-label">
               路径规划
@@ -262,7 +262,7 @@
             @click="navigateTo('weather')"
           >
             <el-icon size="36">
-              <Sun />
+              <Sunny />
             </el-icon>
             <div class="action-label">
               气象监测
@@ -282,7 +282,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import SmartCard from '@/components/SmartCard.vue'
-import { DataLine, Pointer, Location, Chart, Map, Path, Warning, Sun } from '@element-plus/icons-vue'
+import { DataLine, Pointer, Location, Warning, Sunny, MapLocation, TrendCharts, Guide } from '@element-plus/icons-vue'
 
 const store = useStore()
 const router = useRouter()
@@ -364,11 +364,11 @@ const getActivityIcon = (type) => {
     case 'conflict':
       return Warning
     case 'weather':
-      return Sun
+      return Sunny
     case 'emergency':
       return Warning
     default:
-      return Chart
+      return TrendCharts
   }
 }
 

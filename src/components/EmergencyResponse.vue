@@ -40,7 +40,10 @@
             class="stat-icon"
             style="background: linear-gradient(135deg, #f56c6c 0%, #ff8a80 100%);"
           >
-            <el-icon size="24" color="#fff">
+            <el-icon
+              size="24"
+              color="#fff"
+            >
               <Warning />
             </el-icon>
           </div>
@@ -59,7 +62,10 @@
             class="stat-icon"
             style="background: linear-gradient(135deg, #e6a23c 0%, #f5a623 100%);"
           >
-            <el-icon size="24" color="#fff">
+            <el-icon
+              size="24"
+              color="#fff"
+            >
               <Bell />
             </el-icon>
           </div>
@@ -78,7 +84,10 @@
             class="stat-icon"
             style="background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);"
           >
-            <el-icon size="24" color="#fff">
+            <el-icon
+              size="24"
+              color="#fff"
+            >
               <Check />
             </el-icon>
           </div>
@@ -97,7 +106,10 @@
             class="stat-icon"
             style="background: linear-gradient(135deg, #909399 0%, #b1b3b8 100%);"
           >
-            <el-icon size="24" color="#fff">
+            <el-icon
+              size="24"
+              color="#fff"
+            >
               <Close />
             </el-icon>
           </div>
@@ -110,7 +122,10 @@
     </div>
 
     <!-- 过滤器 -->
-    <SmartCard class="filter-card" hover-effect>
+    <SmartCard
+      class="filter-card"
+      hover-effect
+    >
       <div class="filter-section">
         <el-select
           v-model="filter.status"
@@ -118,10 +133,12 @@
           clearable
           @change="refreshEvents"
         >
-          <el-option label="激活中" value="active" />
-          <el-option label="响应中" value="responding" />
-          <el-option label="已解决" value="resolved" />
-          <el-option label="已取消" value="cancelled" />
+          <el-option
+            v-for="option in EmergencyStatusOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
 
         <el-select
@@ -130,16 +147,21 @@
           clearable
           @change="refreshEvents"
         >
-          <el-option label="低" value="low" />
-          <el-option label="中" value="medium" />
-          <el-option label="高" value="high" />
-          <el-option label="严重" value="critical" />
+          <el-option
+            v-for="option in EmergencySeverityOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
       </div>
     </SmartCard>
 
     <!-- 事件列表 -->
-    <SmartCard class="events-card" hover-effect>
+    <SmartCard
+      class="events-card"
+      hover-effect
+    >
       <template #header>
         <div class="card-header">
           <span class="card-title">紧急事件列表</span>
@@ -152,19 +174,36 @@
         style="width: 100%"
         @row-click="handleRowClick"
       >
-        <el-table-column prop="event_code" label="事件编号" width="150" />
+        <el-table-column
+          prop="event_code"
+          label="事件编号"
+          width="150"
+        />
 
-        <el-table-column prop="title" label="标题" min-width="200" />
+        <el-table-column
+          prop="title"
+          label="标题"
+          min-width="200"
+        />
 
-        <el-table-column label="类型" width="120">
+        <el-table-column
+          label="类型"
+          width="120"
+        >
           <template #default="{ row }">
-            <el-tag :color="emergencyApi.getEventTypeColor(row.type)" style="color: white;">
+            <el-tag
+              :color="emergencyApi.getEventTypeColor(row.type)"
+              style="color: white;"
+            >
               {{ emergencyApi.getEventTypeText(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column label="严重程度" width="120">
+        <el-table-column
+          label="严重程度"
+          width="120"
+        >
           <template #default="{ row }">
             <el-tag :type="emergencyApi.getSeverityTagType(row.severity)">
               {{ emergencyApi.getSeverityText(row.severity) }}
@@ -172,7 +211,10 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="状态" width="120">
+        <el-table-column
+          label="状态"
+          width="120"
+        >
           <template #default="{ row }">
             <el-tag :type="emergencyApi.getStatusTagType(row.status)">
               {{ emergencyApi.getStatusText(row.status) }}
@@ -180,12 +222,20 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column
+          prop="created_at"
+          label="创建时间"
+          width="180"
+        />
 
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column
+          label="操作"
+          width="280"
+          fixed="right"
+        >
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'active'"
+              v-if="row.status === EmergencyStatus.ACTIVE"
               type="warning"
               size="small"
               @click.stop="handleRespond(row)"
@@ -193,7 +243,7 @@
               响应
             </el-button>
             <el-button
-              v-if="row.status === 'responding'"
+              v-if="row.status === EmergencyStatus.RESPONDING"
               type="success"
               size="small"
               @click.stop="handleResolve(row)"
@@ -201,7 +251,7 @@
               解决
             </el-button>
             <el-button
-              v-if="row.status === 'active' || row.status === 'responding'"
+              v-if="row.status === EmergencyStatus.ACTIVE || row.status === EmergencyStatus.RESPONDING"
               type="info"
               size="small"
               @click.stop="handleCancel(row)"
@@ -245,7 +295,10 @@
         :rules="createRules"
         label-width="100px"
       >
-        <el-form-item label="任务ID" prop="task_id">
+        <el-form-item
+          label="任务ID"
+          prop="task_id"
+        >
           <el-input-number
             v-model="createForm.task_id"
             :min="1"
@@ -253,33 +306,51 @@
           />
         </el-form-item>
 
-        <el-form-item label="事件类型" prop="type">
-          <el-select v-model="createForm.type" style="width: 100%">
-            <el-option label="设备故障" value="equipment_failure" />
-            <el-option label="恶劣天气" value="weather_emergency" />
-            <el-option label="碰撞风险" value="collision_risk" />
-            <el-option label="信号丢失" value="signal_loss" />
-            <el-option label="电量低" value="battery_low" />
-            <el-option label="电子围栏违规" value="geofence_violation" />
-            <el-option label="手动紧急" value="manual_emergency" />
-            <el-option label="其他" value="other" />
+        <el-form-item
+          label="事件类型"
+          prop="type"
+        >
+          <el-select
+            v-model="createForm.type"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="option in EmergencyTypeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="严重程度" prop="severity">
-          <el-select v-model="createForm.severity" style="width: 100%">
-            <el-option label="低" value="low" />
-            <el-option label="中" value="medium" />
-            <el-option label="高" value="high" />
-            <el-option label="严重" value="critical" />
+        <el-form-item
+          label="严重程度"
+          prop="severity"
+        >
+          <el-select
+            v-model="createForm.severity"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="option in EmergencySeverityOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="标题" prop="title">
+        <el-form-item
+          label="标题"
+          prop="title"
+        >
           <el-input v-model="createForm.title" />
         </el-form-item>
 
-        <el-form-item label="描述" prop="description">
+        <el-form-item
+          label="描述"
+          prop="description"
+        >
           <el-input
             v-model="createForm.description"
             type="textarea"
@@ -287,7 +358,10 @@
           />
         </el-form-item>
 
-        <el-form-item label="纬度" prop="lat">
+        <el-form-item
+          label="纬度"
+          prop="lat"
+        >
           <el-input-number
             v-model="createForm.lat"
             :precision="6"
@@ -295,7 +369,10 @@
           />
         </el-form-item>
 
-        <el-form-item label="经度" prop="lon">
+        <el-form-item
+          label="经度"
+          prop="lon"
+        >
           <el-input-number
             v-model="createForm.lon"
             :precision="6"
@@ -305,8 +382,15 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="danger" @click="handleCreate">创建</el-button>
+        <el-button @click="showCreateDialog = false">
+          取消
+        </el-button>
+        <el-button
+          type="danger"
+          @click="handleCreate"
+        >
+          创建
+        </el-button>
       </template>
     </el-dialog>
 
@@ -323,7 +407,10 @@
         :rules="respondRules"
         label-width="100px"
       >
-        <el-form-item label="响应措施" prop="response_action">
+        <el-form-item
+          label="响应措施"
+          prop="response_action"
+        >
           <el-input
             v-model="respondForm.response_action"
             type="textarea"
@@ -332,7 +419,10 @@
           />
         </el-form-item>
 
-        <el-form-item label="响应备注" prop="response_notes">
+        <el-form-item
+          label="响应备注"
+          prop="response_notes"
+        >
           <el-input
             v-model="respondForm.response_notes"
             type="textarea"
@@ -343,8 +433,15 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="showRespondDialog = false">取消</el-button>
-        <el-button type="warning" @click="handleSubmitRespond">提交响应</el-button>
+        <el-button @click="showRespondDialog = false">
+          取消
+        </el-button>
+        <el-button
+          type="warning"
+          @click="handleSubmitRespond"
+        >
+          提交响应
+        </el-button>
       </template>
     </el-dialog>
 
@@ -354,7 +451,10 @@
       title="事件详情"
       width="700px"
     >
-      <div v-if="selectedEvent" class="event-detail">
+      <div
+        v-if="selectedEvent"
+        class="event-detail"
+      >
         <div class="detail-section">
           <h3>基本信息</h3>
           <div class="detail-grid">
@@ -368,7 +468,10 @@
             </div>
             <div class="detail-item">
               <span class="label">类型:</span>
-              <el-tag :color="emergencyApi.getEventTypeColor(selectedEvent.type)" style="color: white;">
+              <el-tag
+                :color="emergencyApi.getEventTypeColor(selectedEvent.type)"
+                style="color: white;"
+              >
                 {{ emergencyApi.getEventTypeText(selectedEvent.type) }}
               </el-tag>
             </div>
@@ -395,7 +498,9 @@
           </div>
           <div class="detail-item">
             <span class="label">描述:</span>
-            <p class="description">{{ selectedEvent.description }}</p>
+            <p class="description">
+              {{ selectedEvent.description }}
+            </p>
           </div>
         </div>
 
@@ -413,15 +518,25 @@
           </div>
         </div>
 
-        <div v-if="selectedEvent.response_action" class="detail-section">
+        <div
+          v-if="selectedEvent.response_action"
+          class="detail-section"
+        >
           <h3>响应信息</h3>
           <div class="detail-item">
             <span class="label">响应措施:</span>
-            <p class="description">{{ selectedEvent.response_action }}</p>
+            <p class="description">
+              {{ selectedEvent.response_action }}
+            </p>
           </div>
-          <div v-if="selectedEvent.response_notes" class="detail-item">
+          <div
+            v-if="selectedEvent.response_notes"
+            class="detail-item"
+          >
             <span class="label">响应备注:</span>
-            <p class="description">{{ selectedEvent.response_notes }}</p>
+            <p class="description">
+              {{ selectedEvent.response_notes }}
+            </p>
           </div>
           <div class="detail-item">
             <span class="label">响应时间:</span>
@@ -440,7 +555,10 @@
               <span class="label">更新时间:</span>
               <span class="value">{{ selectedEvent.updated_at }}</span>
             </div>
-            <div v-if="selectedEvent.resolved_at" class="detail-item">
+            <div
+              v-if="selectedEvent.resolved_at"
+              class="detail-item"
+            >
               <span class="label">解决时间:</span>
               <span class="value">{{ selectedEvent.resolved_at }}</span>
             </div>
@@ -449,7 +567,9 @@
       </div>
 
       <template #footer>
-        <el-button @click="showDetailDialog = false">关闭</el-button>
+        <el-button @click="showDetailDialog = false">
+          关闭
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -463,6 +583,14 @@ import {
 } from '@element-plus/icons-vue'
 import SmartCard from '@/components/SmartCard.vue'
 import emergencyApi from '@/services/emergencyApi'
+import {
+  EmergencyType,
+  EmergencyTypeOptions,
+  EmergencySeverity,
+  EmergencySeverityOptions,
+  EmergencyStatus,
+  EmergencyStatusOptions
+} from '@/constants/emergencyConstants'
 
 // 响应式数据
 const loading = ref(false)
@@ -487,8 +615,8 @@ const pagination = reactive({
 
 const createForm = reactive({
   task_id: null,
-  type: 'other',
-  severity: 'medium',
+  type: EmergencyType.OTHER,
+  severity: EmergencySeverity.MEDIUM,
   title: '',
   description: '',
   lat: 39.9042,

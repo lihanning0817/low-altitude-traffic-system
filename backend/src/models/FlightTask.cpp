@@ -1,4 +1,5 @@
 #include "FlightTask.h"
+#include "../utils/ParamParser.h"
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
@@ -54,7 +55,8 @@ FlightTask FlightTask::fromJson(const nlohmann::json& json) {
 
     if (json.contains("id") && !json["id"].is_null()) {
         if (json["id"].is_string()) {
-            task.id_ = std::stoll(json["id"].get<std::string>());
+            // 使用ParamParser安全解析ID
+            task.id_ = utils::ParamParser::parseLongLong(json["id"].get<std::string>(), 0, 1, std::nullopt);
         } else {
             task.id_ = json["id"].get<int64_t>();
         }

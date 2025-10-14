@@ -6,6 +6,16 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import authApi from './authApi'
+import {
+  getEventTypeText,
+  getEventTypeColor,
+  getSeverityText,
+  getSeverityColor,
+  getSeverityTagType,
+  getStatusText,
+  getStatusColor,
+  getStatusTagType
+} from '@/constants/emergencyConstants'
 
 class EmergencyApiService {
   constructor() {
@@ -237,17 +247,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getEventTypeText(type) {
-    const types = {
-      equipment_failure: '设备故障',
-      weather_emergency: '恶劣天气',
-      collision_risk: '碰撞风险',
-      signal_loss: '信号丢失',
-      battery_low: '电量低',
-      geofence_violation: '电子围栏违规',
-      manual_emergency: '手动紧急',
-      other: '其他'
-    }
-    return types[type] || type
+    return getEventTypeText(type)
   }
 
   /**
@@ -256,13 +256,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getSeverityText(severity) {
-    const severities = {
-      low: '低',
-      medium: '中',
-      high: '高',
-      critical: '严重'
-    }
-    return severities[severity] || severity
+    return getSeverityText(severity)
   }
 
   /**
@@ -271,13 +265,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getStatusText(status) {
-    const statuses = {
-      active: '激活中',
-      responding: '响应中',
-      resolved: '已解决',
-      cancelled: '已取消'
-    }
-    return statuses[status] || status
+    return getStatusText(status)
   }
 
   /**
@@ -286,17 +274,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getEventTypeColor(type) {
-    const colors = {
-      equipment_failure: '#F56C6C',
-      weather_emergency: '#E6A23C',
-      collision_risk: '#F56C6C',
-      signal_loss: '#909399',
-      battery_low: '#E6A23C',
-      geofence_violation: '#F56C6C',
-      manual_emergency: '#409EFF',
-      other: '#909399'
-    }
-    return colors[type] || '#909399'
+    return getEventTypeColor(type)
   }
 
   /**
@@ -305,13 +283,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getSeverityColor(severity) {
-    const colors = {
-      low: '#67C23A',
-      medium: '#E6A23C',
-      high: '#F56C6C',
-      critical: '#F56C6C'
-    }
-    return colors[severity] || '#909399'
+    return getSeverityColor(severity)
   }
 
   /**
@@ -320,13 +292,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getStatusColor(status) {
-    const colors = {
-      active: '#F56C6C',
-      responding: '#E6A23C',
-      resolved: '#67C23A',
-      cancelled: '#909399'
-    }
-    return colors[status] || '#909399'
+    return getStatusColor(status)
   }
 
   /**
@@ -335,13 +301,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getStatusTagType(status) {
-    const types = {
-      active: 'danger',
-      responding: 'warning',
-      resolved: 'success',
-      cancelled: 'info'
-    }
-    return types[status] || 'info'
+    return getStatusTagType(status)
   }
 
   /**
@@ -350,13 +310,7 @@ class EmergencyApiService {
    * @returns {string}
    */
   getSeverityTagType(severity) {
-    const types = {
-      low: 'success',
-      medium: 'warning',
-      high: 'danger',
-      critical: 'danger'
-    }
-    return types[severity] || 'info'
+    return getSeverityTagType(severity)
   }
 }
 

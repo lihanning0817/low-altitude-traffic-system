@@ -4,18 +4,17 @@
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h2>任务管理中心</h2>
-          <p>管理和监控所有低空飞行任务</p>
+          <h1 class="page-title">任务管理中心</h1>
+          <p class="page-subtitle">管理和监控所有低空飞行任务</p>
         </div>
         <div class="action-section">
-          <el-button
-            type="primary"
+          <AppleButton
+            variant="primary"
             size="large"
             @click="showCreateDialog = true"
           >
-            <el-icon><Plus /></el-icon>
             创建任务
-          </el-button>
+          </AppleButton>
         </div>
       </div>
     </div>
@@ -23,431 +22,346 @@
     <!-- 统计卡片 -->
     <div class="stats-section">
       <div class="stats-grid">
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <DataLine />
-            </el-icon>
-          </div>
+        <AppleCard class="stat-card stat-card--primary">
+          <div class="stat-icon">📊</div>
           <div class="stat-content">
             <h3>{{ tasks.length }}</h3>
             <p>总任务数</p>
           </div>
-        </SmartCard>
+        </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Clock />
-            </el-icon>
-          </div>
+        <AppleCard class="stat-card stat-card--warning">
+          <div class="stat-icon">⏱️</div>
           <div class="stat-content">
             <h3>{{ runningTasks }}</h3>
             <p>进行中</p>
           </div>
-        </SmartCard>
+        </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <CircleCheck />
-            </el-icon>
-          </div>
+        <AppleCard class="stat-card stat-card--success">
+          <div class="stat-icon">✅</div>
           <div class="stat-content">
             <h3>{{ completedTasks }}</h3>
             <p>已完成</p>
           </div>
-        </SmartCard>
+        </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Warning />
-            </el-icon>
-          </div>
+        <AppleCard class="stat-card stat-card--info">
+          <div class="stat-icon">⏳</div>
           <div class="stat-content">
             <h3>{{ pendingTasks }}</h3>
             <p>待执行</p>
           </div>
-        </SmartCard>
+        </AppleCard>
       </div>
     </div>
 
     <!-- 筛选和搜索区域 -->
-    <SmartCard
-      hover-effect
-      class="filter-card"
-    >
+    <AppleCard class="filter-card">
       <div class="filter-content">
         <div class="search-area">
-          <el-input
-            :value="searchKeyword"
+          <AppleInput
+            v-model="searchKeyword"
             placeholder="搜索任务ID或名称..."
-            size="large"
-            clearable
             class="search-input"
-            @input="debouncedSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+          />
         </div>
 
         <div class="filter-controls">
-          <el-select
+          <select
             v-model="statusFilter"
-            placeholder="按状态筛选"
-            size="large"
-            clearable
             class="filter-select"
           >
-            <el-option
-              label="全部状态"
-              value=""
-            />
-            <el-option
-              label="进行中"
-              value="进行中"
-            />
-            <el-option
-              label="已完成"
-              value="已完成"
-            />
-            <el-option
-              label="待执行"
-              value="待执行"
-            />
-          </el-select>
+            <option value="">
+              全部状态
+            </option>
+            <option
+              v-for="option in TASK_STATUS_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
 
-          <el-button
-            type="primary"
-            size="large"
+          <AppleButton
+            variant="secondary"
             @click="refreshTasks"
           >
-            <el-icon><Refresh /></el-icon>
             刷新
-          </el-button>
+          </AppleButton>
         </div>
       </div>
-    </SmartCard>
+    </AppleCard>
 
     <!-- 任务列表 -->
-    <SmartCard
-      hover-effect
-      class="task-table-card"
-    >
+    <AppleCard class="task-table-card">
       <template #header>
         <div class="card-header">
           <span class="card-title">任务列表</span>
-          <el-tag type="info">
-            共 {{ filteredTasks.length }} 个任务
-          </el-tag>
+          <span class="task-count-badge">共 {{ filteredTasks.length }} 个任务</span>
         </div>
       </template>
 
-      <el-table
+      <div
         v-loading="loading"
-        :data="filteredTasks"
-        class="task-table"
-        @row-click="handleRowClick"
+        class="task-table-wrapper"
       >
-        <el-table-column
-          prop="id"
-          label="任务ID"
-          width="120"
-          sortable
+        <el-table
+          :data="filteredTasks"
+          class="task-table"
+          @row-click="handleRowClick"
         >
-          <template #default="{ row }">
-            <div class="task-id">
-              <el-icon
-                size="16"
-                color="#409eff"
-              >
-                <Files />
-              </el-icon>
-              <span>{{ row.id }}</span>
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column
+            prop="id"
+            label="任务ID"
+            width="120"
+            sortable
+          >
+            <template #default="{ row }">
+              <div class="task-id">
+                <span class="task-id-icon">📄</span>
+                <span>{{ row.id }}</span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          prop="name"
-          label="任务名称"
-          min-width="200"
-        >
-          <template #default="{ row }">
-            <div class="task-name">
-              <span class="name">{{ row.name }}</span>
-              <span class="description">{{ row.description }}</span>
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column
+            prop="name"
+            label="任务名称"
+            min-width="200"
+          >
+            <template #default="{ row }">
+              <div class="task-name">
+                <span class="name">{{ row.name }}</span>
+                <span
+                  v-if="row.description"
+                  class="description"
+                >{{ row.description }}</span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          prop="status"
-          label="状态"
-          width="120"
-          align="center"
-        >
-          <template #default="{ row }">
-            <div class="status-indicator">
-              <div
-                class="status-dot"
-                :class="getStatusClass(row.status)"
-              />
-              <span>{{ getStatusText(row.status) }}</span>
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column
+            prop="status"
+            label="状态"
+            width="120"
+            align="center"
+          >
+            <template #default="{ row }">
+              <div class="status-indicator">
+                <div
+                  class="status-dot"
+                  :class="getStatusClass(row.status)"
+                />
+                <span>{{ getStatusText(row.status) }}</span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          prop="progress"
-          label="进度"
-          width="150"
-          align="center"
-        >
-          <template #default="{ row }">
-            <div class="progress-wrapper">
-              <el-progress
-                :percentage="getTaskProgress(row.status)"
-                :color="getProgressColor(getTaskProgress(row.status))"
-                :stroke-width="8"
-                :show-text="false"
-              />
-              <span class="progress-text">{{ getTaskProgress(row.status) }}%</span>
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column
+            prop="progress"
+            label="进度"
+            width="150"
+            align="center"
+          >
+            <template #default="{ row }">
+              <div class="progress-wrapper">
+                <div class="progress-bar">
+                  <div
+                    class="progress-fill"
+                    :class="getProgressClass(getTaskProgress(row.status))"
+                    :style="{ width: getTaskProgress(row.status) + '%' }"
+                  />
+                </div>
+                <span class="progress-text">{{ getTaskProgress(row.status) }}%</span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          prop="createdAt"
-          label="创建时间"
-          width="180"
-          sortable
-        >
-          <template #default="{ row }">
-            <div class="time-info">
-              <el-icon
-                size="14"
-                color="#909399"
-              >
-                <Calendar />
-              </el-icon>
-              <span>{{ formatTime(row.createdAt) }}</span>
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column
+            prop="createdAt"
+            label="创建时间"
+            width="180"
+            sortable
+          >
+            <template #default="{ row }">
+              <div class="time-info">
+                <span class="time-icon">📅</span>
+                <span>{{ formatTime(row.createdAt) }}</span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          label="操作"
-          width="250"
-          align="center"
-          fixed="right"
-        >
-          <template #default="{ row }">
-            <div class="action-buttons">
-              <el-button
-                type="primary"
-                size="small"
-                @click.stop="viewDetail(row)"
-              >
-                <el-icon><View /></el-icon>
-                详情
-              </el-button>
-              <el-button
-                type="warning"
-                size="small"
-                @click.stop="editTask(row)"
-              >
-                <el-icon><Edit /></el-icon>
-                编辑
-              </el-button>
-              <el-button
-                v-if="row.status !== 'completed'"
-                type="success"
-                size="small"
-                @click.stop="executeTask(row)"
-              >
-                <el-icon><VideoPlay /></el-icon>
-                执行
-              </el-button>
-              <el-button
-                type="danger"
-                size="small"
-                @click.stop="deleteTask(row)"
-              >
-                <el-icon><Delete /></el-icon>
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </SmartCard>
+          <el-table-column
+            label="操作"
+            width="280"
+            align="center"
+            fixed="right"
+          >
+            <template #default="{ row }">
+              <div class="action-buttons">
+                <AppleButton
+                  variant="secondary"
+                  size="small"
+                  @click.stop="viewDetail(row)"
+                >
+                  详情
+                </AppleButton>
+                <AppleButton
+                  variant="secondary"
+                  size="small"
+                  @click.stop="editTask(row)"
+                >
+                  编辑
+                </AppleButton>
+                <AppleButton
+                  v-if="row.status !== 'completed'"
+                  variant="primary"
+                  size="small"
+                  @click.stop="executeTask(row)"
+                >
+                  执行
+                </AppleButton>
+                <AppleButton
+                  variant="danger"
+                  size="small"
+                  @click.stop="deleteTask(row)"
+                >
+                  删除
+                </AppleButton>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </AppleCard>
 
     <!-- 创建任务对话框 -->
-    <el-dialog
+    <AppleModal
       v-model="showCreateDialog"
       title="创建新任务"
-      width="600px"
+      :show-close="true"
       @close="resetCreateForm"
     >
-      <el-form
-        :model="newTask"
-        label-width="100px"
+      <form
+        class="task-form"
+        @submit.prevent="createTask"
       >
-        <el-form-item label="任务名称">
-          <el-input
+        <div class="form-group">
+          <label class="form-label">任务名称</label>
+          <AppleInput
             v-model="newTask.name"
             placeholder="请输入任务名称"
+            required
           />
-        </el-form-item>
-        <el-form-item label="任务描述">
-          <el-input
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">任务描述</label>
+          <textarea
             v-model="newTask.description"
-            type="textarea"
-            :rows="3"
+            class="form-textarea"
             placeholder="请输入任务描述"
+            rows="3"
           />
-        </el-form-item>
-        <el-form-item label="计划时间">
-          <el-date-picker
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">计划时间</label>
+          <input
             v-model="newTask.scheduled_time"
-            type="datetime"
-            placeholder="请选择计划执行时间"
-            style="width: 100%"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showCreateDialog = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="createTask"
-        >
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+            type="datetime-local"
+            class="form-datetime"
+          >
+        </div>
+
+        <div class="modal-actions">
+          <AppleButton
+            variant="secondary"
+            @click="showCreateDialog = false"
+          >
+            取消
+          </AppleButton>
+          <AppleButton
+            type="submit"
+            variant="primary"
+          >
+            确定
+          </AppleButton>
+        </div>
+      </form>
+    </AppleModal>
 
     <!-- 编辑任务对话框 -->
-    <el-dialog
+    <AppleModal
       v-model="showEditDialog"
       title="编辑任务"
-      width="600px"
+      :show-close="true"
       @close="resetEditForm"
     >
-      <el-form
+      <form
         v-if="editingTask"
-        :model="editingTask"
-        label-width="100px"
+        class="task-form"
+        @submit.prevent="updateTask"
       >
-        <el-form-item label="任务名称">
-          <el-input
+        <div class="form-group">
+          <label class="form-label">任务名称</label>
+          <AppleInput
             v-model="editingTask.name"
             placeholder="请输入任务名称"
+            required
           />
-        </el-form-item>
-        <el-form-item label="任务描述">
-          <el-input
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">任务描述</label>
+          <textarea
             v-model="editingTask.description"
-            type="textarea"
-            :rows="3"
+            class="form-textarea"
             placeholder="请输入任务描述"
+            rows="3"
           />
-        </el-form-item>
-        <el-form-item label="计划时间">
-          <el-date-picker
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">计划时间</label>
+          <input
             v-model="editingTask.scheduledTime"
-            type="datetime"
-            placeholder="请选择计划执行时间"
-            style="width: 100%"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showEditDialog = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="updateTask"
-        >
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+            type="datetime-local"
+            class="form-datetime"
+          >
+        </div>
+
+        <div class="modal-actions">
+          <AppleButton
+            variant="secondary"
+            @click="showEditDialog = false"
+          >
+            取消
+          </AppleButton>
+          <AppleButton
+            type="submit"
+            variant="primary"
+          >
+            确定
+          </AppleButton>
+        </div>
+      </form>
+    </AppleModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Plus, DataLine, Clock, CircleCheck, Warning, Search, Refresh,
-  Files, View, VideoPlay, Delete, Calendar, Edit
-} from '@element-plus/icons-vue'
-import SmartCard from '@/components/SmartCard.vue'
-import flightTaskApi from '@/services/flightTaskApi'
+import { AppleButton, AppleCard, AppleInput, AppleModal } from '@/components/apple'
 import { useStore } from 'vuex'
+// 🔒 BUG #5修复: 导入任务状态常量
+import { TASK_STATUS, getTaskStatusLabel, TASK_STATUS_OPTIONS } from '@/constants/taskConstants'
 
 // Vuex store
 const store = useStore()
-
-// 防抖函数
-const debounce = (func, wait) => {
-  let timeout
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout)
-      func(...args)
-    }
-    clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-  }
-}
 
 const loading = ref(false)
 const searchKeyword = ref('')
@@ -455,11 +369,6 @@ const statusFilter = ref('')
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
 const editingTask = ref(null)
-
-// 防抖搜索处理
-const debouncedSearch = debounce((value) => {
-  searchKeyword.value = value
-}, 300)
 
 // 从 Vuex store 获取任务数据
 const tasks = computed(() => store.state.flightTasks || [])
@@ -470,7 +379,7 @@ const newTask = reactive({
   scheduled_time: ''
 })
 
-// 计算属性
+// 🔒 BUG #5修复: 使用常量而不是硬编码中文
 const filteredTasks = computed(() => {
   let result = tasks.value
 
@@ -482,16 +391,8 @@ const filteredTasks = computed(() => {
   }
 
   if (statusFilter.value) {
-    // 将中文状态映射到英文状态
-    const statusMap = {
-      '进行中': 'ongoing',
-      '已完成': 'completed',
-      '待执行': 'pending'
-    }
-    const englishStatus = statusMap[statusFilter.value]
-    if (englishStatus) {
-      result = result.filter(task => task.status === englishStatus)
-    }
+    // 直接使用英文状态值进行过滤
+    result = result.filter(task => task.status === statusFilter.value)
   }
 
   return result
@@ -527,7 +428,7 @@ const loadTasks = async () => {
 }
 
 const viewDetail = (task) => {
-  ElMessage.info(`查看任务详情：${task.name}`)
+  ElMessage.info(`查看任务详情:${task.name}`)
 }
 
 const editTask = (task) => {
@@ -537,7 +438,7 @@ const editTask = (task) => {
 
 const executeTask = async (task) => {
   try {
-    await ElMessageBox.confirm(`确定要执行任务 "${task.name}" 吗？`, '确认执行', {
+    await ElMessageBox.confirm(`确定要执行任务 "${task.name}" 吗?`, '确认执行', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -557,7 +458,7 @@ const executeTask = async (task) => {
 
 const deleteTask = async (task) => {
   try {
-    await ElMessageBox.confirm(`确定要删除任务 "${task.name}" 吗？`, '确认删除', {
+    await ElMessageBox.confirm(`确定要删除任务 "${task.name}" 吗?`, '确认删除', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'error'
@@ -627,14 +528,9 @@ const resetEditForm = () => {
   editingTask.value = null
 }
 
-// 获取状态显示文本
+// 🔒 BUG #5修复: 使用常量工具函数获取状态文本
 const getStatusText = (status) => {
-  const statusMap = {
-    'pending': '待执行',
-    'ongoing': '进行中',
-    'completed': '已完成'
-  }
-  return statusMap[status] || status
+  return getTaskStatusLabel(status)
 }
 
 // 格式化时间
@@ -662,10 +558,10 @@ const getStatusClass = (status) => {
   return classMap[status] || ''
 }
 
-const getProgressColor = (progress) => {
-  if (progress < 30) return '#f56c6c'
-  if (progress < 70) return '#e6a23c'
-  return '#67c23a'
+const getProgressClass = (progress) => {
+  if (progress < 30) return 'progress-fill--low'
+  if (progress < 70) return 'progress-fill--medium'
+  return 'progress-fill--high'
 }
 
 // 获取进度（暂时返回基于状态的进度）
@@ -680,97 +576,129 @@ const getTaskProgress = (status) => {
 </script>
 
 <style scoped>
+/* 使用 Apple 设计系统 */
 .task-management {
   min-height: 100%;
+  padding: var(--space-6);
+  background: var(--color-bg-primary);
 }
 
 /* 页面头部 */
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 0;
+  padding: var(--space-6) 0;
 }
 
-.title-section h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+.title-section {
+  flex: 1;
+}
+
+.page-title {
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
-  color: #2c3e50;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-compact);
 }
 
-.title-section p {
+.page-subtitle {
   margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
 }
 
 /* 统计卡片 */
 .stats-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
 }
 
 .stat-card {
-  padding: 24px;
+  padding: var(--space-6);
   display: flex;
   align-items: center;
-  gap: 16px;
-  transition: all 0.3s ease;
+  gap: var(--space-4);
+  transition: var(--transition-smooth);
+  cursor: default;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 28px;
   flex-shrink: 0;
+  background: var(--color-bg-secondary);
+}
+
+.stat-card--primary .stat-icon {
+  background: rgba(0, 113, 227, 0.08);
+}
+
+.stat-card--warning .stat-icon {
+  background: rgba(255, 149, 0, 0.08);
+}
+
+.stat-card--success .stat-icon {
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.stat-card--info .stat-icon {
+  background: rgba(90, 200, 250, 0.08);
+}
+
+.stat-content {
+  flex: 1;
 }
 
 .stat-content h3 {
-  margin: 0 0 4px 0;
-  font-size: 28px;
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-compact);
 }
 
 .stat-content p {
   margin: 0;
-  font-size: 14px;
-  color: #7f8c8d;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   font-weight: 500;
+  line-height: var(--line-height-relaxed);
 }
 
 /* 筛选区域 */
 .filter-card {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
 }
 
 .filter-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: var(--space-4);
 }
 
 .search-area {
@@ -778,65 +706,113 @@ const getTaskProgress = (status) => {
   max-width: 400px;
 }
 
-.search-input {
-  border-radius: 12px;
-}
-
 .filter-controls {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
+  align-items: center;
 }
 
 .filter-select {
-  width: 150px;
+  width: 180px;
+  height: 44px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: var(--transition-input);
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2386868b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.filter-select:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.filter-select:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
+  background-color: var(--color-bg-primary);
 }
 
 /* 任务列表 */
 .task-table-card {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .card-title {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary);
+}
+
+.task-count-badge {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.task-table-wrapper {
+  min-height: 400px;
 }
 
 .task-table {
-  border-radius: 12px;
+  width: 100%;
 }
 
 .task-id {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-weight: 600;
-  color: #409eff;
+  color: var(--apple-blue);
+}
+
+.task-id-icon {
+  font-size: 16px;
 }
 
 .task-name .name {
   display: block;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+  line-height: var(--line-height-compact);
 }
 
 .task-name .description {
   display: block;
-  font-size: 12px;
-  color: #7f8c8d;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: center;
 }
 
@@ -848,15 +824,15 @@ const getTaskProgress = (status) => {
 }
 
 .status-running {
-  background: #409eff;
+  background: var(--apple-orange);
 }
 
 .status-completed {
-  background: #67c23a;
+  background: var(--apple-green);
 }
 
 .status-pending {
-  background: #e6a23c;
+  background: var(--apple-gray);
 }
 
 @keyframes pulse {
@@ -868,46 +844,180 @@ const getTaskProgress = (status) => {
 .progress-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.progress-fill--low {
+  background: var(--apple-red);
+}
+
+.progress-fill--medium {
+  background: var(--apple-orange);
+}
+
+.progress-fill--high {
+  background: var(--apple-green);
 }
 
 .progress-text {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #606266;
-  min-width: 35px;
+  color: var(--color-text-secondary);
+  min-width: 40px;
+  text-align: right;
 }
 
 .time-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #909399;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  justify-content: center;
+}
+
+.time-icon {
+  font-size: 14px;
 }
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 表单样式 */
+.task-form {
+  padding: var(--space-5);
+}
+
+.form-group {
+  margin-bottom: var(--space-5);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.form-textarea,
+.form-datetime {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: var(--transition-input);
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.form-textarea:hover,
+.form-datetime:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.form-textarea:focus,
+.form-datetime:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
+  background-color: var(--color-bg-primary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-default);
+}
+
+/* Element Plus 表格样式覆盖 */
+:deep(.el-table) {
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-primary);
+}
+
+:deep(.el-table__header) {
+  background-color: var(--color-bg-secondary);
+}
+
+:deep(.el-table th) {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+:deep(.el-table td) {
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+:deep(.el-table__row:hover) {
+  background-color: var(--color-bg-secondary);
+  cursor: pointer;
+}
+
+:deep(.el-table__body tr.current-row > td) {
+  background-color: var(--color-bg-tertiary);
 }
 
 /* 响应式设计 */
+@media (max-width: 1024px) {
+  .task-management {
+    padding: var(--space-4);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
     align-items: flex-start;
   }
 
   .filter-content {
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .search-area,
   .filter-controls {
     width: 100%;
+    max-width: none;
   }
 
   .filter-controls {
@@ -918,40 +1028,82 @@ const getTaskProgress = (status) => {
     grid-template-columns: 1fr;
   }
 
-  .action-buttons {
-    flex-direction: column;
+  .page-title {
+    font-size: var(--font-size-2xl);
   }
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-card__body) {
-  padding: 24px;
+@media (max-width: 480px) {
+  .task-management {
+    padding: var(--space-3);
+  }
+
+  .action-buttons {
+    width: 100%;
+  }
+
+  .action-buttons button {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
-:deep(.el-table__row:hover) {
-  background-color: #f8f9fa;
-  cursor: pointer;
-}
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .task-management {
+    background: #000000;
+  }
 
-:deep(.el-table__header) {
-  background-color: #fafbfc;
-}
+  .page-title {
+    color: #f2f2f7;
+  }
 
-:deep(.el-progress-bar__outer) {
-  border-radius: 4px;
-}
+  .page-subtitle {
+    color: #86868b;
+  }
 
-:deep(.el-input__wrapper) {
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
+  .stat-content h3 {
+    color: #f2f2f7;
+  }
 
-:deep(.el-input__wrapper:hover) {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
+  .stat-content p {
+    color: #86868b;
+  }
 
-:deep(.el-button) {
-  border-radius: 8px;
-  font-weight: 500;
+  .card-title {
+    color: #f2f2f7;
+  }
+
+  .task-count-badge {
+    background: #2c2c2e;
+    color: #86868b;
+  }
+
+  .task-name .name {
+    color: #f2f2f7;
+  }
+
+  .task-name .description {
+    color: #86868b;
+  }
+
+  .form-label {
+    color: #f2f2f7;
+  }
+
+  .form-textarea,
+  .form-datetime,
+  .filter-select {
+    background: #2c2c2e;
+    border: 1px solid #48484a;
+    color: #f2f2f7;
+  }
+
+  .form-textarea:focus,
+  .form-datetime:focus,
+  .filter-select:focus {
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+  }
 }
 </style>

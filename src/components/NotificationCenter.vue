@@ -81,7 +81,7 @@
         v-else
         class="no-notifications"
       >
-        <el-icon><Info /></el-icon>
+        <el-icon><InfoFilled /></el-icon>
         <p>暂无通知</p>
       </div>
 
@@ -104,7 +104,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
-import { Bell, Info } from '@element-plus/icons-vue'
+import { Bell, InfoFilled } from '@element-plus/icons-vue'
 
 const store = useStore()
 const isVisible = ref(false)
@@ -125,7 +125,7 @@ const getIconType = (type) => {
     case 'warning':
       return 'Warning'
     case 'info':
-      return 'Info'
+      return 'InfoFilled'
     default:
       return 'Bell'
   }

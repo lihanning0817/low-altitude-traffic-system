@@ -97,45 +97,54 @@ class ApiService {
   }
 
   // 飞行任务管理
+  // 修复：后端端点为 /tasks 而非 /flight-tasks
   async getFlightTasks() {
-    return this.request('/flight-tasks')
+    return this.request('/tasks')
   }
 
   async createFlightTask(taskData) {
-    return this.request('/flight-tasks', {
+    return this.request('/tasks', {
       method: 'POST',
       body: taskData
     })
   }
 
   async updateFlightTask(id, updates) {
-    return this.request(`/flight-tasks/${id}`, {
+    return this.request(`/tasks/${id}`, {
       method: 'PUT',
       body: updates
     })
   }
 
   async deleteFlightTask(taskId) {
-    return this.request(`/flight-tasks/${taskId}`, {
+    return this.request(`/tasks/${taskId}`, {
       method: 'DELETE'
     })
   }
 
   // 设备管理
+  // 已实现：后端API已完成
   async getDevices() {
     return this.request('/devices')
   }
 
   // 空域管理
+  // 已实现：后端API已完成
   async getAirspaces() {
     return this.request('/airspaces')
   }
 
+  // 飞行许可API
+  // 已实现：后端API已完成
   async applyFlightPermit(permitData) {
     return this.request('/flight-permits', {
       method: 'POST',
       body: permitData
     })
+  }
+
+  async getFlightPermits() {
+    return this.request('/flight-permits')
   }
 
   // 气象数据
@@ -152,22 +161,25 @@ class ApiService {
   }
 
   // 应急响应
+  // 修复：后端端点为 /emergency/events 而非 /emergency-events
   async reportEmergency(emergencyData) {
-    return this.request('/emergency-events', {
+    return this.request('/emergency/events', {
       method: 'POST',
       body: emergencyData
     })
   }
 
   async getEmergencyEvents() {
-    return this.request('/emergency-events')
+    return this.request('/emergency/events')
   }
 
+  // 已实现：紧急降落点API
   async getEmergencyLandingPoints() {
     return this.request('/emergency-landing-points')
   }
 
   // 交通管理
+  // 已实现：飞行注册和冲突检测API
   async registerFlight(flightData) {
     return this.request('/flights', {
       method: 'POST',
@@ -180,14 +192,17 @@ class ApiService {
   }
 
   // 路径规划
+  // 修复：后端端点为 /map/route 而非 /routes/plan
+  // 后端使用GET方法通过查询参数传递origin和destination
   async planRoute(routeData) {
-    return this.request('/routes/plan', {
-      method: 'POST',
-      body: routeData
+    const { origin, destination, strategy = '0' } = routeData
+    const queryString = new URLSearchParams({ origin, destination, strategy }).toString()
+    return this.request(`/map/route?${queryString}`, {
+      method: 'GET'
     })
   }
 
-  // 获取所有路线
+  // 已实现：获取所有路线
   async getRoutes() {
     return this.request('/routes')
   }

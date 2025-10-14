@@ -5,27 +5,39 @@
         <!-- Logo 区域 -->
         <div class="logo-section">
           <div class="logo-icon">
-            <img :src="`/logo.png?v=${Date.now()}`" alt="智能低空交通系统" class="logo-image" />
+            <img
+              :src="`/logo.png?v=${Date.now()}`"
+              alt="智能低空交通系统"
+              class="logo-image"
+            >
           </div>
           <!-- 标题插槽，支持自定义标题 -->
           <slot name="title">
-            <h1 class="auth-title">智能低空交通系统</h1>
+            <h1 class="auth-title">
+              智能低空交通系统
+            </h1>
           </slot>
         </div>
 
         <!-- 表单内容插槽 -->
         <div class="form-section">
-          <slot name="form"></slot>
+          <slot name="form" />
         </div>
 
         <!-- 底部链接插槽 -->
-        <div class="bottom-link" v-if="$slots.bottomLink">
-          <slot name="bottomLink"></slot>
+        <div
+          v-if="$slots.bottomLink"
+          class="bottom-link"
+        >
+          <slot name="bottomLink" />
         </div>
 
         <!-- 额外内容插槽（如测试账号信息） -->
-        <div class="extra-content" v-if="$slots.extra">
-          <slot name="extra"></slot>
+        <div
+          v-if="$slots.extra"
+          class="extra-content"
+        >
+          <slot name="extra" />
         </div>
       </div>
     </div>
