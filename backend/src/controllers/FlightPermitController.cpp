@@ -290,6 +290,187 @@ http::response<http::string_body> FlightPermitController::rejectFlightPermit(
     }
 }
 
+http::response<http::string_body> FlightPermitController::getFlightPermitById(
+    const http::request<http::string_body> &req,
+    const std::string &permit_id)
+{
+    try
+    {
+        // 1. 验证JWT Token
+        int64_t user_id = validateTokenAndGetUserId(req);
+        if (user_id == -1)
+        {
+            return utils::HttpResponse::createUnauthorizedResponse("无效的认证Token");
+        }
+
+        // 2. 查询飞行许可详情
+        std::string sql = "SELECT id, permit_code, task_id, airspace_id, applicant_id, approver_id, "
+                          "status, "
+                          "DATE_FORMAT(application_time, '%Y-%m-%d %H:%i:%s') as application_time, "
+                          "DATE_FORMAT(approval_time, '%Y-%m-%d %H:%i:%s') as approval_time, "
+                          "DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') as start_time, "
+                          "DATE_FORMAT(end_time, '%Y-%m-%d %H:%i:%s') as end_time, "
+                          "remarks "
+                          "FROM low_altitude_traffic_system.flight_permits WHERE id = ?";
+
+        auto result = dbSession_->sql(sql).bind(std::stoll(permit_id)).execute();
+
+        // 3. 检查是否存在
+        bool found = false;
+        mysqlx::Row row;
+        for (auto r : result)
+        {
+            row = r;
+            found = true;
+            break;
+        }
+
+        if (!found)
+        {
+            return utils::HttpResponse::createNotFoundResponse("飞行许可不存在");
+        }
+
+        // 4. 构建响应数据
+        json permit;
+
+        permit["id"] = row[0].get<int64_t>();
+        permit["permit_code"] = row[1].get<std::string>();
+        permit["task_id"] = row[2].get<int64_t>();
+        permit["airspace_id"] = row[3].get<int64_t>();
+        permit["applicant_id"] = row[4].get<int64_t>();
+
+        // 可选字段
+        if (!row[5].isNull())
+        {
+            permit["approver_id"] = row[5].get<int64_t>();
+        }
+
+        permit["status"] = row[6].get<std::string>();
+
+        // DATETIME字段已通过DATE_FORMAT转换为字���串
+        if (!row[7].isNull())
+        {
+            permit["application_time"] = row[7].get<std::string>();
+        }
+
+        if (!row[8].isNull())
+        {
+            permit["approval_time"] = row[8].get<std::string>();
+        }
+
+        if (!row[9].isNull())
+        {
+            permit["start_time"] = row[9].get<std::string>();
+        }
+
+        if (!row[10].isNull())
+        {
+            permit["end_time"] = row[10].get<std::string>();
+        }
+
+        if (!row[11].isNull())
+        {
+            permit["remarks"] = row[11].get<std::string>();
+        }
+
+        return utils::HttpResponse::createSuccessResponse(permit, "获取飞行许可详情成功");
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "获取飞行许可详情失败: " << e.what() << std::endl;
+        return utils::HttpResponse::createInternalErrorResponse("获取飞行许可详情失败: " + std::string(e.what()));
+    }
+}
+
+http::response<http::string_body> FlightPermitController::revokeFlightPermit(
+    const http::request<http::string_body> &req,
+    const std::string &permit_id)
+{
+    try
+    {
+        // 1. 验证JWT Token
+        int64_t user_id = validateTokenAndGetUserId(req);
+        if (user_id == -1)
+        {
+            return utils::HttpResponse::createUnauthorizedResponse("无效的认证Token");
+        }
+
+        // 2. 解析请求体（可选）
+        std::string reason = "";
+        try
+        {
+            json requestData = json::parse(req.body(), nullptr, true, true);
+            if (requestData.contains("reason"))
+            {
+                reason = requestData["reason"].get<std::string>();
+            }
+        }
+        catch (...)
+        {
+            // 请求体为空或格式错误时忽略
+        }
+
+        // 3. 检查许可是否存在且属于当前用户或用户是管理员
+        auto check_result = dbSession_->sql(
+            "SELECT applicant_id, status FROM flight_permits WHERE id = ?"
+        )
+        .bind(std::stoll(permit_id))
+        .execute();
+
+        bool found = false;
+        int64_t applicant_id = 0;
+        std::string current_status;
+
+        for (auto row : check_result)
+        {
+            applicant_id = row[0].get<int64_t>();
+            current_status = row[1].get<std::string>();
+            found = true;
+            break;
+        }
+
+        if (!found)
+        {
+            return utils::HttpResponse::createNotFoundResponse("飞行许可不存在");
+        }
+
+        // 检查权限：只有申请人本人或管理员可以撤销
+        if (applicant_id != user_id && !isAdmin(user_id))
+        {
+            return utils::HttpResponse::createForbiddenResponse("权限不足，只有申请人或管理员可以撤销飞行许可");
+        }
+
+        // 检查状态：已经被拒绝或已撤销的许可不能再撤销
+        if (current_status == "rejected" || current_status == "revoked")
+        {
+            return utils::HttpResponse::createErrorResponse("该飞行许可已经被拒绝或撤销��无法再次撤销");
+        }
+
+        // 4. 更新许可状态为revoked
+        std::string update_sql = "UPDATE flight_permits SET status = ?, updated_at = NOW()";
+        if (!reason.empty())
+        {
+            update_sql += ", remarks = CONCAT(IFNULL(remarks, ''), '\n撤销原因: ', ?)";
+        }
+        update_sql += " WHERE id = ?";
+
+        auto update_stmt = dbSession_->sql(update_sql).bind("revoked");
+        if (!reason.empty())
+        {
+            update_stmt.bind(reason);
+        }
+        auto result = update_stmt.bind(std::stoll(permit_id)).execute();
+
+        std::cout << "飞行许可撤销成功: ID=" << permit_id << ", User=" << user_id << std::endl;
+        return utils::HttpResponse::createSuccessResponse(nlohmann::json::object(), "飞行许可已撤销");
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "撤销飞行许可失败: " << e.what() << std::endl;
+        return utils::HttpResponse::createInternalErrorResponse("撤销飞行许可失败: " + std::string(e.what()));
+    }
+}
+
 // ========== 辅助方法实现 ==========
 
 std::string FlightPermitController::extractBearerToken(const http::request<http::string_body> &req)

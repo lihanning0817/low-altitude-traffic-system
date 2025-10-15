@@ -7,8 +7,9 @@ import axios from 'axios'
 import { getAuthToken } from './authApi'
 
 // 创建 axios 实例
+// 使用相对路径，通过Vue开发服务器代理转发
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8081/api/v1/conflict-detection',
+  baseURL: '/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -95,7 +96,7 @@ class ConflictDetectionApiService {
     }
 
     try {
-      return await apiClient.post('/flights/batch', { flights: flightsData })
+      return await apiClient.post('/conflict-detection/flights/batch', { flights: flightsData })
     } catch (error) {
       throw error
     }
@@ -108,7 +109,7 @@ class ConflictDetectionApiService {
    */
   async getConflicts(params = {}) {
     try {
-      return await apiClient.get('/conflicts', { params })
+      return await apiClient.get('/flight-conflicts', { params })
     } catch (error) {
       throw error
     }
@@ -125,7 +126,7 @@ class ConflictDetectionApiService {
     }
 
     try {
-      return await apiClient.get(`/conflicts/${id}`)
+      return await apiClient.get(`/conflict-detection/conflicts/${id}`)
     } catch (error) {
       throw error
     }
@@ -143,7 +144,7 @@ class ConflictDetectionApiService {
     }
 
     try {
-      return await apiClient.post(`/conflicts/${id}/resolve`, resolutionData)
+      return await apiClient.post(`/flight-conflicts/${id}/resolve`, resolutionData)
     } catch (error) {
       throw error
     }
@@ -155,7 +156,7 @@ class ConflictDetectionApiService {
    */
   async getUnresolvedConflicts() {
     try {
-      return await apiClient.get('/conflicts', {
+      return await apiClient.get('/flight-conflicts', {
         params: { status: 'unresolved' }
       })
     } catch (error) {
@@ -169,7 +170,7 @@ class ConflictDetectionApiService {
    */
   async getHighSeverityConflicts() {
     try {
-      return await apiClient.get('/conflicts', {
+      return await apiClient.get('/flight-conflicts', {
         params: { severity: 'high' }
       })
     } catch (error) {
@@ -188,7 +189,7 @@ class ConflictDetectionApiService {
     }
 
     try {
-      return await apiClient.get('/conflicts', {
+      return await apiClient.get('/flight-conflicts', {
         params: { flight_id: flightId }
       })
     } catch (error) {
@@ -203,7 +204,7 @@ class ConflictDetectionApiService {
    */
   async getConflictStatistics(params = {}) {
     try {
-      return await apiClient.get('/conflicts/statistics', { params })
+      return await apiClient.get('/conflict-detection/conflicts/statistics', { params })
     } catch (error) {
       throw error
     }

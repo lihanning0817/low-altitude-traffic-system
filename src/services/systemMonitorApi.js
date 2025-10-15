@@ -4,7 +4,8 @@ import { ElMessage } from 'element-plus'
 
 class SystemMonitorApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8081/api/v1'
+    // 使用相对路径，通过Vue开发服务器代理转发
+    this.baseURL = '/api/v1'
 
     // 创建axios实例
     this.api = axios.create({

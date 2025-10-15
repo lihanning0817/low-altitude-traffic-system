@@ -61,6 +61,11 @@ class PermitApiService {
     }
   }
 
+  // 创建飞行许可（别名方法）
+  async createPermit(permitData) {
+    return this.applyPermit(permitData)
+  }
+
   // 申请飞行许可
   async applyPermit(permitData) {
     try {

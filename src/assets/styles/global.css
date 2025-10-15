@@ -13,6 +13,12 @@
 /* 导入 Element Plus 主题样式 */
 @import './element-theme.css';
 
+/* 导入 Element Plus 深色主题覆盖 */
+@import './element-dark.css';
+
+/* 导入深色模式全局优化 */
+@import './dark-mode.css';
+
 /* 全局样式重置 */
 * {
   margin: 0;

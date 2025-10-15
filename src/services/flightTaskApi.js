@@ -5,7 +5,8 @@ import authApi from './authApi'
 
 class FlightTaskApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8081/api/v1/tasks'
+    // 使用相对路径，通过Vue开发服务器代理转发
+    this.baseURL = '/api/v1/tasks'
 
     // 创建axios实例
     this.api = axios.create({
@@ -75,6 +76,14 @@ class FlightTaskApiService {
       console.error('获取任务列表失败:', error)
       throw this.processError(error)
     }
+  }
+
+  /**
+   * 获取飞行任务列表（别名方法，用于向后兼容）
+   * @param {Object} params - 查询参数
+   */
+  async getTasks(params = {}) {
+    return this.getFlightTasks(params)
   }
 
   /**

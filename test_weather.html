@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Weather API</title>
+</head>
+<body>
+    <h1>Weather API Test</h1>
+    <button onclick="testWeather()">Test Weather API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testWeather() {
+            const result = document.getElementById('result');
+            result.textContent = 'Loading...';
+
+            try {
+                // Login first
+                const loginResp = await fetch('http://localhost:8081/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'superadmin', password: 'admin123' })
+                });
+                const loginData = await loginResp.json();
+                console.log('Login response:', loginData);
+
+                if (!loginData.success) {
+                    result.textContent = 'Login failed: ' + JSON.stringify(loginData, null, 2);
+                    return;
+                }
+
+                const token = loginData.data.access_token;
+
+                // Test weather API
+                const weatherResp = await fetch('http://localhost:8081/api/v1/weather/current/coords?lat=39.9042&lon=116.4074', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const weatherData = await weatherResp.json();
+                console.log('Weather response:', weatherData);
+
+                result.textContent = JSON.stringify(weatherData, null, 2);
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

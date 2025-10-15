@@ -35,9 +35,6 @@
             v-model="loginData.role"
             class="form-select"
           >
-            <option value="">
-              自动识别身份
-            </option>
             <option value="admin">
               管理员
             </option>
@@ -87,12 +84,26 @@
         立即注册
       </button>
     </template>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div
+        v-if="showToast"
+        :class="['toast-notification', toastType]"
+      >
+        <div class="toast-icon">
+          {{ toastIcon }}
+        </div>
+        <div class="toast-message">
+          {{ toastMessage }}
+        </div>
+      </div>
+    </Transition>
   </AuthLayout>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import authApi from '@/services/authApi'
@@ -106,10 +117,40 @@ const store = useStore()
 const loading = ref(false)
 // const loginForm = ref(null)
 
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 const loginData = reactive({
   username: '',
   password: '',
-  role: ''
+  role: 'admin'  // 默认为 admin，后端要求必填
 })
 
 // 角色选择现在是必填的
@@ -131,23 +172,23 @@ const loginData = reactive({
 const handleLogin = async () => {
   // Basic validation
   if (!loginData.username || !loginData.password) {
-    ElMessage.error('请填写用户名和密码')
+    showToastNotification('请填写用户名和密码', 'error')
     return
   }
 
   if (loginData.username.length < 3 || loginData.username.length > 20) {
-    ElMessage.error('用户名长度在3到20个字符')
+    showToastNotification('用户名长度在3到20个字符', 'error')
     return
   }
 
   if (loginData.password.length < 6) {
-    ElMessage.error('密码长度不能少于6位')
+    showToastNotification('密码长度不能少于6位', 'error')
     return
   }
 
   // role是可选的，如果提供了则验证有效性
   if (loginData.role && !['admin', 'user'].includes(loginData.role)) {
-    ElMessage.error('请选择有效的身份')
+    showToastNotification('请选择有效的身份', 'error')
     return
   }
 
@@ -177,7 +218,7 @@ const handleLogin = async () => {
       const user = response.data.user
       await store.dispatch('setUser', user)
 
-      ElMessage.success('登录成功！')
+      showToastNotification('登录成功！', 'success')
 
       // 登录成功后重定向
       const redirect = route.query.redirect || '/dashboard'
@@ -189,7 +230,7 @@ const handleLogin = async () => {
         router.replace(redirect)
       }, 100)
     } else {
-      ElMessage.error(response?.message || '登录失败')
+      showToastNotification(response?.message || '登录失败', 'error')
     }
 
   } catch (error) {
@@ -197,7 +238,7 @@ const handleLogin = async () => {
 
     // 特别处理身份错误
     if (error.error_code === 'ROLE_MISMATCH') {
-      ElMessage.error('身份错误')
+      showToastNotification('身份错误', 'error')
       return
     }
 
@@ -205,7 +246,7 @@ const handleLogin = async () => {
     if (error.success !== false) {
       // 如果有错误消息但不是明确的失败，尝试显示错误
       const errorMessage = error.message || error.error_code || '登录过程中出现错误'
-      ElMessage.error(errorMessage)
+      showToastNotification(errorMessage, 'error')
     }
   } finally {
     loading.value = false
@@ -403,6 +444,114 @@ const handleLogin = async () => {
   .form-select option {
     color: #f2f2f7;
     background: #2c2c2e;
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: var(--font-size-base, 15px);
+  color: var(--color-text, #1D1D1F);
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Toast 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+
+  .toast-notification.success {
+    border-left-color: #30D158;
+  }
+
+  .toast-notification.error {
+    border-left-color: #FF453A;
+  }
+
+  .toast-notification.warning {
+    border-left-color: #FF9F0A;
+  }
+
+  .toast-notification.info {
+    border-left-color: #0A84FF;
   }
 }
 </style>

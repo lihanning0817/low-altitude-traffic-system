@@ -95,6 +95,8 @@
   --primary-color: #0a84ff;
   --primary-hover: #409cff;
   --primary-active: #66b3ff;
+  --primary-light: #409cff;
+  --primary-dark: #0066cc;
   --secondary-color: #98989d;
   --accent-color: #6c6ce6;
 
@@ -105,41 +107,42 @@
   --info-color: #64d2ff;
 
   /* 文字颜色 */
-  --text-primary: #ffffff;
+  --text-primary: #e0e0e0;
   --text-secondary: #98989d;
   --text-tertiary: #636366;
+  --text-light: #98989d;
   --text-inverse: #1d1d1f;
 
   /* 背景颜色 */
-  --bg-primary: #000000;
-  --bg-secondary: #1c1c1e;
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
   --bg-tertiary: #2c2c2e;
-  --bg-card: #1c1c1e;
+  --bg-card: #1e1e1e;
   --bg-overlay: rgba(0, 0, 0, 0.7);
 
   /* 侧边栏 */
-  --sidebar-bg: #1c1c1e;
+  --sidebar-bg: #1e1e1e;
   --sidebar-item-hover: rgba(10, 132, 255, 0.15);
   --sidebar-item-active: #0a84ff;
-  --sidebar-text: #ffffff;
+  --sidebar-text: #e0e0e0;
   --sidebar-text-secondary: #98989d;
 
   /* 头部导航 */
-  --header-bg: #1c1c1e;
+  --header-bg: #1e1e1e;
   --header-border: #38383a;
-  --header-text: #ffffff;
+  --header-text: #e0e0e0;
 
   /* 卡片 */
-  --card-bg: #1c1c1e;
-  --card-border: #38383a;
-  --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+  --card-bg: rgba(30, 30, 30, 0.95);
+  --card-border: rgba(56, 56, 58, 0.5);
+  --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
 
   /* 按钮 */
   --btn-primary-bg: #0a84ff;
   --btn-primary-text: #ffffff;
   --btn-primary-hover: #409cff;
   --btn-secondary-bg: #2c2c2e;
-  --btn-secondary-text: #ffffff;
+  --btn-secondary-text: #e0e0e0;
   --btn-secondary-hover: #3a3a3c;
 
   /* 边框 */
@@ -147,12 +150,38 @@
   --border-light: #2c2c2e;
 
   /* 输入框 */
-  --input-bg: #1c1c1e;
+  --input-bg: #2c2c2e;
   --input-border: #38383a;
   --input-focus: #0a84ff;
 
   /* 阴影 */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.8);
+
+  /* Element Plus 深色主题变量 */
+  --el-bg-color: #1e1e1e;
+  --el-bg-color-page: #121212;
+  --el-bg-color-overlay: #2c2c2e;
+  --el-text-color-primary: #e0e0e0;
+  --el-text-color-regular: #98989d;
+  --el-text-color-secondary: #636366;
+  --el-text-color-placeholder: #636366;
+  --el-border-color: #38383a;
+  --el-border-color-light: #2c2c2e;
+  --el-border-color-lighter: #252525;
+  --el-fill-color: #2c2c2e;
+  --el-fill-color-light: #38383a;
+  --el-fill-color-lighter: #252525;
+  --el-fill-color-extra-light: #1e1e1e;
+  --el-fill-color-dark: #1e1e1e;
+  --el-fill-color-darker: #121212;
+  --el-fill-color-blank: transparent;
+
+  /* Element Plus 组件特定变量 */
+  --el-color-primary: #0a84ff;
+  --el-color-success: #32d74b;
+  --el-color-warning: #ff9f0a;
+  --el-color-danger: #ff453a;
+  --el-color-info: #64d2ff;
 }

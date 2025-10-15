@@ -425,17 +425,126 @@
         </div>
       </div>
     </AppleModal>
+
+    <!-- Toast 通知组件 -->
+    <Transition name="toast-fade">
+      <div
+        v-if="toastState.visible"
+        :class="['toast-notification', `toast-notification--${toastState.type}`]"
+      >
+        <div class="toast-icon">
+          <span v-if="toastState.type === 'success'">✓</span>
+          <span v-else-if="toastState.type === 'error'">✕</span>
+          <span v-else-if="toastState.type === 'warning'">⚠</span>
+          <span v-else>ℹ</span>
+        </div>
+        <div class="toast-message">{{ toastState.message }}</div>
+      </div>
+    </Transition>
+
+    <!-- 确认对话框组件 -->
+    <Transition name="modal-fade">
+      <div v-if="confirmState.visible" class="confirm-overlay" @click="handleConfirmCancel">
+        <div class="confirm-dialog" @click.stop>
+          <div class="confirm-header">
+            <h3 class="confirm-title">{{ confirmState.title }}</h3>
+          </div>
+          <div class="confirm-body">
+            <p class="confirm-message">{{ confirmState.message }}</p>
+          </div>
+          <div class="confirm-footer">
+            <AppleButton
+              variant="secondary"
+              @click="handleConfirmCancel"
+            >
+              {{ confirmState.cancelText }}
+            </AppleButton>
+            <AppleButton
+              variant="primary"
+              @click="handleConfirmOk"
+            >
+              {{ confirmState.confirmText }}
+            </AppleButton>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import conflictDetectionApi from '@/services/conflictDetectionApi'
 import { AppleButton, AppleCard, AppleInput, AppleModal } from '@/components/apple'
 
 const store = useStore()
+
+// Toast 通知状态
+const toastState = reactive({
+  visible: false,
+  message: '',
+  type: 'info', // 'success' | 'error' | 'warning' | 'info'
+  duration: 3000
+})
+
+let toastTimer = null
+
+// 显示 Toast 通知
+const showToastNotification = (message, type = 'info', duration = 3000) => {
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastState.message = message
+  toastState.type = type
+  toastState.duration = duration
+  toastState.visible = true
+
+  toastTimer = setTimeout(() => {
+    toastState.visible = false
+  }, duration)
+}
+
+// Confirm 对话框状态
+const confirmState = reactive({
+  visible: false,
+  title: '',
+  message: '',
+  confirmText: '确认',
+  cancelText: '取消',
+  resolve: null,
+  reject: null
+})
+
+// 显示确认对话框
+const showConfirmDialog = (message, title = '确认操作', options = {}) => {
+  return new Promise((resolve, reject) => {
+    confirmState.title = title
+    confirmState.message = message
+    confirmState.confirmText = options.confirmButtonText || '确认'
+    confirmState.cancelText = options.cancelButtonText || '取消'
+    confirmState.visible = true
+    confirmState.resolve = resolve
+    confirmState.reject = reject
+  })
+}
+
+// 确认对话框 - 确认
+const handleConfirmOk = () => {
+  confirmState.visible = false
+  if (confirmState.resolve) {
+    confirmState.resolve(true)
+  }
+}
+
+// 确认对话框 - 取消
+const handleConfirmCancel = () => {
+  confirmState.visible = false
+  if (confirmState.reject) {
+    confirmState.reject('cancel')
+  }
+}
 
 // 用户角色
 const userRole = computed(() => store.state.user?.role || 'user')
@@ -536,11 +645,11 @@ const loadConflicts = async () => {
       )
       console.log('成功加载冲突列表:', conflicts.value.length)
     } else {
-      ElMessage.warning(response.message || '加载冲突失败')
+      showToastNotification(response.message || '加载冲突失败', 'warning')
     }
   } catch (error) {
     console.error('加载冲突失败:', error)
-    ElMessage.error(error.message || '加载冲突失败')
+    showToastNotification(error.message || '加载冲突失败', 'error')
   } finally {
     loading.value = false
   }
@@ -549,19 +658,18 @@ const loadConflicts = async () => {
 // 刷新列表
 const handleRefresh = () => {
   loadConflicts()
-  ElMessage.success('已刷新')
+  showToastNotification('已刷新', 'success')
 }
 
 // 解决冲突
 const handleResolve = async (conflictId) => {
   try {
-    await ElMessageBox.confirm(
+    await showConfirmDialog(
       '确认将此冲突标记为已解决?',
       '确认操作',
       {
         confirmButtonText: '确认',
-        cancelButtonText: '取消',
-        type: 'info'
+        cancelButtonText: '取消'
       }
     )
 
@@ -570,15 +678,15 @@ const handleResolve = async (conflictId) => {
     })
 
     if (response.success) {
-      ElMessage.success('已标记为已解决')
+      showToastNotification('已标记为已解决', 'success')
       await loadConflicts()
     } else {
-      ElMessage.error(response.message || '操作失败')
+      showToastNotification(response.message || '操作失败', 'error')
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('解决冲突失败:', error)
-      ElMessage.error(error.message || '操作失败')
+      showToastNotification(error.message || '操作失败', 'error')
     }
   }
 }
@@ -626,19 +734,19 @@ const handleDetectConflict = async () => {
       }
 
       if (detectionResult.value.has_conflicts) {
-        ElMessage.warning(`检测到 ${detectionResult.value.conflicts.length} 个冲突`)
+        showToastNotification(`检测到 ${detectionResult.value.conflicts.length} 个冲突`, 'warning')
       } else {
-        ElMessage.success('未检测到冲突')
+        showToastNotification('未检测到冲突', 'success')
       }
 
       // 重新加载冲突列表
       await loadConflicts()
     } else {
-      ElMessage.error(response.message || '检测失败')
+      showToastNotification(response.message || '检测失败', 'error')
     }
   } catch (error) {
     console.error('检测冲突失败:', error)
-    ElMessage.error(error.message || '检测失败')
+    showToastNotification(error.message || '检测失败', 'error')
   } finally {
     detecting.value = false
   }
@@ -1230,6 +1338,183 @@ onMounted(() => {
   flex: 1;
 }
 
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 300px;
+  max-width: 500px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.toast-notification--success .toast-icon {
+  background: rgba(48, 209, 88, 0.15);
+  color: var(--apple-green);
+}
+
+.toast-notification--error .toast-icon {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--apple-red);
+}
+
+.toast-notification--warning .toast-icon {
+  background: rgba(255, 149, 0, 0.15);
+  color: var(--apple-orange);
+}
+
+.toast-notification--info .toast-icon {
+  background: rgba(0, 113, 227, 0.15);
+  color: var(--apple-blue);
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+/* Toast 动画 */
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: all 0.3s var(--easing-default);
+}
+
+.toast-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-20px);
+}
+
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+/* 确认对话框样式 */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: var(--space-6);
+}
+
+.confirm-dialog {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 440px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.confirm-header {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.confirm-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.confirm-body {
+  padding: var(--space-5) var(--space-6);
+}
+
+.confirm-message {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.confirm-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  justify-content: flex-end;
+}
+
+/* 模态框动画 */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s var(--easing-default);
+}
+
+.modal-fade-enter-active .confirm-dialog,
+.modal-fade-leave-active .confirm-dialog {
+  transition: all 0.3s var(--easing-default);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .confirm-dialog {
+  transform: scale(0.9) translateY(20px);
+}
+
+.modal-fade-leave-to .confirm-dialog {
+  transform: scale(0.95) translateY(10px);
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .confirm-dialog {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .confirm-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .flight-conflict-monitor {
@@ -1255,6 +1540,35 @@ onMounted(() => {
 
   .status-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .toast-notification {
+    min-width: auto;
+    max-width: calc(100vw - 32px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+  }
+
+  .toast-fade-enter-from {
+    transform: translateY(-20px);
+  }
+
+  .toast-fade-leave-to {
+    transform: translateY(-10px);
+  }
+
+  .confirm-dialog {
+    max-width: 100%;
+    margin: 0 var(--space-4);
+  }
+
+  .confirm-footer {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-footer button {
+    width: 100%;
   }
 }
 </style>

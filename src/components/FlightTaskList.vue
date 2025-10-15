@@ -349,12 +349,56 @@
         </div>
       </form>
     </AppleModal>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div
+        v-if="showToast"
+        :class="['toast-notification', toastType]"
+      >
+        <div class="toast-icon">
+          {{ toastIcon }}
+        </div>
+        <div class="toast-message">
+          {{ toastMessage }}
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Confirm 对话框 -->
+    <AppleModal
+      v-model="showConfirm"
+      :title="confirmTitle"
+      :show-close="false"
+    >
+      <div class="confirm-dialog">
+        <div class="confirm-icon">
+          {{ confirmIcon }}
+        </div>
+        <div class="confirm-message">
+          {{ confirmMessage }}
+        </div>
+        <div class="confirm-actions">
+          <AppleButton
+            variant="secondary"
+            @click="handleConfirmCancel"
+          >
+            取消
+          </AppleButton>
+          <AppleButton
+            variant="primary"
+            @click="handleConfirmOk"
+          >
+            确定
+          </AppleButton>
+        </div>
+      </div>
+    </AppleModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { AppleButton, AppleCard, AppleInput, AppleModal } from '@/components/apple'
 import { useStore } from 'vuex'
 // 🔒 BUG #5修复: 导入任务状态常量
@@ -369,6 +413,74 @@ const statusFilter = ref('')
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
 const editingTask = ref(null)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+// Confirm 对话框状态
+const showConfirm = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+const confirmType = ref('warning')
+let confirmResolve = null
+let confirmReject = null
+
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+const confirmIcon = computed(() => {
+  switch (confirmType.value) {
+    case 'warning': return '⚠️'
+    case 'error': return '❌'
+    case 'info': return 'ℹ️'
+    default: return '❓'
+  }
+})
+
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
+const showConfirmDialog = (message, title = '确认', type = 'warning') => {
+  return new Promise((resolve, reject) => {
+    confirmMessage.value = message
+    confirmTitle.value = title
+    confirmType.value = type
+    showConfirm.value = true
+    confirmResolve = resolve
+    confirmReject = reject
+  })
+}
+
+const handleConfirmOk = () => {
+  showConfirm.value = false
+  if (confirmResolve) confirmResolve(true)
+}
+
+const handleConfirmCancel = () => {
+  showConfirm.value = false
+  if (confirmReject) confirmReject(new Error('cancel'))
+}
 
 // 从 Vuex store 获取任务数据
 const tasks = computed(() => store.state.flightTasks || [])
@@ -407,9 +519,9 @@ const refreshTasks = async () => {
   loading.value = true
   try {
     await store.dispatch('fetchFlightTasks')
-    ElMessage.success('任务列表已刷新')
+    showToastNotification('任务列表已刷新', 'success')
   } catch (error) {
-    ElMessage.error('刷新失败：' + error.message)
+    showToastNotification('刷新失败：' + error.message, 'error')
   } finally {
     loading.value = false
   }
@@ -421,14 +533,14 @@ const loadTasks = async () => {
   try {
     await store.dispatch('fetchFlightTasks')
   } catch (error) {
-    ElMessage.error('加载任务失败：' + error.message)
+    showToastNotification('加载任务失败：' + error.message, 'error')
   } finally {
     loading.value = false
   }
 }
 
 const viewDetail = (task) => {
-  ElMessage.info(`查看任务详情:${task.name}`)
+  showToastNotification(`查看任务详情:${task.name}`, 'info')
 }
 
 const editTask = (task) => {
@@ -438,44 +550,36 @@ const editTask = (task) => {
 
 const executeTask = async (task) => {
   try {
-    await ElMessageBox.confirm(`确定要执行任务 "${task.name}" 吗?`, '确认执行', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await showConfirmDialog(`确定要执行任务 "${task.name}" 吗?`, '确认执行', 'warning')
 
     await store.dispatch('updateTask', {
       id: task.id,
       updates: { status: 'ongoing' }
     })
-    ElMessage.success('任务执行成功')
+    showToastNotification('任务执行成功', 'success')
   } catch (error) {
-    if (error.message) {
-      ElMessage.error('执行失败：' + error.message)
+    if (error.message && error.message !== 'cancel') {
+      showToastNotification('执行失败：' + error.message, 'error')
     }
   }
 }
 
 const deleteTask = async (task) => {
   try {
-    await ElMessageBox.confirm(`确定要删除任务 "${task.name}" 吗?`, '确认删除', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'error'
-    })
+    await showConfirmDialog(`确定要删除任务 "${task.name}" 吗?`, '确认删除', 'error')
 
     await store.dispatch('deleteTask', task.id)
-    ElMessage.success('任务删除成功')
+    showToastNotification('任务删除成功', 'success')
   } catch (error) {
-    if (error.message) {
-      ElMessage.error('删除失败：' + error.message)
+    if (error.message && error.message !== 'cancel') {
+      showToastNotification('删除失败：' + error.message, 'error')
     }
   }
 }
 
 const createTask = async () => {
   if (!newTask.name) {
-    ElMessage.warning('请输入任务名称')
+    showToastNotification('请输入任务名称', 'warning')
     return
   }
 
@@ -488,15 +592,15 @@ const createTask = async () => {
 
     showCreateDialog.value = false
     resetCreateForm()
-    ElMessage.success('任务创建成功')
+    showToastNotification('任务创建成功', 'success')
   } catch (error) {
-    ElMessage.error('创建失败：' + error.message)
+    showToastNotification('创建失败：' + error.message, 'error')
   }
 }
 
 const updateTask = async () => {
   if (!editingTask.value.name) {
-    ElMessage.warning('请输入任务名称')
+    showToastNotification('请输入任务名称', 'warning')
     return
   }
 
@@ -512,9 +616,9 @@ const updateTask = async () => {
 
     showEditDialog.value = false
     editingTask.value = null
-    ElMessage.success('任务更新成功')
+    showToastNotification('任务更新成功', 'success')
   } catch (error) {
-    ElMessage.error('更新失败：' + error.message)
+    showToastNotification('更新失败：' + error.message, 'error')
   }
 }
 
@@ -1104,6 +1208,142 @@ const getTaskProgress = (status) => {
   .filter-select:focus {
     border-color: #0a84ff;
     box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: var(--font-size-base, 15px);
+  color: var(--color-text, #1D1D1F);
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Confirm 对话框样式 */
+.confirm-dialog {
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+}
+
+.confirm-message {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-6);
+  line-height: var(--line-height-relaxed);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+/* Toast 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+
+  .toast-notification.success {
+    border-left-color: #30D158;
+  }
+
+  .toast-notification.error {
+    border-left-color: #FF453A;
+  }
+
+  .toast-notification.warning {
+    border-left-color: #FF9F0A;
+  }
+
+  .toast-notification.info {
+    border-left-color: #0A84FF;
+  }
+
+  .confirm-message {
+    color: #F5F5F7;
   }
 }
 </style>

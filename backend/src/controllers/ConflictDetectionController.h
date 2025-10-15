@@ -135,6 +135,107 @@ namespace controllers
             const http::request<http::string_body> &req,
             const std::string &conflict_id);
 
+        /**
+         * @brief 批量检测多个飞行任务的冲突
+         * POST /api/v1/conflict-detection/flights/batch
+         *
+         * 请求体格式：
+         * {
+         *   "flights": [
+         *     {
+         *       "task_id": 1,
+         *       "start_time": "2024-12-25T10:00:00Z",
+         *       "end_time": "2024-12-25T12:00:00Z",
+         *       "route": {...},
+         *       "altitude": 100.5
+         *     }
+         *   ]
+         * }
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "批量冲突检测完成",
+         *   "data": {
+         *     "total_flights": 10,
+         *     "conflicts_detected": 3,
+         *     "conflicts": [...]
+         *   }
+         * }
+         *
+         * @param req HTTP请求对象
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> detectMultipleFlightConflicts(const http::request<http::string_body> &req);
+
+        /**
+         * @brief 获取冲突详情接口
+         * GET /api/v1/conflict-detection/conflicts/{id}
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "获取冲突详情成功",
+         *   "data": {
+         *     "id": 1,
+         *     "conflict_code": "FC20241225001",
+         *     "task_id_1": 1,
+         *     "task_id_2": 2,
+         *     "conflict_type": "space",
+         *     "severity": "high",
+         *     "status": "active",
+         *     "conflict_time": "2024-12-25T10:00:00Z",
+         *     "distance": 50.5,
+         *     "time_diff": 300,
+         *     "resolved_by": 3,
+         *     "resolved_at": "2024-12-25T11:00:00Z",
+         *     "resolution_notes": "调整飞行路径"
+         *   }
+         * }
+         *
+         * @param req HTTP请求对象
+         * @param conflict_id 冲突ID
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> getConflictById(
+            const http::request<http::string_body> &req,
+            const std::string &conflict_id);
+
+        /**
+         * @brief 获取冲突统计信息接口
+         * GET /api/v1/conflict-detection/conflicts/statistics
+         *
+         * 查询参数（可选）：
+         * - days: 统计天数（默认7天）
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "获取冲突统计成功",
+         *   "data": {
+         *     "total_conflicts": 100,
+         *     "active_conflicts": 10,
+         *     "resolved_conflicts": 85,
+         *     "ignored_conflicts": 5,
+         *     "by_severity": {
+         *       "low": 20,
+         *       "medium": 40,
+         *       "high": 30,
+         *       "critical": 10
+         *     },
+         *     "by_type": {
+         *       "space": 60,
+         *       "time": 30,
+         *       "altitude": 10
+         *     }
+         *   }
+         * }
+         *
+         * @param req HTTP请求对象
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> getConflictStatistics(const http::request<http::string_body> &req);
+
         // ========== 辅助方法 ==========
 
         /**

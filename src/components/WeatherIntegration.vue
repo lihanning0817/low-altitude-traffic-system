@@ -2,589 +2,343 @@
   <div class="weather-integration">
     <!-- 页面头部 -->
     <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h2>气象监测</h2>
-          <p>实时天气数据与飞行风险评估</p>
-        </div>
-        <div class="action-section">
-          <el-button
-            type="success"
-            size="large"
-            :loading="locating"
-            @click="autoLocate"
-          >
-            <el-icon><Location /></el-icon>
-            自动定位
-          </el-button>
-          <el-button
-            type="primary"
-            size="large"
-            @click="refreshWeatherData"
-          >
-            <el-icon><Refresh /></el-icon>
-            刷新数据
-          </el-button>
-        </div>
+      <h1 class="page-title">☁️ 气象监测</h1>
+      <p class="page-subtitle">实时天气数据与飞行风险评估</p>
+      <div class="header-actions">
+        <AppleButton variant="secondary" :loading="locating" @click="autoLocate">
+          📍 自动定位
+        </AppleButton>
+        <AppleButton @click="refreshWeatherData">
+          🔄 刷新数据
+        </AppleButton>
       </div>
     </div>
 
     <!-- 天气统计卡片 -->
-    <div class="stats-section">
-      <div class="stats-grid">
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Odometer />
-            </el-icon>
+    <div class="stats-grid">
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">🌡️</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ currentWeather?.weather?.temperature ? currentWeather.weather.temperature.toFixed(1) : '--' }}°C</div>
+            <div class="stat-label">当前温度</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ currentWeather?.weather?.temperature ? currentWeather.weather.temperature.toFixed(1) : '--' }}°C</h3>
-            <p>当前温度</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <WindPower />
-            </el-icon>
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">💨</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ currentWeather?.weather?.wind_speed ? currentWeather.weather.wind_speed.toFixed(1) : '--' }} m/s</div>
+            <div class="stat-label">风速</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ currentWeather?.weather?.wind_speed ? currentWeather.weather.wind_speed.toFixed(1) : '--' }} m/s</h3>
-            <p>风速</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Cloudy />
-            </el-icon>
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">☁️</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ currentWeather?.weather?.condition || '--' }}</div>
+            <div class="stat-label">天气状况</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
-            <p>天气状况</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Warning />
-            </el-icon>
-          </div>
-          <div class="stat-content">
-            <h3 v-if="riskAssessment && riskAssessment.overallRisk">
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-value" v-if="riskAssessment && riskAssessment.overallRisk">
               {{ getRiskLevelText(riskAssessment.overallRisk) }}
-            </h3>
-            <h3 v-else-if="loading">
-              加载中...
-            </h3>
-            <h3 v-else>
-              --
-            </h3>
-            <p>飞行风险等级</p>
+            </div>
+            <div class="stat-value" v-else-if="loading">加载中...</div>
+            <div class="stat-value" v-else>--</div>
+            <div class="stat-label">飞行风险等级</div>
           </div>
-        </SmartCard>
-      </div>
+        </div>
+      </AppleCard>
     </div>
 
     <!-- 实时天气区域 -->
-    <SmartCard
-      hover-effect
-      class="current-weather-card"
-    >
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">实时天气</span>
-          <el-tag
-            v-if="riskAssessment && riskAssessment.overallRisk"
-            :type="getRiskTagType(riskAssessment.overallRisk)"
-            size="medium"
-          >
-            {{ getRiskLevelText(riskAssessment.overallRisk) }}
-          </el-tag>
-          <el-tag
-            v-else-if="loading"
-            type="info"
-            size="medium"
-          >
-            加载中...
-          </el-tag>
-          <el-tag
-            v-else
-            type="info"
-            size="medium"
-          >
-            暂无数据
-          </el-tag>
-        </div>
-      </template>
+    <AppleCard class="current-weather-card">
+      <div class="card-header">
+        <h2 class="section-title">实时天气</h2>
+        <span v-if="riskAssessment && riskAssessment.overallRisk"
+              :class="['risk-badge', `risk-${riskAssessment.overallRisk}`]">
+          {{ getRiskLevelText(riskAssessment.overallRisk) }}
+        </span>
+        <span v-else-if="loading" class="risk-badge risk-unknown">加载中...</span>
+        <span v-else class="risk-badge risk-unknown">暂无数据</span>
+      </div>
+
       <div class="weather-content">
-        <div class="weather-info">
+        <div class="weather-main">
           <div class="weather-location">
-            <el-icon
-              size="20"
-              color="#667eea"
-            >
-              <Location />
-            </el-icon>
-            <span>{{ weatherLocation }}</span>
+            <span class="location-icon">📍</span>
+            <span class="location-name">{{ weatherLocation }}</span>
           </div>
 
-          <div class="weather-details">
-            <div class="detail-item">
-              <span class="label">温度:</span>
-              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.temperature || 0) }}</span>
+          <div class="weather-details-grid">
+            <div class="weather-detail-item">
+              <span class="detail-label">温度</span>
+              <span class="detail-value">{{ weatherApi.formatTemperature(currentWeather?.weather?.temperature || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">体感温度:</span>
-              <span class="value">{{ weatherApi.formatTemperature(currentWeather?.weather?.feels_like || 0) }}</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">体感温度</span>
+              <span class="detail-value">{{ weatherApi.formatTemperature(currentWeather?.weather?.feels_like || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">湿度:</span>
-              <span class="value">{{ weatherApi.formatHumidity(currentWeather?.weather?.humidity || 0) }}</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">湿度</span>
+              <span class="detail-value">{{ weatherApi.formatHumidity(currentWeather?.weather?.humidity || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">气压:</span>
-              <span class="value">{{ currentWeather?.weather?.pressure || '--' }} hPa</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">气压</span>
+              <span class="detail-value">{{ currentWeather?.weather?.pressure || '--' }} hPa</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">风速:</span>
-              <span class="value">{{ weatherApi.formatWindSpeed(currentWeather?.weather?.wind_speed || 0) }}</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">风速</span>
+              <span class="detail-value">{{ weatherApi.formatWindSpeed(currentWeather?.weather?.wind_speed || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">风向:</span>
-              <span class="value">{{ weatherApi.getWindDirection(currentWeather?.weather?.wind_direction || 0) }}</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">风向</span>
+              <span class="detail-value">{{ weatherApi.getWindDirection(currentWeather?.weather?.wind_direction || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">能见度:</span>
-              <span class="value">{{ weatherApi.formatVisibility(currentWeather?.weather?.visibility || 0) }}</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">能见度</span>
+              <span class="detail-value">{{ weatherApi.formatVisibility(currentWeather?.weather?.visibility || 0) }}</span>
             </div>
 
-            <div class="detail-item">
-              <span class="label">云量:</span>
-              <span class="value">{{ currentWeather?.weather?.cloudiness || '--' }}%</span>
+            <div class="weather-detail-item">
+              <span class="detail-label">云量</span>
+              <span class="detail-value">{{ currentWeather?.weather?.cloudiness || '--' }}%</span>
             </div>
           </div>
         </div>
 
-        <div class="weather-condition">
-          <div class="condition-icon">
+        <div class="weather-visual">
+          <div class="weather-icon-container">
             <img
               :src="weatherApi.getWeatherIconUrl(currentWeather?.weather?.icon || '01d')"
               :alt="currentWeather?.weather?.condition"
               class="weather-icon"
             >
           </div>
-          <div class="condition-description">
+          <div class="weather-condition-text">
             <h3>{{ currentWeather?.weather?.condition || '--' }}</h3>
             <p>{{ weatherApi.getWeatherDescription(currentWeather?.weather?.condition || '') }}</p>
           </div>
         </div>
       </div>
-    </SmartCard>
+    </AppleCard>
 
     <!-- 风险评估区域 -->
-    <SmartCard
-      hover-effect
-      class="risk-assessment-card"
-    >
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">飞行风险评估</span>
-          <el-button
-            type="primary"
-            size="small"
-            @click="showRiskDetails = true"
-          >
-            详细分析
-          </el-button>
-        </div>
-      </template>
+    <AppleCard class="risk-assessment-card">
+      <div class="card-header">
+        <h2 class="section-title">飞行风险评估</h2>
+        <AppleButton variant="secondary" size="small" @click="showRiskDetails = true">
+          详细分析
+        </AppleButton>
+      </div>
 
       <div class="risk-content">
-        <div class="risk-summary">
+        <div class="risk-items-list">
           <div
             v-for="(risk, index) in riskAssessment.risks"
             :key="index"
             class="risk-item"
           >
-            <div
-              class="risk-icon"
-              :class="getRiskIconClass(risk.level)"
-            >
-              <el-icon
-                :size="18"
-                :color="getRiskColor(risk.level)"
-              >
-                {{ getRiskIcon(risk.type) }}
-              </el-icon>
+            <div :class="['risk-indicator', `risk-level-${risk.level}`]">
+              <span class="risk-emoji">{{ getRiskEmoji(risk.type) }}</span>
             </div>
-            <div class="risk-info">
+            <div class="risk-details">
               <h4>{{ risk.description }}</h4>
-              <p class="risk-level">
-                {{ getRiskLevelText(risk.level) }}
-              </p>
+              <p class="risk-level-text">{{ getRiskLevelText(risk.level) }}</p>
             </div>
           </div>
 
           <div
             v-for="(warning, index) in riskAssessment.warnings"
-            :key="index"
+            :key="'warning-' + index"
             class="risk-item warning-item"
           >
-            <div class="risk-icon warning-icon">
-              <el-icon
-                :size="18"
-                color="#E6A23C"
-              >
-                {{ getRiskIcon('warning') }}
-              </el-icon>
+            <div class="risk-indicator warning-indicator">
+              <span class="risk-emoji">⚠️</span>
             </div>
-            <div class="risk-info">
+            <div class="risk-details">
               <h4>{{ warning.description }}</h4>
             </div>
           </div>
         </div>
 
-        <div class="recommendations">
-          <h4>飞行建议</h4>
-          <ul>
-            <li
-              v-for="(recommendation, index) in riskAssessment.recommendations"
-              :key="index"
-            >
-              {{ recommendation }}
+        <div class="recommendations-section">
+          <h3 class="recommendations-title">飞行建议</h3>
+          <ul class="recommendations-list">
+            <li v-for="(recommendation, index) in riskAssessment.recommendations" :key="index">
+              <span class="recommendation-bullet">•</span>
+              <span>{{ recommendation }}</span>
             </li>
           </ul>
         </div>
       </div>
-    </SmartCard>
-
-    <!-- 路线天气预测 -->
-    <SmartCard
-      hover-effect
-      class="route-weather-card"
-    >
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">路线天气预测</span>
-          <el-button
-            type="primary"
-            size="small"
-            @click="showRoutePlanner = true"
-          >
-            规划路线
-          </el-button>
-        </div>
-      </template>
-
-      <div class="route-weather-content">
-        <div class="route-selector">
-          <el-select
-            v-model="selectedRoute"
-            placeholder="选择航线"
-            size="large"
-            clearable
-            style="width: 300px;"
-          >
-            <el-option
-              label="机场到市中心航线"
-              value="R001"
-            />
-            <el-option
-              label="东城至西城航线"
-              value="R002"
-            />
-            <el-option
-              label="城区巡逻航线"
-              value="R003"
-            />
-            <el-option
-              label="工业区巡查航线"
-              value="R004"
-            />
-          </el-select>
-          
-          <el-date-picker
-            v-model="forecastTimeRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="margin-left: 20px;"
-            width="300px"
-          />
-        </div>
-
-        <div
-          v-if="routeWeather.length > 0"
-          class="route-weather-list"
-        >
-          <el-table
-            :data="routeWeather"
-            style="width: 100%"
-            :row-class-name="getRowClass"
-          >
-            <el-table-column
-              prop="date"
-              label="日期"
-              width="120"
-              align="center"
-            >
-              <template #default="{ row }">
-                <div>
-                  <div style="font-weight: 500;">
-                    {{ row.dayName }}
-                  </div>
-                  <div style="font-size: 12px; color: #909399;">
-                    {{ row.dateStr }}
-                  </div>
-                </div>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="weather"
-              label="天气状况"
-              width="150"
-              align="center"
-            >
-              <template #default="{ row }">
-                <div class="weather-status">
-                  <img
-                    :src="getWeatherIconUrl(row.icon)"
-                    :alt="row.condition"
-                    class="weather-icon-small"
-                  >
-                  <span>{{ row.condition }}</span>
-                </div>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="temperature"
-              label="温度范围"
-              width="120"
-              align="center"
-            >
-              <template #default="{ row }">
-                <div>
-                  <span style="color: #F56C6C; font-weight: 500;">{{ row.temp_max }}°C</span>
-                  <span style="margin: 0 5px;">/</span>
-                  <span style="color: #409EFF;">{{ row.temp_min }}°C</span>
-                </div>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="wind_speed"
-              label="风速"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                <span>{{ row.wind_speed }} m/s</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="humidity"
-              label="湿度"
-              width="80"
-              align="center"
-            >
-              <template #default="{ row }">
-                <span>{{ row.humidity }}%</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="safety_score"
-              label="安全评分"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                <el-progress
-                  :percentage="row.safety_score"
-                  :color="getSafetyScoreColor(row.safety_score)"
-                  :stroke-width="8"
-                />
-              </template>
-            </el-table-column>
-
-            <el-table-column
-              prop="risk_level"
-              label="风险等级"
-              width="120"
-              align="center"
-            >
-              <template #default="{ row }">
-                <el-tag
-                  :type="getRiskTagType(row.risk_level)"
-                  size="small"
-                >
-                  {{ getRiskLevelText(row.risk_level) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-
-        <div
-          v-else
-          class="no-data"
-        >
-          <el-empty description="请选择航线查看天气预测" />
-        </div>
-      </div>
-    </SmartCard>
+    </AppleCard>
 
     <!-- 未来天气预报 -->
-    <SmartCard
-      hover-effect
-      class="forecast-card"
-    >
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">当日每时段天气变化表（3h）</span>
-          <el-tag
-            type="info"
-            size="small"
-          >
-            每3小时更新
-          </el-tag>
-        </div>
-      </template>
+    <AppleCard class="forecast-card">
+      <div class="card-header">
+        <h2 class="section-title">当日每时段天气变化表（3h）</h2>
+        <span class="update-badge">每3小时更新</span>
+      </div>
 
-      <div class="forecast-content">
-        <div class="forecast-grid">
-          <div
-            v-for="(day, index) in forecast"
-            :key="index"
-            class="forecast-item"
-            :class="{ 'forecast-today': index === 0 }"
-          >
-            <div class="forecast-date">
-              <span class="day">{{ getTimeSlot(index) }}</span>
-              <span class="date">{{ getTimeSlotDate(index) }}</span>
-            </div>
-            
-            <div class="forecast-icon">
-              <img
-                :src="weatherApi.getWeatherIconUrl(day.icon || '01d')"
-                :alt="day.condition"
-                class="forecast-icon-img"
-              >
-            </div>
+      <div class="forecast-grid">
+        <div
+          v-for="(day, index) in forecast"
+          :key="index"
+          class="forecast-item"
+          :class="{ 'forecast-today': index === 0 }"
+        >
+          <div class="forecast-time">
+            <span class="time-slot">{{ getTimeSlot(index) }}</span>
+            <span class="time-date">{{ getTimeSlotDate(index) }}</span>
+          </div>
 
-            <div class="forecast-temp">
-              <span class="high">{{ day.temp_max ? Math.round(day.temp_max) : '--' }}°C</span>
-              <span class="low">{{ day.temp_min ? Math.round(day.temp_min) : '--' }}°C</span>
-            </div>
+          <div class="forecast-icon">
+            <img
+              :src="weatherApi.getWeatherIconUrl(day.icon || '01d')"
+              :alt="day.condition"
+              class="forecast-weather-icon"
+            >
+          </div>
 
-            <div class="forecast-condition">
-              {{ day.condition || '--' }}
-            </div>
+          <div class="forecast-temp">
+            <span class="temp-high">{{ day.temp_max ? Math.round(day.temp_max) : '--' }}°</span>
+            <span class="temp-divider">/</span>
+            <span class="temp-low">{{ day.temp_min ? Math.round(day.temp_min) : '--' }}°</span>
+          </div>
 
-            <div class="forecast-detail">
-              <div class="detail-row">
-                <span class="label">风速:</span>
-                <span class="value">{{ day.wind_speed ? day.wind_speed.toFixed(1) : '--' }} m/s</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">安全评分:</span>
-                <span class="value">{{ day.flight_safety?.score || '--' }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">湿度:</span>
-                <span class="value">{{ day.humidity || '--' }}%</span>
-              </div>
+          <div class="forecast-condition">
+            {{ day.condition || '--' }}
+          </div>
+
+          <div class="forecast-details">
+            <div class="forecast-detail-row">
+              <span class="detail-icon">💨</span>
+              <span>{{ day.wind_speed ? day.wind_speed.toFixed(1) : '--' }} m/s</span>
+            </div>
+            <div class="forecast-detail-row">
+              <span class="detail-icon">📊</span>
+              <span>{{ day.flight_safety?.score || '--' }}</span>
+            </div>
+            <div class="forecast-detail-row">
+              <span class="detail-icon">💧</span>
+              <span>{{ day.humidity || '--' }}%</span>
             </div>
           </div>
         </div>
       </div>
-    </SmartCard>
+    </AppleCard>
 
-    <!-- 风险详情对话框 -->
-    <el-dialog
-      v-model="showRiskDetails"
+    <!-- 路线天气预测 -->
+    <AppleCard class="route-weather-card">
+      <div class="card-header">
+        <h2 class="section-title">路线天气预测</h2>
+        <AppleButton variant="secondary" size="small" @click="showRoutePlanner = true">
+          规划路线
+        </AppleButton>
+      </div>
+
+      <div class="route-weather-content">
+        <div class="route-controls">
+          <select v-model="selectedRoute" class="apple-select">
+            <option value="">选择航线</option>
+            <option value="R001">机场到市中心航线</option>
+            <option value="R002">东城至西城航线</option>
+            <option value="R003">城区巡逻航线</option>
+            <option value="R004">工业区巡查航线</option>
+          </select>
+        </div>
+
+        <div v-if="routeWeather.length > 0" class="route-weather-list">
+          <div
+            v-for="(day, index) in routeWeather"
+            :key="index"
+            class="route-weather-item"
+            :class="{ 'risk-high': day.risk_level === 'high', 'risk-medium': day.risk_level === 'medium' }"
+          >
+            <div class="route-date">
+              <div class="day-name">{{ day.dayName }}</div>
+              <div class="date-str">{{ day.dateStr }}</div>
+            </div>
+
+            <div class="route-weather-info">
+              <img :src="getWeatherIconUrl(day.icon)" :alt="day.condition" class="route-weather-icon">
+              <span class="route-condition">{{ day.condition }}</span>
+            </div>
+
+            <div class="route-temp">
+              <span class="temp-max">{{ day.temp_max }}°C</span>
+              <span class="temp-sep">/</span>
+              <span class="temp-min">{{ day.temp_min }}°C</span>
+            </div>
+
+            <div class="route-wind">
+              💨 {{ day.wind_speed }} m/s
+            </div>
+
+            <div class="route-humidity">
+              💧 {{ day.humidity }}%
+            </div>
+
+            <div class="route-safety">
+              <div class="safety-bar">
+                <div class="safety-fill" :style="{ width: day.safety_score + '%', backgroundColor: getSafetyScoreColor(day.safety_score) }"></div>
+              </div>
+              <span class="safety-text">{{ day.safety_score }}%</span>
+            </div>
+
+            <span :class="['route-risk-badge', `risk-${day.risk_level}`]">
+              {{ getRiskLevelText(day.risk_level) }}
+            </span>
+          </div>
+        </div>
+
+        <div v-else class="empty-route">
+          <div class="empty-icon">🗺️</div>
+          <p class="empty-text">请选择航线查看天气预测</p>
+        </div>
+      </div>
+    </AppleCard>
+
+    <!-- 风险详情模态框 -->
+    <AppleModal
+      v-if="showRiskDetails"
       title="详细风险分析"
-      width="800px"
-      :close-on-click-modal="false"
+      @close="showRiskDetails = false"
     >
       <div class="risk-details-content">
         <div class="risk-section">
-          <h3>风险因素</h3>
-          <div class="risk-factors">
+          <h3 class="risk-section-title">风险因素</h3>
+          <div class="risk-factors-list">
             <div
               v-for="(risk, index) in riskAssessment.risks"
               :key="index"
-              class="risk-factor"
+              class="risk-factor-item"
             >
-              <div class="risk-type">
-                <el-icon
-                  :size="20"
-                  :color="getRiskColor(risk.level)"
-                >
-                  {{ getRiskIcon(risk.type) }}
-                </el-icon>
-                <span>{{ getRiskLevelText(risk.level) }}</span>
+              <div class="risk-factor-header">
+                <span :class="['risk-level-indicator', `level-${risk.level}`]">
+                  {{ getRiskEmoji(risk.type) }}
+                </span>
+                <span class="risk-level-label">{{ getRiskLevelText(risk.level) }}</span>
               </div>
-              <p class="risk-description">
-                {{ risk.description }}
-              </p>
-              <div class="risk-value">
+              <p class="risk-factor-description">{{ risk.description }}</p>
+              <div class="risk-factor-values">
                 <span>数值: {{ risk.value }}</span>
                 <span>阈值: {{ risk.threshold }}</span>
               </div>
@@ -593,201 +347,168 @@
         </div>
 
         <div class="risk-section">
-          <h3>警告信息</h3>
-          <div class="risk-factors">
+          <h3 class="risk-section-title">警告信息</h3>
+          <div class="risk-factors-list">
             <div
               v-for="(warning, index) in riskAssessment.warnings"
               :key="index"
-              class="risk-factor"
+              class="risk-factor-item warning"
             >
-              <div class="risk-type">
-                <el-icon
-                  :size="20"
-                  :color="getRiskColor(warning.level)"
-                >
-                  {{ getRiskIcon('warning') }}
-                </el-icon>
-                <span>{{ getRiskLevelText(warning.level) }}</span>
+              <div class="risk-factor-header">
+                <span class="risk-level-indicator level-warning">⚠️</span>
+                <span class="risk-level-label">警告</span>
               </div>
-              <p class="risk-description">
-                {{ warning.description }}
-              </p>
+              <p class="risk-factor-description">{{ warning.description }}</p>
             </div>
           </div>
         </div>
 
         <div class="risk-section">
-          <h3>综合评估</h3>
+          <h3 class="risk-section-title">综合评估</h3>
           <div class="risk-overview">
-            <div class="overview-item">
-              <span class="label">总体风险等级:</span>
-              <el-tag
-                :type="getRiskTagType(riskAssessment.overallRisk)"
-                size="large"
-              >
+            <div class="overview-metric">
+              <span class="metric-label">总体风险等级</span>
+              <span :class="['metric-value', `risk-${riskAssessment.overallRisk}`]">
                 {{ getRiskLevelText(riskAssessment.overallRisk) }}
-              </el-tag>
+              </span>
             </div>
-            <div class="overview-item">
-              <span class="label">风险项总数:</span>
-              <span class="value">{{ riskAssessment.risks.length + riskAssessment.warnings.length }}</span>
+            <div class="overview-metric">
+              <span class="metric-label">风险项总数</span>
+              <span class="metric-value">{{ riskAssessment.risks.length + riskAssessment.warnings.length }}</span>
             </div>
-            <div class="overview-item">
-              <span class="label">高风险项:</span>
-              <span class="value">{{ riskAssessment.risks.filter(r => r.level === 'high').length }}</span>
+            <div class="overview-metric">
+              <span class="metric-label">高风险项</span>
+              <span class="metric-value">{{ riskAssessment.risks.filter(r => r.level === 'high').length }}</span>
             </div>
           </div>
         </div>
 
         <div class="risk-section">
-          <h3>推荐措施</h3>
-          <div class="recommendations-list">
-            <div
-              v-for="(rec, index) in riskAssessment.recommendations"
-              :key="index"
-              class="recommendation-item"
-            >
-              <el-icon
-                size="16"
-                color="#67c23a"
-              >
-                <Check />
-              </el-icon>
+          <h3 class="risk-section-title">推荐措施</h3>
+          <ul class="measures-list">
+            <li v-for="(rec, index) in riskAssessment.recommendations" :key="index" class="measure-item">
+              <span class="measure-check">✓</span>
               <span>{{ rec }}</span>
-            </div>
-          </div>
+            </li>
+          </ul>
         </div>
       </div>
-      
-      <template #footer>
-        <el-button @click="showRiskDetails = false">
-          关闭
-        </el-button>
-      </template>
-    </el-dialog>
 
-    <!-- 路线规划对话框 -->
-    <el-dialog
-      v-model="showRoutePlanner"
-      title="路线规划"
-      width="800px"
-      :close-on-click-modal="false"
-    >
-      <div class="route-planner-content">
-        <div class="route-form">
-          <el-form label-width="120px">
-            <el-form-item label="起点位置">
-              <el-input
-                v-model="routeStart"
-                placeholder="输入起点坐标或地址"
-              />
-            </el-form-item>
-            
-            <el-form-item label="终点位置">
-              <el-input
-                v-model="routeEnd"
-                placeholder="输入终点坐标或地址"
-              />
-            </el-form-item>
-            
-            <el-form-item label="飞行高度(m)">
-              <el-input-number
-                v-model="routeAltitude"
-                :min="0"
-                :max="500"
-                :step="10"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-            
-            <el-form-item label="预计飞行时间">
-              <el-date-picker
-                v-model="routeTime"
-                type="datetime"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-form>
-        </div>
-        
-        <div class="route-preview">
-          <div class="preview-header">
-            <h4>预览路线</h4>
-            <el-button
-              type="primary"
-              :disabled="!routeStart || !routeEnd"
-              @click="generateRoutePreview"
-            >
-              生成预览
-            </el-button>
-          </div>
-          
-          <div
-            v-if="routePreview.length > 0"
-            class="preview-map"
-          >
-            <div class="map-container">
-              <div class="map-placeholder">
-                <el-icon
-                  size="48"
-                  color="#909399"
-                >
-                  <MapLocation />
-                </el-icon>
-                <p>路线预览地图</p>
-              </div>
-            </div>
-          </div>
-          
-          <div
-            v-if="routePreview.length > 0"
-            class="route-stats"
-          >
-            <div class="stat-item">
-              <span class="label">总距离:</span>
-              <span class="value">{{ routePreviewDistance.toFixed(1) }} km</span>
-            </div>
-            <div class="stat-item">
-              <span class="label">预计时间:</span>
-              <span class="value">{{ routePreviewDuration }} 分钟</span>
-            </div>
-            <div class="stat-item">
-              <span class="label">平均速度:</span>
-              <span class="value">{{ routePreviewSpeed.toFixed(1) }} km/h</span>
-            </div>
-            <div class="stat-item">
-              <span class="label">最大高度:</span>
-              <span class="value">{{ routeAltitude }} m</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
       <template #footer>
-        <el-button @click="showRoutePlanner = false">
+        <AppleButton variant="secondary" @click="showRiskDetails = false">
+          关闭
+        </AppleButton>
+      </template>
+    </AppleModal>
+
+    <!-- 路线规划模态框 -->
+    <AppleModal
+      v-if="showRoutePlanner"
+      title="路线规划"
+      @close="showRoutePlanner = false"
+    >
+      <form class="route-planner-form" @submit.prevent="saveRoute">
+        <div class="form-group">
+          <label class="form-label">起点位置</label>
+          <input
+            v-model="routeStart"
+            type="text"
+            class="apple-input"
+            placeholder="输入起点坐标或地址"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">终点位置</label>
+          <input
+            v-model="routeEnd"
+            type="text"
+            class="apple-input"
+            placeholder="输入终点坐标或地址"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">飞行高度 (米)</label>
+          <input
+            v-model.number="routeAltitude"
+            type="number"
+            class="apple-input"
+            min="0"
+            max="500"
+            step="10"
+          />
+        </div>
+
+        <div v-if="routePreview.length > 0" class="route-preview-section">
+          <h3 class="preview-title">路线预览</h3>
+
+          <div class="preview-map">
+            <div class="map-placeholder">
+              <span class="map-icon">🗺️</span>
+              <p>路线预览地图</p>
+            </div>
+          </div>
+
+          <div class="route-stats">
+            <div class="stat-box">
+              <span class="stat-label">总距离</span>
+              <span class="stat-value">{{ routePreviewDistance.toFixed(1) }} km</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">预计时间</span>
+              <span class="stat-value">{{ routePreviewDuration }} 分钟</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">平均速度</span>
+              <span class="stat-value">{{ routePreviewSpeed.toFixed(1) }} km/h</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">最大高度</span>
+              <span class="stat-value">{{ routeAltitude }} m</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <AppleButton
+            variant="secondary"
+            :disabled="!routeStart || !routeEnd"
+            @click="generateRoutePreview"
+          >
+            生成预览
+          </AppleButton>
+        </div>
+      </form>
+
+      <template #footer>
+        <AppleButton variant="secondary" @click="showRoutePlanner = false">
           取消
-        </el-button>
-        <el-button
-          type="primary"
+        </AppleButton>
+        <AppleButton
           :disabled="!routeStart || !routeEnd"
           @click="saveRoute"
         >
           保存为新航线
-        </el-button>
+        </AppleButton>
       </template>
-    </el-dialog>
+    </AppleModal>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div v-if="showToast" :class="['toast-notification', toastType]">
+        <div class="toast-icon">{{ toastIcon }}</div>
+        <div class="toast-message">{{ toastMessage }}</div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
-import { ElMessage } from 'element-plus'
-import {
-  Warning, Location, Refresh, Check, MapLocation, Odometer, WindPower, Cloudy
-} from '@element-plus/icons-vue'
-import SmartCard from '@/components/SmartCard.vue'
+import AppleCard from '@/components/apple/AppleCard.vue'
+import AppleButton from '@/components/apple/AppleButton.vue'
+import AppleModal from '@/components/apple/AppleModal.vue'
 import weatherApi from '@/services/weatherApi'
 import {
   mockForecast,
@@ -796,13 +517,17 @@ import {
   mockFlightSafetyData
 } from '@/config/mockWeatherData'
 
-// const store = useStore()
-
 // 响应式数据
 const loading = ref(false)
 const locating = ref(false)
 const showRiskDetails = ref(false)
 const showRoutePlanner = ref(false)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
 
 const currentWeather = ref(null)
 const flightSafetyData = ref(null)
@@ -815,29 +540,13 @@ const riskAssessment = ref({
 const routeWeather = ref([])
 const forecast = ref([])
 const selectedRoute = ref('')
-const forecastTimeRange = ref([])
-const currentLocation = ref({ lat: 39.9042, lon: 116.4074 }) // 默认北京坐标
+const currentLocation = ref({ lat: 39.9042, lon: 116.4074 })
 
-// 用于跟踪正在进行的HTTP请求的AbortController集合
 const activeRequests = new Set()
-
-// 创建一个包装器来跟踪Promise请求
-// const trackRequest = async (promise) => {
-//   const controller = new AbortController()
-//   activeRequests.add(controller)
-
-//   try {
-//     const result = await promise
-//     return result
-//   } finally {
-//     activeRequests.delete(controller)
-//   }
-// }
 
 const routeStart = ref('')
 const routeEnd = ref('')
 const routeAltitude = ref(100)
-const routeTime = ref(new Date().toISOString())
 const routePreview = ref([])
 
 // 计算属性
@@ -848,18 +557,13 @@ const weatherLocation = computed(() => {
   return '未知位置'
 })
 
-// 移除了 riskLevel 和 riskLevelText computed 属性
-// 现在统一使用 riskAssessment.overallRisk 来确保一致性
-
 const routePreviewDistance = computed(() => {
   if (routePreview.value.length === 0) return 0
-  // 简化计算：假设每段距离为1公里
   return routePreview.value.length - 1
 })
 
 const routePreviewDuration = computed(() => {
   if (routePreviewDistance.value === 0) return 0
-  // 假设平均速度为30km/h
   return Math.round(routePreviewDistance.value / 30 * 60)
 })
 
@@ -868,42 +572,50 @@ const routePreviewSpeed = computed(() => {
   return (routePreviewDistance.value / routePreviewDuration.value) * 60
 })
 
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
 // 方法
-/**
- * 自动定位当前位置
- */
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 const autoLocate = () => {
   if (!navigator.geolocation) {
-    ElMessage.error('您的浏览器不支持定位功能')
+    showToastNotification('您的浏览器不支持定位功能', 'error')
     return
   }
 
   locating.value = true
-  ElMessage.info('正在获取您的位置...')
+  showToastNotification('正在获取您的位置...', 'info')
 
   navigator.geolocation.getCurrentPosition(
-    // 成功回调
     (position) => {
       const { latitude, longitude } = position.coords
-      console.log('[AutoLocate] 获取位置成功:', latitude, longitude)
-
-      // 更新当前位置
-      currentLocation.value = {
-        lat: latitude,
-        lon: longitude
-      }
-
-      ElMessage.success(`定位成功: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-
-      // 自动刷新天气数据
+      currentLocation.value = { lat: latitude, lon: longitude }
+      showToastNotification(`定位成功: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, 'success')
       locating.value = false
       refreshWeatherData()
     },
-    // 错误回调
     (error) => {
       locating.value = false
-      console.error('[AutoLocate] 定位失败:', error)
-
       let errorMessage = '定位失败'
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -918,19 +630,9 @@ const autoLocate = () => {
         default:
           errorMessage = '定位失败: ' + error.message
       }
-
-      ElMessage.error({
-        message: errorMessage,
-        duration: 5000,
-        showClose: true
-      })
+      showToastNotification(errorMessage, 'error')
     },
-    // 选项
-    {
-      enableHighAccuracy: true, // 使用高精度定位
-      timeout: 10000,          // 10秒超时
-      maximumAge: 0            // 不使用缓存的位置
-    }
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   )
 }
 
@@ -938,28 +640,24 @@ const refreshWeatherData = async () => {
   loading.value = true
 
   try {
-    // 并发获取当前天气、预报和飞行安全评估
     const [weatherResponse, forecastResponse, safetyResponse] = await Promise.all([
       weatherApi.getCurrentWeatherByCoords(currentLocation.value.lat, currentLocation.value.lon),
       weatherApi.getForecast(currentLocation.value.lat, currentLocation.value.lon),
       weatherApi.checkFlightSafety(currentLocation.value.lat, currentLocation.value.lon)
     ])
 
-    // 处理天气数据
     if (weatherResponse && weatherResponse.success) {
       currentWeather.value = weatherResponse.data
     } else {
       throw new Error('获取天气数据失败')
     }
 
-    // 处理预报数据
     if (forecastResponse && forecastResponse.success) {
       forecast.value = forecastResponse.data.forecast || []
     } else {
       throw new Error('获取预报数据失败')
     }
 
-    // 处理安全评估数据
     if (safetyResponse && safetyResponse.success) {
       flightSafetyData.value = safetyResponse.data
       buildRiskAssessment(safetyResponse.data)
@@ -967,24 +665,16 @@ const refreshWeatherData = async () => {
       throw new Error('获取安全评估数据失败')
     }
 
-    ElMessage.success('天气数据加载成功')
+    showToastNotification('天气数据加载成功', 'success')
   } catch (error) {
-    console.error('刷新天气数据失败:', error)
-    ElMessage.warning({
-      message: '外部天气API连接失败（可能被防火墙屏蔽），已切换到演示模式',
-      duration: 5000,
-      showClose: true
-    })
-    // 使用Mock数据作为降级方案
+    showToastNotification('外部天气API连接失败（可能被防火墙屏蔽），已切换到演示模式', 'warning')
     useMockData()
   } finally {
     loading.value = false
   }
 }
 
-// 使用Mock数据的降级函数
 const useMockData = () => {
-  // 从配置文件导入的Mock数据
   currentWeather.value = mockCurrentWeather
 
   forecast.value = mockForecast.slice(0, 8).map(item => ({
@@ -999,20 +689,13 @@ const useMockData = () => {
     icon: item.weather[0].icon,
     cloudiness: item.clouds.all,
     visibility: item.visibility,
-    flight_safety: {
-      score: 85,
-      safe: true
-    }
+    flight_safety: { score: 85, safe: true }
   }))
 
   flightSafetyData.value = mockFlightSafetyData
-
   buildRiskAssessment(flightSafetyData.value)
 }
 
-/**
- * 根据后端返回的飞行安全数据构建前端风险评估
- */
 const buildRiskAssessment = (safetyData) => {
   if (!safetyData || !safetyData.safety) return
 
@@ -1023,7 +706,6 @@ const buildRiskAssessment = (safetyData) => {
   const warnings = []
   const recommendations = []
 
-  // 添加风险项
   if (weather.wind_speed) {
     const windSpeed = weather.wind_speed
     let riskLevel = 'low'
@@ -1064,7 +746,6 @@ const buildRiskAssessment = (safetyData) => {
     }
   }
 
-  // 温度评估
   if (weather.temperature) {
     const temp = weather.temperature
     let riskLevel = 'low'
@@ -1081,17 +762,12 @@ const buildRiskAssessment = (safetyData) => {
     })
   }
 
-  // 添加警告和建议（警告不单独显示风险等级，只作为提示信息）
   if (safety.warnings && safety.warnings.length > 0) {
     safety.warnings.forEach(warning => {
-      warnings.push({
-        type: 'warning',
-        description: warning
-      })
+      warnings.push({ type: 'warning', description: warning })
     })
   }
 
-  // 根据评分生成建议和总体风险等级
   const score = safety.score || 100
   let overallRisk = 'low'
 
@@ -1111,32 +787,7 @@ const buildRiskAssessment = (safetyData) => {
     recommendations.push('天气条件恶劣，禁止飞行')
   }
 
-  console.log('[buildRiskAssessment] 计算结果:', {
-    score: score,
-    overallRisk: overallRisk,
-    risks: risks,
-    warnings: warnings,
-    recommendations: recommendations
-  })
-
-  riskAssessment.value = {
-    overallRisk: overallRisk,
-    risks,
-    warnings,
-    recommendations
-  }
-
-  console.log('[buildRiskAssessment] riskAssessment设置完成:', riskAssessment.value)
-}
-
-const getRiskTagType = (level) => {
-  const types = {
-    'low': 'success',
-    'low_medium': 'info',
-    'medium': 'warning',
-    'high': 'danger'
-  }
-  return types[level] || 'info'
+  riskAssessment.value = { overallRisk, risks, warnings, recommendations }
 }
 
 const getRiskLevelText = (level) => {
@@ -1149,89 +800,39 @@ const getRiskLevelText = (level) => {
   return texts[level] || '未知'
 }
 
-const getRiskColor = (level) => {
-  const colors = {
-    'low': '#67c23a',
-    'low_medium': '#409eff',
-    'medium': '#e6a23c',
-    'high': '#f56c6c'
+const getRiskEmoji = (type) => {
+  const emojis = {
+    'wind': '💨',
+    'temperature': '🌡️',
+    'visibility': '👁️',
+    'precipitation': '🌧️',
+    'warning': '⚠️'
   }
-  return colors[level] || '#909399'
+  return emojis[type] || '⚠️'
 }
-
-const getRiskIcon = (type) => {
-  const icons = {
-    'wind': 'Wind',
-    'temperature': 'Temperature',
-    'visibility': 'Visibility',
-    'precipitation': 'Rain',
-    'warning': 'Warning',
-    'none': ''
-  }
-  return icons[type] || 'Warning'
-}
-
-const getRiskIconClass = (level) => {
-  return level === 'high' ? 'risk-icon-high' : level === 'medium' ? 'risk-icon-medium' : 'risk-icon-low'
-}
-
-// const getWindDirection = (deg) => {
-//   if (!deg) return '未知'
-//   const directions = ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
-//   const index = Math.round(deg / 45) % 8
-//   return directions[index]
-// }
 
 const getWeatherIconUrl = (iconCode) => {
   return `https://openweathermap.org/img/wn/${iconCode}@2x.png`
 }
 
-// const getDayName = (timestamp) => {
-//   if (!timestamp) return ''
-//   const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
-//   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-//   return days[date.getDay()]
-// }
-
-// const getDate = (timestamp) => {
-//   if (!timestamp) return ''
-//   const date = new Date(timestamp * 1000) // 后端返回Unix时间戳（秒）
-//   return `${date.getMonth() + 1}月${date.getDate()}日`
-// }
-
 const getTimeSlot = (index) => {
-  // 每个时段为3小时，从当前时间开始
   const now = new Date()
   const currentHour = now.getHours()
-
-  // 计算起始小时（向下取整到3的倍数）
   const baseHour = Math.floor(currentHour / 3) * 3
-
-  // 计算该索引对应的起始和结束小时
   const startHour = (baseHour + index * 3) % 24
   const endHour = (startHour + 3) % 24
 
-  // 格式化为 HH:MM 格式
-  const formatHour = (hour) => {
-    return `${hour.toString().padStart(2, '0')}:00`
-  }
-
+  const formatHour = (hour) => `${hour.toString().padStart(2, '0')}:00`
   return `${formatHour(startHour)} ~ ${formatHour(endHour)}`
 }
 
 const getTimeSlotDate = (index) => {
-  // 计算该时段对应的日期
   const now = new Date()
   const currentHour = now.getHours()
   const baseHour = Math.floor(currentHour / 3) * 3
-
-  // 计算该时段的起始小时（实际小时数，不取模）
   const actualStartHour = baseHour + index * 3
-
-  // 计算日期偏移（每24小时为一天）
   const dayOffset = Math.floor(actualStartHour / 24)
 
-  // 创建新日期
   const slotDate = new Date(now)
   slotDate.setDate(slotDate.getDate() + dayOffset)
 
@@ -1242,48 +843,31 @@ const getTimeSlotDate = (index) => {
   return `${dayName} ${dateStr}`
 }
 
-// const getTempClass = (temp) => {
-//   if (temp < 0) return 'temp-cold'
-//   if (temp > 30) return 'temp-hot'
-//   return 'temp-normal'
-// }
-
-const getRowClass = ({ row }) => {
-  if (row.risk_level === 'high') return 'risk-high'
-  if (row.risk_level === 'medium') return 'risk-medium'
-  return ''
-}
-
 const getSafetyScoreColor = (score) => {
-  if (score >= 80) return '#67C23A' // 绿色 - 安全
-  if (score >= 60) return '#E6A23C' // 橙色 - 警告
-  if (score >= 40) return '#F56C6C' // 红色 - 危险
-  return '#909399' // 灰色 - 禁止
+  if (score >= 80) return '#34C759'
+  if (score >= 60) return '#FF9500'
+  if (score >= 40) return '#FF3B30'
+  return '#8E8E93'
 }
 
 const generateRoutePreview = () => {
   if (!routeStart.value || !routeEnd.value) return
-  
-  // 模拟路线生成
+
   routePreview.value = Array.from({ length: 5 }, (_, i) => ({
     lat: 39.90923 + i * 0.005,
     lng: 116.397428 + i * 0.005
   }))
-  
-  routePreviewDistance.value = routePreview.value.length - 1
-  routePreviewDuration.value = Math.round(routePreviewDistance.value / 30 * 60)
-  routePreviewSpeed.value = (routePreviewDistance.value / routePreviewDuration.value) * 60
-  
-  ElMessage.info('路线预览已生成')
+
+  showToastNotification('路线预览已生成', 'info')
 }
 
 const saveRoute = () => {
   if (!routeStart.value || !routeEnd.value) {
-    ElMessage.warning('请填写起点和终点')
+    showToastNotification('请填写起点和终点', 'warning')
     return
   }
-  
-  ElMessage.success('航线已保存')
+
+  showToastNotification('航线已保存', 'success')
   showRoutePlanner.value = false
   resetRouteForm()
 }
@@ -1292,58 +876,33 @@ const resetRouteForm = () => {
   routeStart.value = ''
   routeEnd.value = ''
   routeAltitude.value = 100
-  routeTime.value = new Date().toISOString()
   routePreview.value = []
-  routePreviewDistance.value = 0
-  routePreviewDuration.value = 0
-  routePreviewSpeed.value = 0
 }
 
-// 加载航线天气数据的函数
 const loadRouteWeatherData = () => {
   if (!selectedRoute.value) {
     routeWeather.value = []
     return
   }
 
-  // 设置标志，防止watch触发无限循环
   isLoadingRouteWeather = true
 
   try {
-    // 确定起始日期
-    let startDate = null
-    if (forecastTimeRange.value && forecastTimeRange.value.length > 0) {
-      // 如果用户选择了日期范围，使用起始日期
-      startDate = new Date(forecastTimeRange.value[0])
-      console.log('[WeatherIntegration] 使用选定起始日期:', forecastTimeRange.value[0])
-    } else {
-      // 否则使用今天
-      startDate = new Date()
-      console.log('[WeatherIntegration] 使用今天作为起始日期')
-    }
-
-    console.log('[WeatherIntegration] 加载航线天气:', selectedRoute.value, '起始日期:', startDate)
-
-    // 生成从起始日期开始的未来5天天气预报
+    const startDate = new Date()
     routeWeather.value = generateMockRouteWeather(startDate)
-
     const dateStr = `${startDate.getMonth() + 1}月${startDate.getDate()}日`
-    ElMessage.success(`已加载航线 ${selectedRoute.value} 从${dateStr}开始的5天天气预报`)
+    showToastNotification(`已加载航线 ${selectedRoute.value} 从${dateStr}开始的5天天气预报`, 'success')
   } finally {
-    // 使用nextTick确保在DOM更新后才清除标志
     nextTick(() => {
       isLoadingRouteWeather = false
     })
   }
 }
 
-// 防止watch无限循环的标志
 let isLoadingRouteWeather = false
 
-// 监听航线选择变化
 watch(selectedRoute, (newRoute) => {
   if (isLoadingRouteWeather) return
-
   if (newRoute) {
     loadRouteWeatherData()
   } else {
@@ -1351,185 +910,209 @@ watch(selectedRoute, (newRoute) => {
   }
 })
 
-// 监听日期范围变化（深度监听数组内容变化）
-watch(forecastTimeRange, () => {
-  if (isLoadingRouteWeather) return
-
-  // 只有在已选择航线的情况下才重新加载数据
-  if (selectedRoute.value) {
-    loadRouteWeatherData()
-  }
-}, { deep: true })
-
-// 组件卸载时取消所有未完成的HTTP请求，防止内存泄漏
 onBeforeUnmount(() => {
-  console.log('[WeatherIntegration] 组件卸载，取消所有待处理的HTTP请求:', activeRequests.size)
-
-  // 取消所有活动请求
   activeRequests.forEach(controller => {
     controller.abort()
   })
-
-  // 清空请求集合
   activeRequests.clear()
 })
 
-// 初始化数据
 refreshWeatherData()
 </script>
 
 <style scoped>
 .weather-integration {
-  min-height: 100%;
+  padding: var(--space-6, 24px);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* 页面头部 */
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-8, 32px);
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 0;
-}
-
-.title-section h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+.page-title {
+  margin: 0 0 var(--space-2, 8px) 0;
+  font-size: var(--font-size-3xl, 32px);
   font-weight: 600;
-  color: #2c3e50;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary, #1D1D1F);
+  letter-spacing: -0.02em;
 }
 
-.title-section p {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
+.page-subtitle {
+  margin: 0 0 var(--space-4, 16px) 0;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-secondary, #86868B);
 }
 
-.action-section {
+.header-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3, 12px);
 }
 
 /* 统计卡片 */
-.stats-section {
-  margin-bottom: 24px;
-}
-
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4, 16px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .stat-card {
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.3s ease;
+  padding: var(--space-5, 20px);
+  transition: all var(--transition-smooth, 0.3s ease);
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
 }
 
 .stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl, 28px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+  line-height: 1.2;
+  margin-bottom: var(--space-1, 4px);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+/* 实时天气卡片 */
+.current-weather-card {
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-6, 24px);
+}
+
+.card-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: var(--space-5, 20px);
 }
 
-.stat-content h3 {
-  margin: 0 0 4px 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
-}
-
-.stat-content p {
+.section-title {
   margin: 0;
-  font-size: 14px;
-  color: #7f8c8d;
+  font-size: var(--font-size-xl, 20px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.risk-badge {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-sm, 14px);
   font-weight: 500;
 }
 
-/* 当前天气卡片 */
-.current-weather-card {
-  margin-bottom: 24px;
+.risk-low {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.risk-low_medium {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.risk-medium {
+  background: #FFF3E0;
+  color: #F57C00;
+}
+
+.risk-high {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.risk-unknown {
+  background: var(--color-bg-secondary, #F5F5F7);
+  color: var(--color-text-secondary, #86868B);
 }
 
 .weather-content {
   display: flex;
-  gap: 30px;
-  padding: 20px 0;
+  gap: var(--space-8, 32px);
+  align-items: flex-start;
 }
 
-.weather-info {
+.weather-main {
   flex: 1;
 }
 
 .weather-location {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-  color: #667eea;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-5, 20px);
+  font-size: var(--font-size-base, 16px);
   font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.weather-details {
+.location-icon {
+  font-size: 20px;
+}
+
+.weather-details-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
+  gap: var(--space-4, 16px);
 }
 
-.detail-item {
+.weather-detail-item {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1, 4px);
 }
 
-.label {
-  font-size: 13px;
-  color: #7f8c8d;
-  margin-bottom: 4px;
+.detail-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
-.value {
-  font-size: 16px;
+.detail-value {
+  font-size: var(--font-size-base, 16px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.weather-condition {
+.weather-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 20px;
-  border-left: 1px solid #eee;
+  gap: var(--space-3, 12px);
+  padding: var(--space-5, 20px);
+  border-left: 1px solid var(--color-border, #D2D2D7);
   min-width: 200px;
 }
 
-.condition-icon {
-  width: 80px;
-  height: 80px;
+.weather-icon-container {
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fa;
-  border-radius: 12px;
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
 }
 
 .weather-icon {
@@ -1537,205 +1120,182 @@ refreshWeatherData()
   height: 80px;
 }
 
-.condition-description h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
+.weather-condition-text {
+  text-align: center;
 }
 
-.condition-description p {
+.weather-condition-text h3 {
+  margin: 0 0 var(--space-1, 4px) 0;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.weather-condition-text p {
   margin: 0;
-  color: #7f8c8d;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
 /* 风险评估卡片 */
 .risk-assessment-card {
-  margin-bottom: 24px;
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .risk-content {
-  padding: 20px 0;
+  margin-top: var(--space-5, 20px);
 }
 
-.risk-summary {
-  margin-bottom: 24px;
+.risk-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .risk-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-  border-left: 4px solid #667eea;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
+  border-left: 3px solid var(--color-primary, #0071E3);
 }
 
-.risk-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.risk-indicator {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
-.risk-icon.high {
-  background-color: #f56c6c;
-  color: white;
+.risk-level-low {
+  background: #E8F5E9;
 }
 
-.risk-icon.medium {
-  background-color: #e6a23c;
-  color: white;
+.risk-level-medium {
+  background: #FFF3E0;
 }
 
-.risk-icon.low {
-  background-color: #67c23a;
-  color: white;
+.risk-level-high {
+  background: #FFEBEE;
 }
 
-.warning-icon {
-  background-color: #f093fb;
-  color: white;
+.warning-indicator {
+  background: #FFF3E0;
 }
 
-.risk-info h4 {
-  margin: 0;
-  font-size: 14px;
+.risk-details h4 {
+  margin: 0 0 var(--space-1, 4px) 0;
+  font-size: var(--font-size-base, 16px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.risk-level {
-  font-size: 12px;
-  font-weight: 500;
-  color: #667eea;
+.risk-level-text {
+  margin: 0;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
-.recommendations {
-  margin-top: 20px;
+.recommendations-section {
+  padding: var(--space-5, 20px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
 }
 
-.recommendations h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
+.recommendations-title {
+  margin: 0 0 var(--space-3, 12px) 0;
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.recommendations ul {
-  padding-left: 20px;
+.recommendations-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.recommendations li {
-  margin-bottom: 8px;
-  color: #606266;
+.recommendations-list li {
+  display: flex;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
+  color: var(--color-text-primary, #1D1D1F);
   line-height: 1.6;
 }
 
-/* 路线天气卡片 */
-.route-weather-card {
-  margin-bottom: 24px;
+.recommendation-bullet {
+  color: var(--color-primary, #0071E3);
+  font-weight: bold;
 }
 
-.route-weather-content {
-  padding: 20px 0;
-}
-
-.route-selector {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  gap: 20px;
-}
-
-.no-data {
-  text-align: center;
-  padding: 40px;
-  color: #909399;
-}
-
-.route-weather-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.risk-high {
-  background-color: #ffebee;
-}
-
-.risk-medium {
-  background-color: #fff3e0;
-}
-
-/* 未来天气预报卡片 */
+/* 预报卡片 */
 .forecast-card {
-  margin-bottom: 24px;
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-6, 24px);
 }
 
-.forecast-content {
-  padding: 20px 0;
+.update-badge {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #86868B);
 }
 
 .forecast-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
+  gap: var(--space-4, 16px);
+  margin-top: var(--space-5, 20px);
 }
 
 .forecast-item {
-  padding: 16px;
-  border-radius: 12px;
-  background-color: #f8f9fa;
+  padding: var(--space-4, 16px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
   text-align: center;
-  border: 1px solid #e8eaec;
-  transition: all 0.3s ease;
+  transition: all var(--transition-smooth, 0.3s ease);
 }
 
 .forecast-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .forecast-today {
-  background-color: #667eea;
-  color: white;
-  border-color: #667eea;
-}
-
-.forecast-today .forecast-date,
-.forecast-today .forecast-icon,
-.forecast-today .forecast-temp,
-.forecast-today .forecast-condition,
-.forecast-today .forecast-detail {
+  background: var(--color-primary, #0071E3);
   color: white;
 }
 
-.forecast-date {
-  margin-bottom: 10px;
+.forecast-time {
+  margin-bottom: var(--space-2, 8px);
 }
 
-.day {
+.time-slot {
+  display: block;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 14px);
 }
 
-.date {
-  font-size: 12px;
-  opacity: 0.9;
+.time-date {
+  display: block;
+  font-size: var(--font-size-xs, 12px);
+  opacity: 0.8;
 }
 
 .forecast-icon {
-  margin: 10px 0;
+  margin: var(--space-2, 8px) 0;
 }
 
-.forecast-icon-img {
+.forecast-weather-icon {
   width: 60px;
   height: 60px;
 }
@@ -1743,253 +1303,486 @@ refreshWeatherData()
 .forecast-temp {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-1, 4px);
+  margin: var(--space-2, 8px) 0;
+  font-weight: 600;
 }
 
-.high {
-  font-weight: 700;
-  color: #e64a19;
+.temp-high {
+  color: #FF3B30;
 }
 
-.low {
-  font-weight: 500;
-  color: #2196f3;
+.temp-divider {
+  opacity: 0.5;
+}
+
+.temp-low {
+  color: #007AFF;
 }
 
 .forecast-condition {
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.forecast-detail {
-  font-size: 12px;
-  color: #606266;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0;
-}
-
-.label {
+  margin-bottom: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 14px);
   font-weight: 500;
 }
 
-.value {
+.forecast-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.forecast-detail-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.detail-icon {
+  font-size: 14px;
+}
+
+/* 路线天气卡片 */
+.route-weather-card {
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-6, 24px);
+}
+
+.route-weather-content {
+  margin-top: var(--space-5, 20px);
+}
+
+.route-controls {
+  margin-bottom: var(--space-5, 20px);
+}
+
+.apple-select {
+  width: 100%;
+  max-width: 300px;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 16px);
+  background: var(--color-bg-primary, #FFFFFF);
+  cursor: pointer;
+  transition: all var(--transition-input, 0.2s ease);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2386868B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.apple-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #0071E3);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.route-weather-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+
+.route-weather-item {
+  display: grid;
+  grid-template-columns: 100px 150px 120px 100px 80px 150px 120px;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  padding: var(--space-4, 16px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
+  transition: all var(--transition-smooth, 0.3s ease);
+}
+
+.route-weather-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.route-date {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-name {
+  font-weight: 600;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.date-str {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+.route-weather-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.route-weather-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.route-condition {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.route-temp {
+  display: flex;
+  gap: var(--space-1, 4px);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.temp-max {
+  color: #FF3B30;
   font-weight: 600;
 }
 
-/* 风险详情对话框 */
+.temp-sep {
+  color: var(--color-text-secondary, #86868B);
+}
+
+.temp-min {
+  color: #007AFF;
+}
+
+.route-wind,
+.route-humidity {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.route-safety {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.safety-bar {
+  flex: 1;
+  height: 8px;
+  background: #E5E5EA;
+  border-radius: var(--radius-full, 9999px);
+  overflow: hidden;
+}
+
+.safety-fill {
+  height: 100%;
+  border-radius: var(--radius-full, 9999px);
+  transition: width 0.3s ease;
+}
+
+.safety-text {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--color-text-secondary, #86868B);
+}
+
+.route-risk-badge {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  text-align: center;
+}
+
+.empty-route {
+  text-align: center;
+  padding: var(--space-12, 48px);
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: var(--space-4, 16px);
+  opacity: 0.5;
+}
+
+.empty-text {
+  margin: 0;
+  font-size: var(--font-size-lg, 18px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+/* 风险详情模态框 */
 .risk-details-content {
-  padding: 20px 0;
+  padding: var(--space-6, 24px) 0;
   max-height: 600px;
   overflow-y: auto;
 }
 
 .risk-section {
-  margin-bottom: 30px;
+  margin-bottom: var(--space-6, 24px);
 }
 
-.risk-section h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
+.risk-section:last-child {
+  margin-bottom: 0;
+}
+
+.risk-section-title {
+  margin: 0 0 var(--space-4, 16px) 0;
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  color: var(--color-text-primary, #1D1D1F);
+  padding-bottom: var(--space-2, 8px);
+  border-bottom: 1px solid var(--color-border, #D2D2D7);
 }
 
-.risk-factors {
+.risk-factors-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3, 12px);
 }
 
-.risk-factor {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-  border-left: 4px solid #667eea;
+.risk-factor-item {
+  padding: var(--space-4, 16px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
+  border-left: 3px solid var(--color-primary, #0071E3);
 }
 
-.risk-type {
+.risk-factor-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #2c3e50;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
 }
 
-.risk-description {
-  margin: 0;
-  color: #606266;
+.risk-level-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.level-low {
+  background: #E8F5E9;
+}
+
+.level-medium {
+  background: #FFF3E0;
+}
+
+.level-high {
+  background: #FFEBEE;
+}
+
+.level-warning {
+  background: #FFF3E0;
+}
+
+.risk-level-label {
+  font-weight: 600;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.risk-factor-description {
+  margin: 0 0 var(--space-2, 8px) 0;
+  color: var(--color-text-primary, #1D1D1F);
   line-height: 1.6;
 }
 
-.risk-value {
+.risk-factor-values {
   display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #909399;
+  gap: var(--space-4, 16px);
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
 .risk-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  gap: var(--space-4, 16px);
 }
 
-.overview-item {
+.overview-metric {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1, 4px);
 }
 
-.overview-item .label {
-  font-size: 14px;
-  color: #7f8c8d;
+.metric-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
-.overview-item .value {
-  font-size: 16px;
+.metric-value {
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.recommendations-list {
-  margin-top: 16px;
+.measures-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.recommendation-item {
+.measure-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: #606266;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
+  color: var(--color-text-primary, #1D1D1F);
   line-height: 1.6;
 }
 
-/* 路线规划对话框 */
-.route-planner-content {
-  padding: 20px 0;
-}
-
-.route-form {
-  margin-bottom: 30px;
-}
-
-.route-preview {
-  margin-top: 20px;
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.preview-header h4 {
-  margin: 0;
+.measure-check {
+  color: #34C759;
+  font-weight: bold;
   font-size: 18px;
+}
+
+/* 路线规划模态框 */
+.route-planner-form {
+  padding: var(--space-6, 24px) 0;
+}
+
+.form-group {
+  margin-bottom: var(--space-5, 20px);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.apple-input {
+  width: 100%;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 16px);
+  transition: all var(--transition-input, 0.2s ease);
+  background: var(--color-bg-primary, #FFFFFF);
+  font-family: inherit;
+}
+
+.apple-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #0071E3);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.route-preview-section {
+  margin-top: var(--space-6, 24px);
+  padding-top: var(--space-6, 24px);
+  border-top: 1px solid var(--color-border, #D2D2D7);
+}
+
+.preview-title {
+  margin: 0 0 var(--space-4, 16px) 0;
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
 .preview-map {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-4, 16px);
 }
 
-.map-container {
-  width: 100%;
+.map-placeholder {
   height: 200px;
-  border: 1px dashed #ddd;
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fa;
-  margin-bottom: 16px;
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-lg, 12px);
+  border: 2px dashed var(--color-border, #D2D2D7);
 }
 
-.map-placeholder {
-  text-align: center;
-  color: #909399;
+.map-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-2, 8px);
+  opacity: 0.5;
 }
 
-.map-placeholder el-icon {
-  margin-bottom: 10px;
+.map-placeholder p {
+  margin: 0;
+  color: var(--color-text-secondary, #86868B);
 }
 
 .route-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  gap: var(--space-3, 12px);
 }
 
-.stat-item {
+.stat-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
-  border-radius: 8px;
-  background-color: #f8f9fa;
-  border: 1px solid #eee;
+  padding: var(--space-3, 12px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-md, 8px);
 }
 
-.stat-item .label {
-  font-size: 12px;
-  color: #7f8c8d;
-  margin-bottom: 4px;
+.stat-label {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #86868B);
+  margin-bottom: var(--space-1, 4px);
 }
 
-.stat-item .value {
-  font-size: 16px;
+.stat-value {
+  font-size: var(--font-size-base, 16px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.form-actions {
+  margin-top: var(--space-4, 16px);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .header-content {
+  .weather-integration {
+    padding: var(--space-4, 16px);
+  }
+
+  .page-title {
+    font-size: var(--font-size-2xl, 28px);
+  }
+
+  .header-actions {
     flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .weather-content {
     flex-direction: column;
-    gap: 20px;
   }
 
-  .weather-condition {
+  .weather-visual {
     border-left: none;
-    border-top: 1px solid #eee;
-    padding: 20px;
+    border-top: 1px solid var(--color-border, #D2D2D7);
+    padding-top: var(--space-5, 20px);
   }
 
   .forecast-grid {
     grid-template-columns: 1fr;
   }
 
-  .route-selector {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .preview-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+  .route-weather-item {
+    grid-template-columns: 1fr;
+    gap: var(--space-2, 8px);
   }
 
   .route-stats {
@@ -1997,56 +1790,134 @@ refreshWeatherData()
   }
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-card__body) {
-  padding: 24px;
-}
-
-:deep(.el-table__row:hover) {
-  background-color: #f8f9fa;
-  cursor: pointer;
-}
-
-:deep(.el-table__header) {
-  background-color: #fafbfc;
-}
-
-:deep(.el-input__wrapper) {
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-:deep(.el-input__wrapper:hover) {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.el-button) {
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-:deep(.el-date-editor) {
-  border-radius: 12px;
-}
-
-:deep(.el-select) {
-  border-radius: 12px;
-}
-
-:deep(.el-radio-group) {
-  display: flex;
-  gap: 20px;
-}
-
-:deep(.el-radio) {
-  margin-right: 20px;
-}
-
-:deep(.el-alert) {
-  margin-bottom: 15px;
-}
-
-:deep(.el-message-box__content) {
-  padding: 20px;
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
-  </style>
+
+  .weather-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .page-title,
+  .section-title,
+  .weather-location,
+  .detail-value {
+    color: var(--color-text-primary-dark, #F5F5F7);
+  }
+
+  .page-subtitle,
+  .stat-label,
+  .detail-label {
+    color: var(--color-text-secondary-dark, #A1A1A6);
+  }
+
+  .apple-input,
+  .apple-select {
+    background: var(--color-bg-secondary-dark, #1C1C1E);
+    border-color: var(--color-border-dark, #38383A);
+    color: var(--color-text-primary-dark, #F5F5F7);
+  }
+
+  .forecast-item,
+  .risk-item,
+  .route-weather-item {
+    background: var(--color-bg-secondary-dark, #1C1C1E);
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-base, 16px);
+  font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
+  line-height: 1.5;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Toast 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+}
+</style>

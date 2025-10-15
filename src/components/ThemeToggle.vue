@@ -8,12 +8,9 @@
     >
       <div class="toggle-track">
         <div class="toggle-thumb">
-          <el-icon
-            :size="14"
-            class="toggle-icon"
-          >
-            <component :is="iconComponent" />
-          </el-icon>
+          <span class="toggle-icon">
+            {{ isDarkMode ? '☀️' : '🌙' }}
+          </span>
         </div>
       </div>
     </button>
@@ -23,14 +20,9 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
-import { Moon, Sunny } from '@element-plus/icons-vue'
 
 const store = useStore()
 const isDarkMode = computed(() => store.state.theme === 'dark')
-
-const iconComponent = computed(() => {
-  return isDarkMode.value ? Sunny : Moon
-})
 
 // 组件挂载时初始化主题
 onMounted(() => {
@@ -43,6 +35,7 @@ const toggleTheme = () => {
 </script>
 
 <style scoped>
+/* 使用 Apple 设计系统 */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -58,19 +51,19 @@ const toggleTheme = () => {
   border-radius: 16px;
   cursor: pointer;
   outline: none;
-  transition: var(--transition-theme);
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   padding: 2px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
 }
 
 .toggle-btn:hover {
-  transform: scale(1.02);
-  box-shadow: var(--shadow-sm);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-btn:focus-visible {
-  outline: 2px solid var(--primary-color);
+  outline: 2px solid var(--apple-blue);
   outline-offset: 2px;
 }
 
@@ -79,12 +72,12 @@ const toggleTheme = () => {
   width: 100%;
   height: 100%;
   border-radius: 14px;
-  background: var(--bg-secondary);
-  transition: var(--transition-theme);
+  background: var(--color-bg-secondary);
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .toggle-btn.dark .toggle-track {
-  background: var(--bg-tertiary);
+  background: #3A3A3C;
 }
 
 .toggle-thumb {
@@ -93,48 +86,59 @@ const toggleTheme = () => {
   left: 2px;
   width: 20px;
   height: 20px;
-  background: var(--bg-primary);
+  background: #FFFFFF;
   border-radius: 50%;
-  border: 1px solid var(--border-light);
-  transition: var(--transition-theme);
+  border: 1px solid var(--color-border-light);
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transform: translateX(0);
 }
 
 .toggle-btn.dark .toggle-thumb {
   transform: translateX(22px);
-  background: var(--bg-primary);
-  border-color: var(--border-color);
-  box-shadow: var(--shadow-md);
+  background: #1C1C1E;
+  border-color: #3A3A3C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .toggle-icon {
-  color: var(--text-secondary);
-  transition: var(--transition-theme);
-}
-
-.toggle-btn.dark .toggle-icon {
-  color: var(--primary-color);
+  font-size: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toggle-btn:active .toggle-thumb {
-  transform: scale(0.95) translateX(0);
+  transform: scale(0.92) translateX(0);
 }
 
 .toggle-btn.dark:active .toggle-thumb {
-  transform: scale(0.95) translateX(22px);
+  transform: scale(0.92) translateX(22px);
 }
 
-/* 苹果风格的微动画 */
+/* Apple 风格的微动画 */
 @keyframes bounce {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  50% { transform: scale(1.08); }
 }
 
 .toggle-btn:active {
   animation: bounce 0.2s ease-out;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .toggle-btn {
+    background: #1C1C1E;
+    border-color: #3A3A3C;
+  }
+
+  .toggle-btn:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 }
 </style>

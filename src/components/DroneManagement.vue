@@ -340,12 +340,56 @@
         </div>
       </form>
     </AppleModal>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div
+        v-if="showToast"
+        :class="['toast-notification', toastType]"
+      >
+        <div class="toast-icon">
+          {{ toastIcon }}
+        </div>
+        <div class="toast-message">
+          {{ toastMessage }}
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Confirm 对话框 -->
+    <AppleModal
+      v-model="showConfirm"
+      :title="confirmTitle"
+      :show-close="false"
+    >
+      <div class="confirm-dialog">
+        <div class="confirm-icon">
+          {{ confirmIcon }}
+        </div>
+        <div class="confirm-message">
+          {{ confirmMessage }}
+        </div>
+        <div class="confirm-actions">
+          <AppleButton
+            variant="secondary"
+            @click="handleConfirmCancel"
+          >
+            取消
+          </AppleButton>
+          <AppleButton
+            :variant="confirmType === 'error' ? 'danger' : 'primary'"
+            @click="handleConfirmOk"
+          >
+            确定
+          </AppleButton>
+        </div>
+      </div>
+    </AppleModal>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import droneApi from '@/services/droneApi'
 import { AppleButton, AppleCard, AppleInput, AppleModal } from '@/components/apple'
@@ -366,6 +410,80 @@ const viewMode = ref('grid') // 'grid' 或 'list'
 const showAddModal = ref(false)
 const editingDrone = ref(null)
 const submitting = ref(false)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+// Confirm 对话框状态
+const showConfirm = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+const confirmType = ref('warning')
+let confirmResolve = null
+let confirmReject = null
+
+// Toast 图标计算属性
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+// Confirm 图标计算属性
+const confirmIcon = computed(() => {
+  switch (confirmType.value) {
+    case 'warning': return '⚠️'
+    case 'error': return '❌'
+    case 'info': return 'ℹ️'
+    default: return '❓'
+  }
+})
+
+// 显示 Toast 通知
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
+// 显示 Confirm 对话框
+const showConfirmDialog = (message, title = '确认', type = 'warning') => {
+  return new Promise((resolve, reject) => {
+    confirmMessage.value = message
+    confirmTitle.value = title
+    confirmType.value = type
+    showConfirm.value = true
+    confirmResolve = resolve
+    confirmReject = reject
+  })
+}
+
+// 处理 Confirm 确认
+const handleConfirmOk = () => {
+  showConfirm.value = false
+  if (confirmResolve) confirmResolve(true)
+}
+
+// 处理 Confirm 取消
+const handleConfirmCancel = () => {
+  showConfirm.value = false
+  if (confirmReject) confirmReject(new Error('cancel'))
+}
 
 const formData = reactive({
   drone_id: '',
@@ -455,11 +573,11 @@ const loadDrones = async () => {
       drones.value = response.data || []
       console.log('成功加载无人机列表:', drones.value.length)
     } else {
-      ElMessage.warning(response.message || '加载无人机失败')
+      showToastNotification(response.message || '加载无人机失败', 'warning')
     }
   } catch (error) {
     console.error('加载无人机失败:', error)
-    ElMessage.error(error.message || '加载无人机失败')
+    showToastNotification(error.message || '加载无人机失败', 'error')
   } finally {
     loading.value = false
   }
@@ -473,7 +591,7 @@ const handleSearch = () => {
 // 刷新列表
 const handleRefresh = () => {
   loadDrones()
-  ElMessage.success('已刷新')
+  showToastNotification('已刷新', 'success')
 }
 
 // 编辑无人机
@@ -536,17 +654,17 @@ const handleSubmit = async () => {
     }
 
     if (response.success) {
-      ElMessage.success(editingDrone.value ? '更新成功' : '创建成功')
+      showToastNotification(editingDrone.value ? '更新成功' : '创建成功', 'success')
       showAddModal.value = false
       editingDrone.value = null
       resetForm()
       await loadDrones()
     } else {
-      ElMessage.error(response.message || '操作失败')
+      showToastNotification(response.message || '操作失败', 'error')
     }
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error(error.message || '提交失败')
+    showToastNotification(error.message || '提交失败', 'error')
   } finally {
     submitting.value = false
   }
@@ -555,28 +673,24 @@ const handleSubmit = async () => {
 // 删除无人机
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm(
+    await showConfirmDialog(
       '确定要删除此无人机吗?此操作无法撤销。',
       '确认删除',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+      'error'
     )
 
     const response = await droneApi.deleteDrone(id)
 
     if (response.success) {
-      ElMessage.success('删除成功')
+      showToastNotification('删除成功', 'success')
       await loadDrones()
     } else {
-      ElMessage.error(response.message || '删除失败')
+      showToastNotification(response.message || '删除失败', 'error')
     }
   } catch (error) {
-    if (error !== 'cancel') {
+    if (error.message !== 'cancel') {
       console.error('删除失败:', error)
-      ElMessage.error(error.message || '删除失败')
+      showToastNotification(error.message || '删除失败', 'error')
     }
   }
 }
@@ -1092,6 +1206,142 @@ onMounted(() => {
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: var(--font-size-base, 15px);
+  color: var(--color-text-primary, #1D1D1F);
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Confirm 对话框样式 */
+.confirm-dialog {
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+}
+
+.confirm-message {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-6);
+  line-height: var(--line-height-relaxed);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+/* Toast 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+
+  .toast-notification.success {
+    border-left-color: #30D158;
+  }
+
+  .toast-notification.error {
+    border-left-color: #FF453A;
+  }
+
+  .toast-notification.warning {
+    border-left-color: #FF9F0A;
+  }
+
+  .toast-notification.info {
+    border-left-color: #0A84FF;
+  }
+
+  .confirm-message {
+    color: #F5F5F7;
   }
 }
 </style>

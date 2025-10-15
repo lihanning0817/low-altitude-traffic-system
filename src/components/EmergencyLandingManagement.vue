@@ -314,17 +314,134 @@
         </div>
       </form>
     </AppleModal>
+
+    <!-- Toast 通知容器 -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          :class="['toast', `toast--${toast.type}`]"
+        >
+          <div class="toast-icon">
+            <svg v-if="toast.type === 'success'" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <svg v-else-if="toast.type === 'error'" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+            <svg v-else-if="toast.type === 'warning'" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <svg v-else viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="toast-message">{{ toast.message }}</div>
+          <button class="toast-close" @click="removeToast(toast.id)">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </transition-group>
+    </div>
+
+    <!-- Confirm 对话框 -->
+    <div v-if="confirmDialog.visible" class="confirm-overlay" @click.self="handleCancel">
+      <div class="confirm-dialog">
+        <div class="confirm-header">
+          <div class="confirm-icon-wrapper">
+            <svg v-if="confirmDialog.type === 'warning'" class="confirm-icon confirm-icon--warning" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
+        </div>
+        <div class="confirm-body">
+          <p class="confirm-message">{{ confirmDialog.message }}</p>
+        </div>
+        <div class="confirm-footer">
+          <AppleButton variant="secondary" @click="handleCancel">
+            {{ confirmDialog.cancelText }}
+          </AppleButton>
+          <AppleButton variant="danger" @click="handleConfirm">
+            {{ confirmDialog.confirmText }}
+          </AppleButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import emergencyLandingApi from '@/services/emergencyLandingApi'
 import { AppleButton, AppleCard, AppleInput, AppleModal } from '@/components/apple'
 
 const store = useStore()
+
+// Toast 通知系统
+const toasts = ref([])
+let toastId = 0
+
+const showToastNotification = (message, type = 'info', duration = 3000) => {
+  const id = toastId++
+  toasts.value.push({ id, message, type, duration })
+
+  if (duration > 0) {
+    setTimeout(() => {
+      removeToast(id)
+    }, duration)
+  }
+}
+
+const removeToast = (id) => {
+  const index = toasts.value.findIndex(t => t.id === id)
+  if (index > -1) {
+    toasts.value.splice(index, 1)
+  }
+}
+
+// Confirm 对话框系统
+const confirmDialog = reactive({
+  visible: false,
+  title: '',
+  message: '',
+  confirmText: '确定',
+  cancelText: '取消',
+  type: 'warning',
+  resolve: null,
+  reject: null
+})
+
+const showConfirmDialog = (message, title = '确认操作', options = {}) => {
+  return new Promise((resolve, reject) => {
+    confirmDialog.visible = true
+    confirmDialog.title = title
+    confirmDialog.message = message
+    confirmDialog.confirmText = options.confirmButtonText || '确定'
+    confirmDialog.cancelText = options.cancelButtonText || '取消'
+    confirmDialog.type = options.type || 'warning'
+    confirmDialog.resolve = resolve
+    confirmDialog.reject = reject
+  })
+}
+
+const handleConfirm = () => {
+  if (confirmDialog.resolve) {
+    confirmDialog.resolve(true)
+  }
+  confirmDialog.visible = false
+}
+
+const handleCancel = () => {
+  if (confirmDialog.reject) {
+    confirmDialog.reject('cancel')
+  }
+  confirmDialog.visible = false
+}
 
 // 用户角色
 const userRole = computed(() => store.state.user?.role || 'user')
@@ -411,11 +528,11 @@ const loadLandingPoints = async () => {
       landingPoints.value = response.data || []
       console.log('成功加载降落点列表:', landingPoints.value.length)
     } else {
-      ElMessage.warning(response.message || '加载降落点失败')
+      showToastNotification(response.message || '加载降落点失败', 'warning')
     }
   } catch (error) {
     console.error('加载降落点失败:', error)
-    ElMessage.error(error.message || '加载降落点失败')
+    showToastNotification(error.message || '加载降落点失败', 'error')
   } finally {
     loading.value = false
   }
@@ -483,17 +600,17 @@ const handleSubmit = async () => {
     }
 
     if (response.success) {
-      ElMessage.success(editingPoint.value ? '更新成功' : '创建成功')
+      showToastNotification(editingPoint.value ? '更新成功' : '创建成功', 'success')
       showAddModal.value = false
       editingPoint.value = null
       resetForm()
       await loadLandingPoints()
     } else {
-      ElMessage.error(response.message || '操作失败')
+      showToastNotification(response.message || '操作失败', 'error')
     }
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error(error.message || '提交失败')
+    showToastNotification(error.message || '提交失败', 'error')
   } finally {
     submitting.value = false
   }
@@ -502,7 +619,7 @@ const handleSubmit = async () => {
 // 删除降落点
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm(
+    await showConfirmDialog(
       '确定要删除此降落点吗?此操作无法撤销。',
       '确认删除',
       {
@@ -515,15 +632,15 @@ const handleDelete = async (id) => {
     const response = await emergencyLandingApi.deleteLandingPoint(id)
 
     if (response.success) {
-      ElMessage.success('删除成功')
+      showToastNotification('删除成功', 'success')
       await loadLandingPoints()
     } else {
-      ElMessage.error(response.message || '删除失败')
+      showToastNotification(response.message || '删除失败', 'error')
     }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
-      ElMessage.error(error.message || '删除失败')
+      showToastNotification(error.message || '删除失败', 'error')
     }
   }
 }
@@ -533,7 +650,7 @@ const handleFindNearest = async () => {
   try {
     // 验证输入
     if (!nearestSearch.latitude || !nearestSearch.longitude) {
-      ElMessage.warning('请输入纬度和经度')
+      showToastNotification('请输入纬度和经度', 'warning')
       return
     }
 
@@ -549,16 +666,16 @@ const handleFindNearest = async () => {
     if (response.success) {
       nearestResults.value = response.data || []
       if (nearestResults.value.length === 0) {
-        ElMessage.info('在指定范围内未找到降落点')
+        showToastNotification('在指定范围内未找到降落点', 'info')
       } else {
-        ElMessage.success(`找到 ${nearestResults.value.length} 个降落点`)
+        showToastNotification(`找到 ${nearestResults.value.length} 个降落点`, 'success')
       }
     } else {
-      ElMessage.warning(response.message || '搜索失败')
+      showToastNotification(response.message || '搜索失败', 'warning')
     }
   } catch (error) {
     console.error('搜索最近降落点失败:', error)
-    ElMessage.error(error.message || '搜索失败')
+    showToastNotification(error.message || '搜索失败', 'error')
   } finally {
     searchingNearest.value = false
   }
@@ -981,6 +1098,224 @@ onMounted(() => {
   color: var(--color-text-tertiary);
 }
 
+/* Toast 通知系统样式 */
+.toast-container {
+  position: fixed;
+  top: var(--space-6);
+  right: var(--space-6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 320px;
+  max-width: 480px;
+  padding: var(--space-4);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.toast--success .toast-icon {
+  color: var(--apple-green);
+}
+
+.toast--error .toast-icon {
+  color: var(--apple-red);
+}
+
+.toast--warning .toast-icon {
+  color: var(--apple-orange);
+}
+
+.toast--info .toast-icon {
+  color: var(--apple-blue);
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: var(--transition-button);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-close:hover {
+  color: var(--color-text-primary);
+}
+
+.toast-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Toast 动画 */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100%) scale(0.95);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100%) scale(0.95);
+}
+
+.toast-move {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Confirm 对话框样式 */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-dialog {
+  width: 90%;
+  max-width: 440px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.confirm-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.confirm-icon-wrapper {
+  margin-bottom: var(--space-3);
+}
+
+.confirm-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.confirm-icon--warning {
+  color: var(--apple-orange);
+}
+
+.confirm-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.confirm-body {
+  padding: 0 var(--space-6) var(--space-6);
+  text-align: center;
+}
+
+.confirm-message {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.confirm-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-6);
+}
+
+.confirm-footer button {
+  flex: 1;
+}
+
+/* 对话框动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .toast {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .confirm-dialog {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .confirm-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .emergency-landing-management {
@@ -1012,6 +1347,22 @@ onMounted(() => {
   .tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .toast-container {
+    top: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+  }
+
+  .toast {
+    min-width: unset;
+    max-width: none;
+  }
+
+  .confirm-dialog {
+    width: 95%;
+    max-width: none;
   }
 }
 </style>

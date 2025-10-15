@@ -109,6 +109,38 @@ namespace controllers
         http::response<http::string_body> getFlightPermits(const http::request<http::string_body> &req);
 
         /**
+         * @brief 获取飞行许可详情接口
+         * GET /api/v1/flight-permits/{id}
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "获取飞行许可详情成功",
+         *   "data": {
+         *     "id": 1,
+         *     "permit_code": "FP20241225001",
+         *     "task_id": 1,
+         *     "airspace_id": 2,
+         *     "applicant_id": 3,
+         *     "approver_id": 4,
+         *     "status": "approved",
+         *     "application_time": "2024-12-25T10:00:00Z",
+         *     "approval_time": "2024-12-25T10:30:00Z",
+         *     "start_time": "2024-12-25T10:00:00Z",
+         *     "end_time": "2024-12-25T12:00:00Z",
+         *     "remarks": "常规巡检任务"
+         *   }
+         * }
+         *
+         * @param req HTTP请求对象
+         * @param permit_id 许可ID
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> getFlightPermitById(
+            const http::request<http::string_body> &req,
+            const std::string &permit_id);
+
+        /**
          * @brief 审批飞行许可接口（管理员）
          * POST /api/v1/flight-permits/{id}/approve
          *
@@ -133,6 +165,29 @@ namespace controllers
          * @return HTTP响应对象
          */
         http::response<http::string_body> rejectFlightPermit(
+            const http::request<http::string_body> &req,
+            const std::string &permit_id);
+
+        /**
+         * @brief 撤销飞行许可接口
+         * POST /api/v1/flight-permits/{id}/revoke
+         *
+         * 请求体格式：
+         * {
+         *   "reason": "string"  // 撤销原因（可选）
+         * }
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "飞行许可已撤销"
+         * }
+         *
+         * @param req HTTP请求对象
+         * @param permit_id 许可ID
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> revokeFlightPermit(
             const http::request<http::string_body> &req,
             const std::string &permit_id);
 

@@ -380,6 +380,142 @@ http::response<http::string_body> EmergencyLandingController::updateEmergencyLan
     }
 }
 
+http::response<http::string_body> EmergencyLandingController::getEmergencyLandingPointById(
+    const http::request<http::string_body> &req,
+    const std::string &point_id)
+{
+    try
+    {
+        // 1. 验证JWT Token
+        int64_t user_id = validateTokenAndGetUserId(req);
+        if (user_id == -1)
+        {
+            return utils::HttpResponse::createUnauthorizedResponse("无效的认证Token");
+        }
+
+        // 2. 查询紧急降落点详情
+        std::string sql = "SELECT id, point_code, name, type, lat, lng, altitude, "
+                          "capacity, status, safety_rating, weather_protected, accessible_24h, "
+                          "contact_name, contact_phone, address, description, "
+                          "DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at, "
+                          "DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at, "
+                          "facilities "
+                          "FROM low_altitude_traffic_system.emergency_landing_points WHERE id = ?";
+
+        auto result = dbSession_->sql(sql).bind(std::stoll(point_id)).execute();
+
+        // 3. 检查是否存在
+        bool found = false;
+        mysqlx::Row row;
+        for (auto r : result)
+        {
+            row = r;
+            found = true;
+            break;
+        }
+
+        if (!found)
+        {
+            return utils::HttpResponse::createNotFoundResponse("紧急降落点不存在");
+        }
+
+        // 4. 构建响应数据
+        json point = {
+            {"id", row[0].get<int64_t>()},
+            {"point_code", row[1].get<std::string>()},
+            {"name", row[2].get<std::string>()},
+            {"type", row[3].get<std::string>()},
+            {"lat", row[4].get<double>()},
+            {"lng", row[5].get<double>()},
+            {"capacity", row[7].get<int>()},
+            {"status", row[8].get<std::string>()}};
+
+        // 可选字段
+        if (!row[6].isNull())
+            point["altitude"] = row[6].get<double>();
+        if (!row[9].isNull())
+            point["safety_rating"] = row[9].get<std::string>();
+        if (!row[10].isNull())
+            point["weather_protected"] = row[10].get<bool>();
+        if (!row[11].isNull())
+            point["accessible_24h"] = row[11].get<bool>();
+        if (!row[12].isNull())
+            point["contact_name"] = row[12].get<std::string>();
+        if (!row[13].isNull())
+            point["contact_phone"] = row[13].get<std::string>();
+        if (!row[14].isNull())
+            point["address"] = row[14].get<std::string>();
+        if (!row[15].isNull())
+            point["description"] = row[15].get<std::string>();
+
+        // TIMESTAMP字段已通过DATE_FORMAT转换为字符串
+        if (!row[16].isNull())
+            point["created_at"] = row[16].get<std::string>();
+        if (!row[17].isNull())
+            point["updated_at"] = row[17].get<std::string>();
+        if (!row[18].isNull())
+            point["facilities"] = row[18].get<std::string>();
+
+        return utils::HttpResponse::createSuccessResponse(point, "获取紧急降落点详情成功");
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "获取紧急降落点详情失败: " << e.what() << std::endl;
+        return utils::HttpResponse::createInternalErrorResponse("获取紧急降落点详情失败: " + std::string(e.what()));
+    }
+}
+
+http::response<http::string_body> EmergencyLandingController::deleteEmergencyLandingPoint(
+    const http::request<http::string_body> &req,
+    const std::string &point_id)
+{
+    try
+    {
+        // 1. 验证JWT Token
+        int64_t user_id = validateTokenAndGetUserId(req);
+        if (user_id == -1)
+        {
+            return utils::HttpResponse::createUnauthorizedResponse("无效的认证Token");
+        }
+
+        // 2. 验证管理员权限
+        if (!isAdmin(user_id))
+        {
+            return utils::HttpResponse::createForbiddenResponse("权限不足，只有管理员可以删除紧急降落点");
+        }
+
+        // 3. 检查降落点是否存在
+        auto check_result = dbSession_->sql("SELECT id FROM emergency_landing_points WHERE id = ?")
+                                .bind(std::stoll(point_id))
+                                .execute();
+
+        bool exists = false;
+        for (auto r : check_result)
+        {
+            exists = true;
+            break;
+        }
+
+        if (!exists)
+        {
+            return utils::HttpResponse::createNotFoundResponse("紧急降落点不存在");
+        }
+
+        // 4. 删除降落点
+        auto result = dbSession_->sql("DELETE FROM emergency_landing_points WHERE id = ?")
+                          .bind(std::stoll(point_id))
+                          .execute();
+
+        std::cout << "紧急降落点删除成功: ID=" << point_id << std::endl;
+        return utils::HttpResponse::createSuccessResponse(nlohmann::json::object(), "紧急降落点删除成功");
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "删除紧急降落点失败: " << e.what() << std::endl;
+        return utils::HttpResponse::createInternalErrorResponse("删除紧急降落点失败: " + std::string(e.what()));
+    }
+}
+
 // ========== 辅助方法实现 ==========
 
 std::string EmergencyLandingController::extractBearerToken(const http::request<http::string_body> &req)

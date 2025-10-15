@@ -97,12 +97,26 @@
         立即登录
       </button>
     </template>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div
+        v-if="showToast"
+        :class="['toast-notification', toastType]"
+      >
+        <div class="toast-icon">
+          {{ toastIcon }}
+        </div>
+        <div class="toast-message">
+          {{ toastMessage }}
+        </div>
+      </div>
+    </Transition>
   </AuthLayout>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import authApi from '@/services/authApi'
@@ -113,6 +127,36 @@ const router = useRouter()
 const store = useStore()
 
 const loading = ref(false)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
 
 // 注册表单数据
 const registerData = reactive({
@@ -128,42 +172,42 @@ const registerData = reactive({
 const handleRegister = async () => {
   // 基础表单验证
   if (!registerData.username || !registerData.email || !registerData.password || !registerData.confirmPassword || !registerData.full_name) {
-    ElMessage.error('请填写所有必填字段')
+    showToastNotification('请填写所有必填字段', 'error')
     return
   }
 
   if (registerData.username.length < 3 || registerData.username.length > 20) {
-    ElMessage.error('用户名长度在3到20个字符')
+    showToastNotification('用户名长度在3到20个字符', 'error')
     return
   }
 
   if (!/^[a-zA-Z0-9_]+$/.test(registerData.username)) {
-    ElMessage.error('用户名只能包含字母、数字和下划线')
+    showToastNotification('用户名只能包含字母、数字和下划线', 'error')
     return
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerData.email)) {
-    ElMessage.error('请输入正确的邮箱格式')
+    showToastNotification('请输入正确的邮箱格式', 'error')
     return
   }
 
   if (registerData.full_name.length < 2 || registerData.full_name.length > 50) {
-    ElMessage.error('姓名长度在2到50个字符')
+    showToastNotification('姓名长度在2到50个字符', 'error')
     return
   }
 
   if (registerData.password.length < 6) {
-    ElMessage.error('密码长度不能少于6位')
+    showToastNotification('密码长度不能少于6位', 'error')
     return
   }
 
   if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]/.test(registerData.password)) {
-    ElMessage.error('密码必须包含字母和数字')
+    showToastNotification('密码必须包含字母和数字', 'error')
     return
   }
 
   if (registerData.password !== registerData.confirmPassword) {
-    ElMessage.error('两次输入的密码不一致')
+    showToastNotification('两次输入的密码不一致', 'error')
     return
   }
 
@@ -180,7 +224,7 @@ const handleRegister = async () => {
     })
 
     if (response.success) {
-      ElMessage.success('注册成功!正在自动登录...')
+      showToastNotification('注册成功!正在自动登录...', 'success')
 
       try {
         // 自动登录
@@ -194,7 +238,7 @@ const handleRegister = async () => {
           const user = loginResponse.data.user
           await store.dispatch('setUser', user)
 
-          ElMessage.success('登录成功!即将跳转到仪表盘')
+          showToastNotification('登录成功!即将跳转到仪表盘', 'success')
 
           // 延迟跳转到仪表盘
           setTimeout(() => {
@@ -202,26 +246,26 @@ const handleRegister = async () => {
           }, 1000)
         } else {
           // 自动登录失败,跳转到登录页
-          ElMessage.warning('注册成功,但自动登录失败,请手动登录')
+          showToastNotification('注册成功,但自动登录失败,请手动登录', 'warning')
           setTimeout(() => {
             router.push('/login')
           }, 1500)
         }
       } catch (loginError) {
         console.error('自动登录失败:', loginError)
-        ElMessage.warning('注册成功,但自动登录失败,请手动登录')
+        showToastNotification('注册成功,但自动登录失败,请手动登录', 'warning')
         setTimeout(() => {
           router.push('/login')
         }, 1500)
       }
     } else {
-      ElMessage.error(response.message || '注册失败')
+      showToastNotification(response.message || '注册失败', 'error')
     }
 
   } catch (error) {
     console.error('注册错误:', error)
     const errorMessage = error.message || error.error_code || '注册失败,请检查网络连接'
-    ElMessage.error(errorMessage)
+    showToastNotification(errorMessage, 'error')
   } finally {
     loading.value = false
   }
@@ -352,6 +396,114 @@ const handleRegister = async () => {
   .form-select option {
     color: #f2f2f7;
     background: #2c2c2e;
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: var(--font-size-base, 15px);
+  color: var(--color-text, #1D1D1F);
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Toast 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+
+  .toast-notification.success {
+    border-left-color: #30D158;
+  }
+
+  .toast-notification.error {
+    border-left-color: #FF453A;
+  }
+
+  .toast-notification.warning {
+    border-left-color: #FF9F0A;
+  }
+
+  .toast-notification.info {
+    border-left-color: #0A84FF;
   }
 }
 </style>

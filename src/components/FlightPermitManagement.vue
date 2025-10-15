@@ -236,12 +236,48 @@
         </AppleCard>
       </div>
     </div>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast-slide">
+      <div
+        v-if="toastState.show"
+        :class="['toast-notification', `toast-notification--${toastState.type}`]"
+        @click="closeToast"
+      >
+        <div class="toast-icon">
+          <svg v-if="toastState.type === 'success'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <svg v-else-if="toastState.type === 'error'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <svg v-else-if="toastState.type === 'warning'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </div>
+        <div class="toast-message">{{ toastState.message }}</div>
+        <button class="toast-close" @click.stop="closeToast">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import { AppleButton, AppleCard, AppleInput } from '@/components/apple'
 import permitApi from '@/services/permitApi'
 import taskApi from '@/services/taskApi'
@@ -251,6 +287,44 @@ import airspaceApi from '@/services/airspaceApi'
 const activeTab = ref('apply')
 const loading = ref(false)
 const submitting = ref(false)
+
+// Toast 通知状态
+const toastState = reactive({
+  show: false,
+  message: '',
+  type: 'info', // success, error, warning, info
+  duration: 3000
+})
+
+let toastTimer = null
+
+// 显示 Toast 通知
+const showToastNotification = (message, type = 'info', duration = 3000) => {
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastState.show = false
+
+  setTimeout(() => {
+    toastState.message = message
+    toastState.type = type
+    toastState.duration = duration
+    toastState.show = true
+
+    toastTimer = setTimeout(() => {
+      toastState.show = false
+    }, duration)
+  }, 100)
+}
+
+// 关闭 Toast
+const closeToast = () => {
+  toastState.show = false
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+}
 
 // 数据
 const tasks = ref([])
@@ -325,7 +399,7 @@ const loadPermits = async () => {
     }
   } catch (error) {
     console.error('加载许可列表失败:', error)
-    ElMessage.error('加载许可列表失败')
+    showToastNotification('加载许可列表失败', 'error')
   } finally {
     loading.value = false
   }
@@ -344,16 +418,16 @@ const handleSubmitApplication = async () => {
     })
 
     if (response && response.success) {
-      ElMessage.success('申请提交成功！')
+      showToastNotification('申请提交成功！', 'success')
       resetApplication()
       await loadPermits()
       activeTab.value = 'my'
     } else {
-      ElMessage.error(response?.message || '申请提交失败')
+      showToastNotification(response?.message || '申请提交失败', 'error')
     }
   } catch (error) {
     console.error('提交申请失败:', error)
-    ElMessage.error('提交申请失败')
+    showToastNotification('提交申请失败', 'error')
   } finally {
     submitting.value = false
   }
@@ -374,14 +448,14 @@ const handleApprove = async (permitId) => {
   try {
     const response = await permitApi.approvePermit(permitId)
     if (response && response.success) {
-      ElMessage.success('已批准许可')
+      showToastNotification('已批准许可', 'success')
       await loadPermits()
     } else {
-      ElMessage.error('批准失败')
+      showToastNotification('批准失败', 'error')
     }
   } catch (error) {
     console.error('批准许可失败:', error)
-    ElMessage.error('批准许可失败')
+    showToastNotification('批准许可失败', 'error')
   }
 }
 
@@ -390,14 +464,14 @@ const handleReject = async (permitId) => {
   try {
     const response = await permitApi.rejectPermit(permitId)
     if (response && response.success) {
-      ElMessage.success('已拒绝许可')
+      showToastNotification('已拒绝许可', 'success')
       await loadPermits()
     } else {
-      ElMessage.error('拒绝失败')
+      showToastNotification('拒绝失败', 'error')
     }
   } catch (error) {
     console.error('拒绝许可失败:', error)
-    ElMessage.error('拒绝许可失败')
+    showToastNotification('拒绝许可失败', 'error')
   }
 }
 
@@ -705,6 +779,213 @@ const getStatusText = (status) => {
 
   .form-actions button {
     width: 100%;
+  }
+}
+
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 320px;
+  max-width: 500px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+  z-index: 10000;
+  cursor: pointer;
+  transition: var(--transition-card);
+}
+
+.toast-notification:hover {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: var(--transition-fast);
+}
+
+.toast-close:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.toast-close svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Toast 类型样式 */
+.toast-notification--success {
+  border-color: rgba(48, 209, 88, 0.3);
+  background: linear-gradient(to right, rgba(48, 209, 88, 0.05), var(--color-bg-primary));
+}
+
+.toast-notification--success .toast-icon {
+  color: var(--apple-green);
+}
+
+.toast-notification--error {
+  border-color: rgba(255, 59, 48, 0.3);
+  background: linear-gradient(to right, rgba(255, 59, 48, 0.05), var(--color-bg-primary));
+}
+
+.toast-notification--error .toast-icon {
+  color: var(--apple-red);
+}
+
+.toast-notification--warning {
+  border-color: rgba(255, 159, 10, 0.3);
+  background: linear-gradient(to right, rgba(255, 159, 10, 0.05), var(--color-bg-primary));
+}
+
+.toast-notification--warning .toast-icon {
+  color: var(--apple-orange);
+}
+
+.toast-notification--info {
+  border-color: rgba(0, 122, 255, 0.3);
+  background: linear-gradient(to right, rgba(0, 122, 255, 0.05), var(--color-bg-primary));
+}
+
+.toast-notification--info .toast-icon {
+  color: var(--apple-blue);
+}
+
+/* Toast 动画 */
+.toast-slide-enter-active {
+  animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-slide-leave-active {
+  animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.95);
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: rgba(30, 30, 30, 0.95);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .toast-notification:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .toast-notification--success {
+    background: linear-gradient(to right, rgba(48, 209, 88, 0.1), rgba(30, 30, 30, 0.95));
+  }
+
+  .toast-notification--error {
+    background: linear-gradient(to right, rgba(255, 59, 48, 0.1), rgba(30, 30, 30, 0.95));
+  }
+
+  .toast-notification--warning {
+    background: linear-gradient(to right, rgba(255, 159, 10, 0.1), rgba(30, 30, 30, 0.95));
+  }
+
+  .toast-notification--info {
+    background: linear-gradient(to right, rgba(0, 122, 255, 0.1), rgba(30, 30, 30, 0.95));
+  }
+}
+
+/* 响应式 Toast */
+@media (max-width: 768px) {
+  .toast-notification {
+    left: var(--space-4);
+    right: var(--space-4);
+    min-width: auto;
+    transform: translateX(0);
+  }
+
+  .toast-slide-enter-active,
+  .toast-slide-leave-active {
+    animation: none;
+  }
+
+  @keyframes toastSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes toastSlideOut {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
   }
 }
 </style>

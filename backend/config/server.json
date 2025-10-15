@@ -9,7 +9,7 @@
     "host": "localhost",
     "port": 33060,
     "database": "low_altitude_traffic_system",
-    "username": "root",
+    "username": "xprotocol_user",
     "password": "Aabc123456+",
     "connection_pool_size": 10,
     "connection_timeout": 10

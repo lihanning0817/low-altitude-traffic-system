@@ -82,6 +82,45 @@ namespace controllers
         http::response<http::string_body> getEmergencyLandingPoints(const http::request<http::string_body> &req);
 
         /**
+         * @brief 获取紧急降落点详情接口
+         * GET /api/v1/emergency-landing-points/{id}
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "获取紧急降落点详情成功",
+         *   "data": {
+         *     "id": 1,
+         *     "point_code": "ELP001",
+         *     "name": "中心医院停机坪",
+         *     "type": "hospital",
+         *     "lat": 39.904,
+         *     "lng": 116.407,
+         *     "altitude": 100.5,
+         *     "capacity": 2,
+         *     "status": "active",
+         *     "safety_rating": "A",
+         *     "weather_protected": true,
+         *     "accessible_24h": true,
+         *     "contact_name": "张三",
+         *     "contact_phone": "13800138000",
+         *     "address": "北京市朝阳区...",
+         *     "description": "大型三甲医院停机坪",
+         *     "facilities": "照明,充电,维修",
+         *     "created_at": "2024-01-01 00:00:00",
+         *     "updated_at": "2024-10-01 12:00:00"
+         *   }
+         * }
+         *
+         * @param req HTTP请求对象
+         * @param point_id 降落点ID
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> getEmergencyLandingPointById(
+            const http::request<http::string_body> &req,
+            const std::string &point_id);
+
+        /**
          * @brief 添加紧急降落点接口（管理员）
          * POST /api/v1/emergency-landing-points
          *
@@ -158,6 +197,26 @@ namespace controllers
          * @return HTTP响应对象
          */
         http::response<http::string_body> updateEmergencyLandingPoint(
+            const http::request<http::string_body> &req,
+            const std::string &point_id);
+
+        /**
+         * @brief 删除紧急降落点接口（管理员）
+         * DELETE /api/v1/emergency-landing-points/{id}
+         *
+         * 权限要求：管理员角色
+         *
+         * 响应格式：
+         * {
+         *   "success": true,
+         *   "message": "紧急降落点删除成功"
+         * }
+         *
+         * @param req HTTP请求对象
+         * @param point_id 降落点ID
+         * @return HTTP响应对象
+         */
+        http::response<http::string_body> deleteEmergencyLandingPoint(
             const http::request<http::string_body> &req,
             const std::string &point_id);
 

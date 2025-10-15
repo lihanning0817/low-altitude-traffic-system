@@ -2,586 +2,474 @@
   <div class="emergency-response">
     <!-- 页面头部 -->
     <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h2>应急响应</h2>
-          <p>紧急事件监控与处理</p>
-        </div>
-        <div class="action-section">
-          <el-button
-            type="danger"
-            size="large"
-            @click="showCreateDialog = true"
-          >
-            <el-icon><CirclePlus /></el-icon>
-            创建紧急事件
-          </el-button>
-          <el-button
-            type="primary"
-            size="large"
-            @click="refreshEvents"
-          >
-            <el-icon><Refresh /></el-icon>
-            刷新
-          </el-button>
-        </div>
+      <h1 class="page-title">🚨 应急响应</h1>
+      <p class="page-subtitle">紧急事件监控与处理</p>
+      <div class="header-actions">
+        <AppleButton variant="danger" @click="showCreateDialog = true">
+          ➕ 创建紧急事件
+        </AppleButton>
+        <AppleButton @click="refreshEvents">
+          🔄 刷新
+        </AppleButton>
       </div>
     </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-section">
-      <div class="stats-grid">
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #f56c6c 0%, #ff8a80 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Warning />
-            </el-icon>
+    <div class="stats-grid">
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ statistics.active_events || 0 }}</div>
+            <div class="stat-label">激活事件</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ statistics.active_events || 0 }}</h3>
-            <p>激活事件</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #e6a23c 0%, #f5a623 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Bell />
-            </el-icon>
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">🔔</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ statistics.total_events || 0 }}</div>
+            <div class="stat-label">总事件数</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ statistics.total_events || 0 }}</h3>
-            <p>总事件数</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Check />
-            </el-icon>
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ statistics.by_status?.resolved || 0 }}</div>
+            <div class="stat-label">已解决</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ statistics.by_status?.resolved || 0 }}</h3>
-            <p>已解决</p>
-          </div>
-        </SmartCard>
+        </div>
+      </AppleCard>
 
-        <SmartCard
-          hover-effect
-          bordered
-          class="stat-card"
-        >
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #909399 0%, #b1b3b8 100%);"
-          >
-            <el-icon
-              size="24"
-              color="#fff"
-            >
-              <Close />
-            </el-icon>
+      <AppleCard class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon">❌</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ statistics.by_status?.cancelled || 0 }}</div>
+            <div class="stat-label">已取消</div>
           </div>
-          <div class="stat-content">
-            <h3>{{ statistics.by_status?.cancelled || 0 }}</h3>
-            <p>已取消</p>
-          </div>
-        </SmartCard>
-      </div>
+        </div>
+      </AppleCard>
     </div>
 
     <!-- 过滤器 -->
-    <SmartCard
-      class="filter-card"
-      hover-effect
-    >
+    <AppleCard class="filter-card">
       <div class="filter-section">
-        <el-select
-          v-model="filter.status"
-          placeholder="状态筛选"
-          clearable
-          @change="refreshEvents"
-        >
-          <el-option
-            v-for="option in EmergencyStatusOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+        <select v-model="filter.status" class="apple-select" @change="refreshEvents">
+          <option value="">所有状态</option>
+          <option v-for="option in EmergencyStatusOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
 
-        <el-select
-          v-model="filter.severity"
-          placeholder="严重程度筛选"
-          clearable
-          @change="refreshEvents"
-        >
-          <el-option
-            v-for="option in EmergencySeverityOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+        <select v-model="filter.severity" class="apple-select" @change="refreshEvents">
+          <option value="">所有严重程度</option>
+          <option v-for="option in EmergencySeverityOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
       </div>
-    </SmartCard>
+    </AppleCard>
 
     <!-- 事件列表 -->
-    <SmartCard
-      class="events-card"
-      hover-effect
-    >
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">紧急事件列表</span>
-        </div>
-      </template>
+    <AppleCard class="events-card">
+      <div class="card-header">
+        <h2 class="section-title">紧急事件列表</h2>
+        <span class="count-badge">共 {{ events.length }} 个事件</span>
+      </div>
 
-      <el-table
-        v-loading="loading"
-        :data="events"
-        style="width: 100%"
-        @row-click="handleRowClick"
-      >
-        <el-table-column
-          prop="event_code"
-          label="事件编号"
-          width="150"
-        />
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
 
-        <el-table-column
-          prop="title"
-          label="标题"
-          min-width="200"
-        />
-
-        <el-table-column
-          label="类型"
-          width="120"
+      <div v-else class="events-list">
+        <div
+          v-for="event in events"
+          :key="event.id"
+          class="event-item"
+          @click="handleViewDetail(event)"
         >
-          <template #default="{ row }">
-            <el-tag
-              :color="emergencyApi.getEventTypeColor(row.type)"
-              style="color: white;"
-            >
-              {{ emergencyApi.getEventTypeText(row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
+          <div class="event-main">
+            <div class="event-header">
+              <div class="event-title-row">
+                <h3 class="event-code">{{ event.event_code }}</h3>
+                <span :class="['severity-badge', `severity-${event.severity}`]">
+                  {{ getSeverityText(event.severity) }}
+                </span>
+              </div>
+              <h4 class="event-title">{{ event.title }}</h4>
+            </div>
 
-        <el-table-column
-          label="严重程度"
-          width="120"
-        >
-          <template #default="{ row }">
-            <el-tag :type="emergencyApi.getSeverityTagType(row.severity)">
-              {{ emergencyApi.getSeverityText(row.severity) }}
-            </el-tag>
-          </template>
-        </el-table-column>
+            <div class="event-meta">
+              <div class="meta-item">
+                <span class="meta-label">类型:</span>
+                <span :class="['type-badge', `type-${event.type}`]">
+                  {{ getEventTypeText(event.type) }}
+                </span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">状态:</span>
+                <span :class="['status-indicator', `status-${event.status}`]">
+                  <span class="status-dot"></span>
+                  {{ getStatusText(event.status) }}
+                </span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">任务ID:</span>
+                <span class="meta-value">{{ event.task_id }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">创建时间:</span>
+                <span class="meta-value">{{ event.created_at }}</span>
+              </div>
+            </div>
+          </div>
 
-        <el-table-column
-          label="状态"
-          width="120"
-        >
-          <template #default="{ row }">
-            <el-tag :type="emergencyApi.getStatusTagType(row.status)">
-              {{ emergencyApi.getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column
-          prop="created_at"
-          label="创建时间"
-          width="180"
-        />
-
-        <el-table-column
-          label="操作"
-          width="280"
-          fixed="right"
-        >
-          <template #default="{ row }">
-            <el-button
-              v-if="row.status === EmergencyStatus.ACTIVE"
-              type="warning"
+          <div class="event-actions" @click.stop>
+            <AppleButton
+              v-if="event.status === EmergencyStatus.ACTIVE"
+              variant="warning"
               size="small"
-              @click.stop="handleRespond(row)"
+              @click="handleRespond(event)"
             >
               响应
-            </el-button>
-            <el-button
-              v-if="row.status === EmergencyStatus.RESPONDING"
-              type="success"
+            </AppleButton>
+            <AppleButton
+              v-if="event.status === EmergencyStatus.RESPONDING"
+              variant="success"
               size="small"
-              @click.stop="handleResolve(row)"
+              @click="handleResolve(event)"
             >
               解决
-            </el-button>
-            <el-button
-              v-if="row.status === EmergencyStatus.ACTIVE || row.status === EmergencyStatus.RESPONDING"
-              type="info"
+            </AppleButton>
+            <AppleButton
+              v-if="event.status === EmergencyStatus.ACTIVE || event.status === EmergencyStatus.RESPONDING"
+              variant="secondary"
               size="small"
-              @click.stop="handleCancel(row)"
+              @click="handleCancel(event)"
             >
               取消
-            </el-button>
-            <el-button
-              type="primary"
+            </AppleButton>
+            <AppleButton
+              variant="secondary"
               size="small"
-              @click.stop="handleViewDetail(row)"
+              @click="handleViewDetail(event)"
             >
               详情
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+            </AppleButton>
+          </div>
+        </div>
 
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.page_size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @current-change="refreshEvents"
-          @size-change="refreshEvents"
-        />
+        <div v-if="events.length === 0" class="empty-state">
+          <div class="empty-icon">🚨</div>
+          <p class="empty-text">暂无紧急事件</p>
+          <AppleButton @click="showCreateDialog = true">创建第一个事件</AppleButton>
+        </div>
       </div>
-    </SmartCard>
 
-    <!-- 创建事件对话框 -->
-    <el-dialog
-      v-model="showCreateDialog"
+      <div v-if="events.length > 0" class="pagination">
+        <button
+          class="page-button"
+          :disabled="pagination.page === 1"
+          @click="changePage(pagination.page - 1)"
+        >
+          ← 上一页
+        </button>
+        <span class="page-info">第 {{ pagination.page }} 页，共 {{ totalPages }} 页</span>
+        <button
+          class="page-button"
+          :disabled="pagination.page >= totalPages"
+          @click="changePage(pagination.page + 1)"
+        >
+          下一页 →
+        </button>
+      </div>
+    </AppleCard>
+
+    <!-- 创建事件模态框 -->
+    <AppleModal
+      v-if="showCreateDialog"
       title="创建紧急事件"
-      width="600px"
-      :close-on-click-modal="false"
+      @close="showCreateDialog = false"
     >
-      <el-form
-        ref="createFormRef"
-        :model="createForm"
-        :rules="createRules"
-        label-width="100px"
-      >
-        <el-form-item
-          label="任务ID"
-          prop="task_id"
-        >
-          <el-input-number
-            v-model="createForm.task_id"
-            :min="1"
-            style="width: 100%"
+      <form class="create-form" @submit.prevent="handleCreate">
+        <div class="form-group">
+          <label class="form-label">任务ID</label>
+          <input
+            v-model.number="createForm.task_id"
+            type="number"
+            class="apple-input"
+            placeholder="请输入任务ID"
+            min="1"
+            required
           />
-        </el-form-item>
+        </div>
 
-        <el-form-item
-          label="事件类型"
-          prop="type"
-        >
-          <el-select
-            v-model="createForm.type"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="option in EmergencyTypeOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-        </el-form-item>
+        <div class="form-group">
+          <label class="form-label">事件类型</label>
+          <select v-model="createForm.type" class="apple-select" required>
+            <option v-for="option in EmergencyTypeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
 
-        <el-form-item
-          label="严重程度"
-          prop="severity"
-        >
-          <el-select
-            v-model="createForm.severity"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="option in EmergencySeverityOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-        </el-form-item>
+        <div class="form-group">
+          <label class="form-label">严重程度</label>
+          <select v-model="createForm.severity" class="apple-select" required>
+            <option v-for="option in EmergencySeverityOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
 
-        <el-form-item
-          label="标题"
-          prop="title"
-        >
-          <el-input v-model="createForm.title" />
-        </el-form-item>
+        <div class="form-group">
+          <label class="form-label">标题</label>
+          <input
+            v-model="createForm.title"
+            type="text"
+            class="apple-input"
+            placeholder="请输入事件标题"
+            required
+          />
+        </div>
 
-        <el-form-item
-          label="描述"
-          prop="description"
-        >
-          <el-input
+        <div class="form-group">
+          <label class="form-label">描述</label>
+          <textarea
             v-model="createForm.description"
-            type="textarea"
-            :rows="4"
-          />
-        </el-form-item>
+            class="apple-textarea"
+            rows="4"
+            placeholder="请输入事件描述"
+            required
+          ></textarea>
+        </div>
 
-        <el-form-item
-          label="纬度"
-          prop="lat"
-        >
-          <el-input-number
-            v-model="createForm.lat"
-            :precision="6"
-            style="width: 100%"
-          />
-        </el-form-item>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">纬度</label>
+            <input
+              v-model.number="createForm.lat"
+              type="number"
+              class="apple-input"
+              step="0.000001"
+              required
+            />
+          </div>
 
-        <el-form-item
-          label="经度"
-          prop="lon"
-        >
-          <el-input-number
-            v-model="createForm.lon"
-            :precision="6"
-            style="width: 100%"
-          />
-        </el-form-item>
-      </el-form>
+          <div class="form-group">
+            <label class="form-label">经度</label>
+            <input
+              v-model.number="createForm.lon"
+              type="number"
+              class="apple-input"
+              step="0.000001"
+              required
+            />
+          </div>
+        </div>
+      </form>
 
       <template #footer>
-        <el-button @click="showCreateDialog = false">
+        <AppleButton variant="secondary" @click="showCreateDialog = false">
           取消
-        </el-button>
-        <el-button
-          type="danger"
-          @click="handleCreate"
-        >
+        </AppleButton>
+        <AppleButton variant="danger" @click="handleCreate">
           创建
-        </el-button>
+        </AppleButton>
       </template>
-    </el-dialog>
+    </AppleModal>
 
-    <!-- 响应事件对话框 -->
-    <el-dialog
-      v-model="showRespondDialog"
+    <!-- 响应事件模态框 -->
+    <AppleModal
+      v-if="showRespondDialog"
       title="响应紧急事件"
-      width="600px"
-      :close-on-click-modal="false"
+      @close="showRespondDialog = false"
     >
-      <el-form
-        ref="respondFormRef"
-        :model="respondForm"
-        :rules="respondRules"
-        label-width="100px"
-      >
-        <el-form-item
-          label="响应措施"
-          prop="response_action"
-        >
-          <el-input
+      <form class="create-form" @submit.prevent="handleSubmitRespond">
+        <div class="form-group">
+          <label class="form-label">响应措施</label>
+          <textarea
             v-model="respondForm.response_action"
-            type="textarea"
-            :rows="3"
+            class="apple-textarea"
+            rows="3"
             placeholder="请输入响应措施"
-          />
-        </el-form-item>
+            required
+          ></textarea>
+        </div>
 
-        <el-form-item
-          label="响应备注"
-          prop="response_notes"
-        >
-          <el-input
+        <div class="form-group">
+          <label class="form-label">响应备注（可选）</label>
+          <textarea
             v-model="respondForm.response_notes"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入响应备注（可选）"
-          />
-        </el-form-item>
-      </el-form>
+            class="apple-textarea"
+            rows="3"
+            placeholder="请输入响应备注"
+          ></textarea>
+        </div>
+      </form>
 
       <template #footer>
-        <el-button @click="showRespondDialog = false">
+        <AppleButton variant="secondary" @click="showRespondDialog = false">
           取消
-        </el-button>
-        <el-button
-          type="warning"
-          @click="handleSubmitRespond"
-        >
+        </AppleButton>
+        <AppleButton variant="warning" @click="handleSubmitRespond">
           提交响应
-        </el-button>
+        </AppleButton>
       </template>
-    </el-dialog>
+    </AppleModal>
 
-    <!-- 事件详情对话框 -->
-    <el-dialog
-      v-model="showDetailDialog"
+    <!-- 事件详情模态框 -->
+    <AppleModal
+      v-if="showDetailDialog"
       title="事件详情"
-      width="700px"
+      @close="showDetailDialog = false"
     >
-      <div
-        v-if="selectedEvent"
-        class="event-detail"
-      >
+      <div v-if="selectedEvent" class="detail-content">
         <div class="detail-section">
-          <h3>基本信息</h3>
+          <h3 class="detail-section-title">基本信息</h3>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="label">事件编号:</span>
-              <span class="value">{{ selectedEvent.event_code }}</span>
+              <span class="detail-label">事件编号</span>
+              <span class="detail-value">{{ selectedEvent.event_code }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">任务ID:</span>
-              <span class="value">{{ selectedEvent.task_id }}</span>
+              <span class="detail-label">任务ID</span>
+              <span class="detail-value">{{ selectedEvent.task_id }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">类型:</span>
-              <el-tag
-                :color="emergencyApi.getEventTypeColor(selectedEvent.type)"
-                style="color: white;"
-              >
-                {{ emergencyApi.getEventTypeText(selectedEvent.type) }}
-              </el-tag>
+              <span class="detail-label">类型</span>
+              <span :class="['type-badge', `type-${selectedEvent.type}`]">
+                {{ getEventTypeText(selectedEvent.type) }}
+              </span>
             </div>
             <div class="detail-item">
-              <span class="label">严重程度:</span>
-              <el-tag :type="emergencyApi.getSeverityTagType(selectedEvent.severity)">
-                {{ emergencyApi.getSeverityText(selectedEvent.severity) }}
-              </el-tag>
+              <span class="detail-label">严重程度</span>
+              <span :class="['severity-badge', `severity-${selectedEvent.severity}`]">
+                {{ getSeverityText(selectedEvent.severity) }}
+              </span>
             </div>
             <div class="detail-item">
-              <span class="label">状态:</span>
-              <el-tag :type="emergencyApi.getStatusTagType(selectedEvent.status)">
-                {{ emergencyApi.getStatusText(selectedEvent.status) }}
-              </el-tag>
+              <span class="detail-label">状态</span>
+              <span :class="['status-indicator', `status-${selectedEvent.status}`]">
+                <span class="status-dot"></span>
+                {{ getStatusText(selectedEvent.status) }}
+              </span>
             </div>
           </div>
         </div>
 
         <div class="detail-section">
-          <h3>事件内容</h3>
+          <h3 class="detail-section-title">事件内容</h3>
           <div class="detail-item">
-            <span class="label">标题:</span>
-            <span class="value">{{ selectedEvent.title }}</span>
+            <span class="detail-label">标题</span>
+            <span class="detail-value">{{ selectedEvent.title }}</span>
           </div>
           <div class="detail-item">
-            <span class="label">描述:</span>
-            <p class="description">
-              {{ selectedEvent.description }}
-            </p>
+            <span class="detail-label">描述</span>
+            <p class="description-text">{{ selectedEvent.description }}</p>
           </div>
         </div>
 
         <div class="detail-section">
-          <h3>位置信息</h3>
+          <h3 class="detail-section-title">位置信息</h3>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="label">纬度:</span>
-              <span class="value">{{ selectedEvent.location?.lat }}</span>
+              <span class="detail-label">纬度</span>
+              <span class="detail-value">{{ selectedEvent.location?.lat }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">经度:</span>
-              <span class="value">{{ selectedEvent.location?.lon }}</span>
+              <span class="detail-label">经度</span>
+              <span class="detail-value">{{ selectedEvent.location?.lon }}</span>
             </div>
           </div>
         </div>
 
-        <div
-          v-if="selectedEvent.response_action"
-          class="detail-section"
-        >
-          <h3>响应信息</h3>
+        <div v-if="selectedEvent.response_action" class="detail-section">
+          <h3 class="detail-section-title">响应信息</h3>
           <div class="detail-item">
-            <span class="label">响应措施:</span>
-            <p class="description">
-              {{ selectedEvent.response_action }}
-            </p>
+            <span class="detail-label">响应措施</span>
+            <p class="description-text">{{ selectedEvent.response_action }}</p>
           </div>
-          <div
-            v-if="selectedEvent.response_notes"
-            class="detail-item"
-          >
-            <span class="label">响应备注:</span>
-            <p class="description">
-              {{ selectedEvent.response_notes }}
-            </p>
+          <div v-if="selectedEvent.response_notes" class="detail-item">
+            <span class="detail-label">响应备注</span>
+            <p class="description-text">{{ selectedEvent.response_notes }}</p>
           </div>
           <div class="detail-item">
-            <span class="label">响应时间:</span>
-            <span class="value">{{ selectedEvent.responded_at || '--' }}</span>
+            <span class="detail-label">响应时间</span>
+            <span class="detail-value">{{ selectedEvent.responded_at || '--' }}</span>
           </div>
         </div>
 
         <div class="detail-section">
-          <h3>时间信息</h3>
+          <h3 class="detail-section-title">时间信息</h3>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="label">创建时间:</span>
-              <span class="value">{{ selectedEvent.created_at }}</span>
+              <span class="detail-label">创建时间</span>
+              <span class="detail-value">{{ selectedEvent.created_at }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">更新时间:</span>
-              <span class="value">{{ selectedEvent.updated_at }}</span>
+              <span class="detail-label">更新时间</span>
+              <span class="detail-value">{{ selectedEvent.updated_at }}</span>
             </div>
-            <div
-              v-if="selectedEvent.resolved_at"
-              class="detail-item"
-            >
-              <span class="label">解决时间:</span>
-              <span class="value">{{ selectedEvent.resolved_at }}</span>
+            <div v-if="selectedEvent.resolved_at" class="detail-item">
+              <span class="detail-label">解决时间</span>
+              <span class="detail-value">{{ selectedEvent.resolved_at }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <el-button @click="showDetailDialog = false">
+        <AppleButton variant="secondary" @click="showDetailDialog = false">
           关闭
-        </el-button>
+        </AppleButton>
       </template>
-    </el-dialog>
+    </AppleModal>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div v-if="showToast" :class="['toast-notification', toastType]">
+        <div class="toast-icon">{{ toastIcon }}</div>
+        <div class="toast-message">{{ toastMessage }}</div>
+      </div>
+    </Transition>
+
+    <!-- 确认对话框 -->
+    <Transition name="modal-fade">
+      <div v-if="showConfirmDialog" class="modal-overlay" @click="handleConfirmNo">
+        <div class="confirm-dialog" @click.stop>
+          <div class="confirm-header">
+            <h3 class="confirm-title">{{ confirmDialogTitle }}</h3>
+          </div>
+          <div class="confirm-body">
+            <p class="confirm-message">{{ confirmDialogMessage }}</p>
+          </div>
+          <div class="confirm-footer">
+            <AppleButton variant="secondary" @click="handleConfirmNo">
+              取消
+            </AppleButton>
+            <AppleButton @click="handleConfirmYes">
+              确认
+            </AppleButton>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  CirclePlus, Refresh, Warning, Bell, Check, Close
-} from '@element-plus/icons-vue'
-import SmartCard from '@/components/SmartCard.vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import AppleCard from '@/components/apple/AppleCard.vue'
+import AppleButton from '@/components/apple/AppleButton.vue'
+import AppleModal from '@/components/apple/AppleModal.vue'
 import emergencyApi from '@/services/emergencyApi'
 import {
   EmergencyType,
@@ -601,6 +489,18 @@ const events = ref([])
 const statistics = ref({})
 const selectedEvent = ref(null)
 const currentRespondEvent = ref(null)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+// 确认对话框状态
+const showConfirmDialog = ref(false)
+const confirmDialogTitle = ref('')
+const confirmDialogMessage = ref('')
+let confirmDialogCallback = null
 
 const filter = reactive({
   status: '',
@@ -623,27 +523,64 @@ const createForm = reactive({
   lon: 116.4074
 })
 
-const createRules = {
-  task_id: [{ required: true, message: '请输入任务ID', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择事件类型', trigger: 'change' }],
-  severity: [{ required: true, message: '请选择严重程度', trigger: 'change' }],
-  title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-  description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
-  lat: [{ required: true, message: '请输入纬度', trigger: 'blur' }],
-  lon: [{ required: true, message: '请输入经度', trigger: 'blur' }]
-}
-
 const respondForm = reactive({
   response_action: '',
   response_notes: ''
 })
 
-const respondRules = {
-  response_action: [{ required: true, message: '请输入响应措施', trigger: 'blur' }]
+const totalPages = computed(() => {
+  return Math.ceil(pagination.total / pagination.page_size) || 1
+})
+
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+// 方法
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
 }
 
-const createFormRef = ref(null)
-const respondFormRef = ref(null)
+const showConfirm = (title, message) => {
+  return new Promise((resolve) => {
+    confirmDialogTitle.value = title
+    confirmDialogMessage.value = message
+    showConfirmDialog.value = true
+    confirmDialogCallback = resolve
+  })
+}
+
+const handleConfirmYes = () => {
+  showConfirmDialog.value = false
+  if (confirmDialogCallback) {
+    confirmDialogCallback(true)
+    confirmDialogCallback = null
+  }
+}
+
+const handleConfirmNo = () => {
+  showConfirmDialog.value = false
+  if (confirmDialogCallback) {
+    confirmDialogCallback(false)
+    confirmDialogCallback = null
+  }
+}
 
 // 方法
 const refreshEvents = async () => {
@@ -689,37 +626,47 @@ const refreshStatistics = async () => {
 }
 
 const handleCreate = async () => {
-  if (!createFormRef.value) return
+  if (!createForm.task_id || !createForm.title || !createForm.description) {
+    showToastNotification('请填写所有必填项', 'warning')
+    return
+  }
 
-  await createFormRef.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        const eventData = {
-          task_id: createForm.task_id,
-          type: createForm.type,
-          severity: createForm.severity,
-          title: createForm.title,
-          description: createForm.description,
-          location: {
-            lat: createForm.lat,
-            lon: createForm.lon
-          }
-        }
-
-        const response = await emergencyApi.createEvent(eventData)
-
-        if (response.success) {
-          ElMessage.success('紧急事件创建成功')
-          showCreateDialog.value = false
-          createFormRef.value.resetFields()
-          refreshEvents()
-          refreshStatistics()
-        }
-      } catch (error) {
-        console.error('创建事件失败:', error)
+  try {
+    const eventData = {
+      task_id: createForm.task_id,
+      type: createForm.type,
+      severity: createForm.severity,
+      title: createForm.title,
+      description: createForm.description,
+      location: {
+        lat: createForm.lat,
+        lon: createForm.lon
       }
     }
-  })
+
+    const response = await emergencyApi.createEvent(eventData)
+
+    if (response.success) {
+      showToastNotification('紧急事件创建成功', 'success')
+      showCreateDialog.value = false
+      resetCreateForm()
+      refreshEvents()
+      refreshStatistics()
+    }
+  } catch (error) {
+    console.error('创建事件失败:', error)
+    showToastNotification('创建事件失败', 'error')
+  }
+}
+
+const resetCreateForm = () => {
+  createForm.task_id = null
+  createForm.type = EmergencyType.OTHER
+  createForm.severity = EmergencySeverity.MEDIUM
+  createForm.title = ''
+  createForm.description = ''
+  createForm.lat = 39.9042
+  createForm.lon = 116.4074
 }
 
 const handleRespond = (event) => {
@@ -730,71 +677,69 @@ const handleRespond = (event) => {
 }
 
 const handleSubmitRespond = async () => {
-  if (!respondFormRef.value) return
+  if (!respondForm.response_action) {
+    showToastNotification('请输入响应措施', 'warning')
+    return
+  }
 
-  await respondFormRef.value.validate(async (valid) => {
-    if (valid) {
-      try {
-        const response = await emergencyApi.respondToEvent(
-          currentRespondEvent.value.id,
-          respondForm.response_action,
-          respondForm.response_notes
-        )
-
-        if (response.success) {
-          ElMessage.success('响应提交成功')
-          showRespondDialog.value = false
-          refreshEvents()
-          refreshStatistics()
-        }
-      } catch (error) {
-        console.error('响应事件失败:', error)
-      }
-    }
-  })
-}
-
-const handleResolve = async (event) => {
   try {
-    await ElMessageBox.confirm('确认解决该紧急事件？', '确认', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'success'
-    })
-
-    const response = await emergencyApi.resolveEvent(event.id)
+    const response = await emergencyApi.respondToEvent(
+      currentRespondEvent.value.id,
+      respondForm.response_action,
+      respondForm.response_notes
+    )
 
     if (response.success) {
-      ElMessage.success('事件已解决')
+      showToastNotification('响应提交成功', 'success')
+      showRespondDialog.value = false
       refreshEvents()
       refreshStatistics()
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('解决事件失败:', error)
+    console.error('响应事件失败:', error)
+    showToastNotification('响应事件失败', 'error')
+  }
+}
+
+const handleResolve = async (event) => {
+  try {
+    const confirmed = await showConfirm('确认解决', '确认解决该紧急事件？')
+
+    if (!confirmed) {
+      return
     }
+
+    const response = await emergencyApi.resolveEvent(event.id)
+
+    if (response.success) {
+      showToastNotification('事件已解决', 'success')
+      refreshEvents()
+      refreshStatistics()
+    }
+  } catch (error) {
+    console.error('解决事件失败:', error)
+    showToastNotification('解决事件失败', 'error')
   }
 }
 
 const handleCancel = async (event) => {
   try {
-    await ElMessageBox.confirm('确认取消该紧急事件？', '确认', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    const confirmed = await showConfirm('确认取消', '确认取消该紧急事件？')
+
+    if (!confirmed) {
+      return
+    }
 
     const response = await emergencyApi.cancelEvent(event.id)
 
     if (response.success) {
-      ElMessage.success('事件已取消')
+      showToastNotification('事件已取消', 'success')
       refreshEvents()
       refreshStatistics()
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('取消事件失败:', error)
-    }
+    console.error('取消事件失败:', error)
+    showToastNotification('取消事件失败', 'error')
   }
 }
 
@@ -803,8 +748,21 @@ const handleViewDetail = (event) => {
   showDetailDialog.value = true
 }
 
-const handleRowClick = (row) => {
-  handleViewDetail(row)
+const changePage = (page) => {
+  pagination.page = page
+  refreshEvents()
+}
+
+const getSeverityText = (severity) => {
+  return emergencyApi.getSeverityText(severity)
+}
+
+const getEventTypeText = (type) => {
+  return emergencyApi.getEventTypeText(type)
+}
+
+const getStatusText = (status) => {
+  return emergencyApi.getStatusText(status)
 }
 
 // 初始化
@@ -816,212 +774,753 @@ onMounted(() => {
 
 <style scoped>
 .emergency-response {
-  min-height: 100%;
+  padding: var(--space-6, 24px);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* 页面头部 */
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-8, 32px);
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 0;
-}
-
-.title-section h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+.page-title {
+  margin: 0 0 var(--space-2, 8px) 0;
+  font-size: var(--font-size-3xl, 32px);
   font-weight: 600;
-  color: #2c3e50;
-  background: linear-gradient(135deg, #f56c6c 0%, #e6a23c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary, #1D1D1F);
+  letter-spacing: -0.02em;
 }
 
-.title-section p {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
+.page-subtitle {
+  margin: 0 0 var(--space-4, 16px) 0;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-secondary, #86868B);
 }
 
-.action-section {
+.header-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3, 12px);
 }
 
 /* 统计卡片 */
-.stats-section {
-  margin-bottom: 24px;
-}
-
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4, 16px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .stat-card {
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.3s ease;
+  padding: var(--space-5, 20px);
+  transition: all var(--transition-smooth, 0.3s ease);
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 16px);
 }
 
 .stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  font-size: 40px;
+  line-height: 1;
 }
 
-.stat-content h3 {
-  margin: 0 0 4px 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
+.stat-info {
+  flex: 1;
 }
 
-.stat-content p {
-  margin: 0;
-  font-size: 14px;
-  color: #7f8c8d;
-  font-weight: 500;
+.stat-value {
+  font-size: var(--font-size-2xl, 28px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+  line-height: 1.2;
+  margin-bottom: var(--space-1, 4px);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
 }
 
 /* 过滤器 */
 .filter-card {
-  margin-bottom: 24px;
+  padding: var(--space-5, 20px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .filter-section {
   display: flex;
-  gap: 16px;
-  padding: 16px 0;
+  gap: var(--space-3, 12px);
+}
+
+.apple-select {
+  flex: 1;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 16px);
+  background: var(--color-bg-primary, #FFFFFF);
+  cursor: pointer;
+  transition: all var(--transition-input, 0.2s ease);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2386868B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.apple-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #0071E3);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
 }
 
 /* 事件列表 */
 .events-card {
-  margin-bottom: 24px;
+  padding: var(--space-6, 24px);
+  margin-bottom: var(--space-6, 24px);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--space-5, 20px);
 }
 
-.card-title {
-  font-size: 18px;
+.section-title {
+  margin: 0;
+  font-size: var(--font-size-xl, 20px);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary, #1D1D1F);
 }
 
-.pagination {
-  margin-top: 20px;
+.count-badge {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+.loading-state {
+  text-align: center;
+  padding: var(--space-10, 40px);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-bg-secondary, #F5F5F7);
+  border-top-color: var(--color-primary, #0071E3);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto var(--space-4, 16px);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.events-list {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
 }
 
-/* 事件详情 */
-.event-detail {
-  padding: 20px 0;
+.event-item {
+  padding: var(--space-5, 20px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  cursor: pointer;
+  transition: all var(--transition-smooth, 0.3s ease);
+  background: var(--color-bg-primary, #FFFFFF);
+}
+
+.event-item:hover {
+  border-color: var(--color-primary, #0071E3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.event-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-header {
+  margin-bottom: var(--space-3, 12px);
+}
+
+.event-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-2, 8px);
+  flex-wrap: wrap;
+}
+
+.event-code {
+  margin: 0;
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 600;
+  color: var(--color-text-secondary, #86868B);
+}
+
+.event-title {
+  margin: 0;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.severity-badge {
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+}
+
+.severity-low {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.severity-medium {
+  background: #FFF3E0;
+  color: #F57C00;
+}
+
+.severity-high {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.severity-critical {
+  background: #3C0008;
+  color: #FFFFFF;
+}
+
+.type-badge {
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  background: var(--color-bg-secondary, #F5F5F7);
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.event-meta {
+  display: flex;
+  gap: var(--space-6, 24px);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  gap: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 14px);
+  align-items: center;
+}
+
+.meta-label {
+  color: var(--color-text-secondary, #86868B);
+}
+
+.meta-value {
+  color: var(--color-text-primary, #1D1D1F);
+  font-weight: 500;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-active .status-dot {
+  background: #FF3B30;
+}
+
+.status-responding .status-dot {
+  background: #FF9500;
+}
+
+.status-resolved .status-dot {
+  background: #34C759;
+}
+
+.status-cancelled .status-dot {
+  background: #8E8E93;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.event-actions {
+  display: flex;
+  gap: var(--space-2, 8px);
+  flex-shrink: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-12, 48px) var(--space-6, 24px);
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: var(--space-4, 16px);
+  opacity: 0.5;
+}
+
+.empty-text {
+  margin: 0 0 var(--space-6, 24px) 0;
+  font-size: var(--font-size-lg, 18px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+/* 分页 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  margin-top: var(--space-6, 24px);
+  padding-top: var(--space-6, 24px);
+  border-top: 1px solid var(--color-border, #D2D2D7);
+}
+
+.page-button {
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-bg-primary, #FFFFFF);
+  color: var(--color-text-primary, #1D1D1F);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-smooth, 0.3s ease);
+}
+
+.page-button:hover:not(:disabled) {
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-color: var(--color-primary, #0071E3);
+}
+
+.page-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+/* 表单样式 */
+.create-form {
+  padding: var(--space-6, 24px) 0;
+}
+
+.form-group {
+  margin-bottom: var(--space-5, 20px);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.apple-input,
+.apple-textarea {
+  width: 100%;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--color-border, #D2D2D7);
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 16px);
+  transition: all var(--transition-input, 0.2s ease);
+  background: var(--color-bg-primary, #FFFFFF);
+  font-family: inherit;
+}
+
+.apple-input:focus,
+.apple-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #0071E3);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.apple-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+/* 详情内容 */
+.detail-content {
+  padding: var(--space-6, 24px) 0;
 }
 
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6, 24px);
 }
 
-.detail-section h3 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section-title {
+  margin: 0 0 var(--space-4, 16px) 0;
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  color: var(--color-text-primary, #1D1D1F);
+  padding-bottom: var(--space-2, 8px);
+  border-bottom: 1px solid var(--color-border, #D2D2D7);
 }
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4, 16px);
 }
 
 .detail-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1, 4px);
 }
 
-.detail-item .label {
-  font-size: 13px;
-  color: #7f8c8d;
+.detail-label {
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #86868B);
+}
+
+.detail-value {
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-primary, #1D1D1F);
   font-weight: 500;
 }
 
-.detail-item .value {
-  font-size: 15px;
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.detail-item .description {
+.description-text {
   margin: 0;
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-secondary, #86868B);
   line-height: 1.6;
+  padding: var(--space-4, 16px);
+  background: var(--color-bg-secondary, #F5F5F7);
+  border-radius: var(--radius-md, 8px);
+  border-left: 3px solid var(--color-primary, #0071E3);
   white-space: pre-wrap;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .header-content {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+  .emergency-response {
+    padding: var(--space-4, 16px);
   }
 
-  .action-section {
-    width: 100%;
+  .page-title {
+    font-size: var(--font-size-2xl, 28px);
+  }
+
+  .header-actions {
     flex-direction: column;
   }
 
-  .action-section .el-button {
-    width: 100%;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .filter-section {
     flex-direction: column;
   }
 
+  .event-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .event-actions {
+    justify-content: flex-end;
+  }
+
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
     grid-template-columns: 1fr;
   }
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-table) {
-  cursor: pointer;
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-meta {
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+  }
 }
 
-:deep(.el-table__row:hover) {
-  background-color: #f8f9fa;
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .page-title,
+  .section-title,
+  .event-title,
+  .detail-value {
+    color: var(--color-text-primary-dark, #F5F5F7);
+  }
+
+  .page-subtitle,
+  .stat-label,
+  .meta-label,
+  .detail-label {
+    color: var(--color-text-secondary-dark, #A1A1A6);
+  }
+
+  .event-item {
+    background: var(--color-bg-secondary-dark, #1C1C1E);
+    border-color: var(--color-border-dark, #38383A);
+  }
+
+  .apple-input,
+  .apple-select,
+  .apple-textarea {
+    background: var(--color-bg-secondary-dark, #1C1C1E);
+    border-color: var(--color-border-dark, #38383A);
+    color: var(--color-text-primary-dark, #F5F5F7);
+  }
+
+  .page-button {
+    background: var(--color-bg-secondary-dark, #1C1C1E);
+    border-color: var(--color-border-dark, #38383A);
+    color: var(--color-text-primary-dark, #F5F5F7);
+  }
+
+  .description-text {
+    background: var(--color-bg-tertiary-dark, #2C2C2E);
+    color: var(--color-text-secondary-dark, #A1A1A6);
+  }
 }
 
-:deep(.el-button) {
-  border-radius: 8px;
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #34C759;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
+}
+
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-base, 16px);
   font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
+  line-height: 1.5;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* 确认对话框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6, 24px);
+}
+
+.confirm-dialog {
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-2xl, 20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 480px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.confirm-header {
+  padding: var(--space-6, 24px) var(--space-6, 24px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border, #E5E5E7);
+}
+
+.confirm-title {
+  margin: 0;
+  font-size: var(--font-size-xl, 20px);
+  font-weight: 600;
+  color: var(--color-text-primary, #1D1D1F);
+}
+
+.confirm-body {
+  padding: var(--space-6, 24px);
+}
+
+.confirm-message {
+  margin: 0;
+  font-size: var(--font-size-base, 16px);
+  color: var(--color-text-secondary, #86868B);
+  line-height: 1.6;
+}
+
+.confirm-footer {
+  padding: var(--space-4, 16px) var(--space-6, 24px);
+  border-top: 1px solid var(--color-border, #E5E5E7);
+  display: flex;
+  gap: var(--space-3, 12px);
+  justify-content: flex-end;
+}
+
+/* Modal 动画 */
+.modal-fade-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-fade-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .confirm-dialog {
+  transform: scale(0.95) translateY(-20px);
+  opacity: 0;
+}
+
+.modal-fade-leave-to .confirm-dialog {
+  transform: scale(0.98) translateY(-10px);
+  opacity: 0;
+}
+
+/* Toast 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
+
+  .confirm-dialog {
+    background: #1C1C1E;
+  }
+
+  .confirm-title {
+    color: #F5F5F7;
+  }
+
+  .confirm-message {
+    color: #98989D;
+  }
+
+  .confirm-header,
+  .confirm-footer {
+    border-color: #38383A;
+  }
 }
 </style>

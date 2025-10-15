@@ -2,7 +2,7 @@
   <div class="page-header">
     <div class="header-content">
       <div class="title-section">
-        <h2>实时地图监控</h2>
+        <h2>🗺️ 实时地图监控</h2>
         <p>监控低空飞行器位置和交通状况</p>
       </div>
       <div class="status-indicators">
@@ -11,7 +11,7 @@
           <span>系统在线</span>
         </div>
         <div class="status-item">
-          <el-icon><Location /></el-icon>
+          <span class="icon">📍</span>
           <span>{{ activeDevices }} 设备活跃</span>
         </div>
       </div>
@@ -29,6 +29,7 @@ defineProps({
 </script>
 
 <style scoped>
+/* 使用 Apple 设计系统 */
 .page-header {
   margin-bottom: 0;
 }
@@ -37,44 +38,46 @@ defineProps({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 }
 
 .title-section h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: #2c3e50;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .title-section p {
   margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .status-indicators {
   display: flex;
-  gap: 24px;
+  gap: var(--space-6);
   align-items: center;
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #606266;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.status-item .icon {
+  font-size: 18px;
 }
 
 .status-item.online .status-dot {
   width: 8px;
   height: 8px;
-  background: #67c23a;
+  background: #34C759;
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
@@ -83,5 +86,37 @@ defineProps({
   0% { opacity: 1; }
   50% { opacity: 0.5; }
   100% { opacity: 1; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: flex-start;
+  }
+
+  .status-indicators {
+    gap: var(--space-4);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .title-section h2 {
+    color: #F5F5F7;
+  }
+
+  .title-section p {
+    color: #86868B;
+  }
+
+  .status-item {
+    color: #F5F5F7;
+  }
+
+  .status-item.online .status-dot {
+    background: #30D158;
+  }
 }
 </style>

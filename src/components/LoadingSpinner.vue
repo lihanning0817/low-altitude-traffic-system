@@ -4,7 +4,10 @@
     :class="{ 'full-screen': fullscreen }"
   >
     <div class="spinner-container">
-      <div class="spinner" />
+      <!-- Apple 风格的加载动画 -->
+      <div class="apple-spinner">
+        <div class="spinner-circle" />
+      </div>
       <p
         v-if="message"
         class="loading-message"
@@ -16,8 +19,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
-
 defineProps({
   message: {
     type: String,
@@ -31,6 +32,7 @@ defineProps({
 </script>
 
 <style scoped>
+/* 使用 Apple 设计系统 */
 .loading-spinner {
   display: flex;
   justify-content: center;
@@ -44,34 +46,73 @@ defineProps({
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.85);
   z-index: 9999;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .spinner-container {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--primary-color);
+/* Apple 风格的环形加载动画 */
+.apple-spinner {
+  width: 44px;
+  height: 44px;
+  position: relative;
+}
+
+.spinner-circle {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+  border: 3px solid transparent;
+  border-top-color: var(--apple-blue);
+  border-right-color: var(--apple-blue);
+  animation: apple-spin 0.8s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
 }
 
 .loading-message {
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
   font-weight: 500;
   margin: 0;
+  letter-spacing: var(--letter-spacing-normal);
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Apple 风格的旋转动画 */
+@keyframes apple-spin {
+  0% {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotate(360deg);
+    opacity: 1;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .loading-spinner.full-screen {
+    background-color: rgba(0, 0, 0, 0.85);
+  }
+
+  .spinner-circle {
+    border-top-color: #0A84FF;
+    border-right-color: #0A84FF;
+  }
+
+  .loading-message {
+    color: #86868B;
+  }
 }
 </style>

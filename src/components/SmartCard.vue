@@ -1,40 +1,26 @@
 <template>
   <div
     class="smart-card"
-    :class="{ 'hoverable': hoverable, 'full-height': fullHeight }"
+    :class="{
+      'hoverable': hoverable,
+      'full-height': fullHeight
+    }"
   >
-    <div
-      v-if="header"
-      class="card-header"
-    >
-      <h3 class="card-title">
-        {{ header }}
-      </h3>
-      <slot name="actions" />
+    <div v-if="header" class="smart-card-header">
+      {{ header }}
     </div>
-    
-    <div class="card-body">
-      <slot />
+    <div class="smart-card-body">
+      <slot></slot>
     </div>
-    
-    <div
-      v-if="footer"
-      class="card-footer"
-    >
-      <slot name="footer" />
+    <div v-if="$slots.footer" class="smart-card-footer">
+      <slot name="footer"></slot>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
-
 defineProps({
   header: {
-    type: String,
-    default: ''
-  },
-  footer: {
     type: String,
     default: ''
   },
@@ -51,78 +37,54 @@ defineProps({
 
 <style scoped>
 .smart-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--card-bg, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  transition: all var(--transition-fast);
-  display: flex;
-  flex-direction: column;
-  height: auto;
-}
-
-.smart-card.hoverable {
-  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color, #e4e7ed);
 }
 
 .smart-card.hoverable:hover {
-  border-color: rgba(0, 113, 227, 0.2);
-  transform: translateY(-1px);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .smart-card.full-height {
   height: 100%;
 }
 
-.card-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-tertiary);
-}
-
-.card-title {
-  margin: 0;
-  font-size: 18px;
+.smart-card-header {
+  padding: 16px 20px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-primary, #303133);
+  border-bottom: 1px solid var(--border-color, #e4e7ed);
+  background: var(--bg-secondary, #f5f7fa);
 }
 
-.card-body {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
+.smart-card-body {
+  padding: 20px;
 }
 
-.card-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-tertiary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: var(--text-secondary);
+.smart-card-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color, #e4e7ed);
+  background: var(--bg-secondary, #f5f7fa);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
   .smart-card {
-    margin-bottom: 1rem;
+    background: #1C1C1E;
+    border-color: rgba(255, 255, 255, 0.1);
   }
-  
-  .card-header {
-    padding: 1rem;
-  }
-  
-  .card-body {
-    padding: 1rem;
-  }
-  
-  .card-footer {
-    padding: 0.75rem 1rem;
+
+  .smart-card-header,
+  .smart-card-footer {
+    background: #2C2C2E;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #F5F5F7;
   }
 }
 </style>

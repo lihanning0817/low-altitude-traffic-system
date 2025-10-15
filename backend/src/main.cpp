@@ -18,6 +18,7 @@
 #include "controllers/FlightPermitController.h"
 #include "controllers/ConflictDetectionController.h"
 #include "controllers/EmergencyLandingController.h"
+#include "controllers/DroneController.h"
 #include "auth/JwtService.h"
 #include "services/RouteService.h"
 #include "services/WeatherService.h"
@@ -123,6 +124,7 @@ void setupRoutes(server::HttpServer& server) {
     auto permitController = std::make_shared<controllers::FlightPermitController>(dbSession, jwtService);
     auto conflictController = std::make_shared<controllers::ConflictDetectionController>(dbSession, jwtService);
     auto landingController = std::make_shared<controllers::EmergencyLandingController>(dbSession, jwtService);
+    auto droneController = std::make_shared<controllers::DroneController>(dbSession, jwtService);
 
     // ========== 认证相关API ==========
 
@@ -925,6 +927,46 @@ void setupRoutes(server::HttpServer& server) {
         }
     });
 
+    // 获取指定飞行许可详情
+    server.get("/api/v1/flight-permits/{id}", [permitController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-permits/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string permit_id = matches[1].str();
+                auto response = permitController->getFlightPermitById(req, permit_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/flight-permits/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 撤销飞行许可
+    server.post("/api/v1/flight-permits/{id}/revoke", [permitController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-permits/(\\d+)/revoke");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string permit_id = matches[1].str();
+                auto response = permitController->revokeFlightPermit(req, permit_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in POST /api/v1/flight-permits/{}/revoke: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
     // ========== 飞行冲突检测API ==========
 
     // 飞行注册（自动冲突检测）
@@ -956,6 +998,37 @@ void setupRoutes(server::HttpServer& server) {
             }
         } else {
             res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 获取指定冲突详情
+    server.get("/api/v1/flight-conflicts/{id}", [conflictController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/flight-conflicts/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string conflict_id = matches[1].str();
+                auto response = conflictController->getConflictById(req, conflict_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/flight-conflicts/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 获取冲突统计信息
+    server.get("/api/v1/conflict-detection/conflicts/statistics", [conflictController](const auto& req, auto& res) {
+        try {
+            auto response = conflictController->getConflictStatistics(req);
+            res = std::move(response);
+        } catch (const std::exception& e) {
+            spdlog::error("Error in GET /api/v1/conflict-detection/conflicts/statistics: {}", e.what());
+            res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
         }
     });
 
@@ -992,6 +1065,68 @@ void setupRoutes(server::HttpServer& server) {
                 res = std::move(response);
             } catch (const std::exception& e) {
                 spdlog::error("Error in PUT /api/v1/emergency-landing-points/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 获取指定紧急降落点详情
+    server.get("/api/v1/emergency-landing-points/{id}", [landingController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/emergency-landing-points/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string point_id = matches[1].str();
+                auto response = landingController->getEmergencyLandingPointById(req, point_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/emergency-landing-points/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // 删除紧急降落点（管理员）
+    server.del("/api/v1/emergency-landing-points/{id}", [landingController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/emergency-landing-points/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string point_id = matches[1].str();
+                auto response = landingController->deleteEmergencyLandingPoint(req, point_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in DELETE /api/v1/emergency-landing-points/{}: {}", matches[1].str(), e.what());
+                res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
+            }
+        } else {
+            res = utils::HttpResponse::createErrorResponse("无效的请求路径");
+        }
+    });
+
+    // ========== 无人机管理API ==========
+
+    // 获取指定无人机详情
+    server.get("/api/v1/drones/{id}", [droneController](const auto& req, auto& res) {
+        std::string target = req.target();
+        std::regex pattern("/api/v1/drones/(\\d+)");
+        std::smatch matches;
+
+        if (std::regex_match(target, matches, pattern)) {
+            try {
+                std::string drone_id = matches[1].str();
+                auto response = droneController->getDroneById(req, drone_id);
+                res = std::move(response);
+            } catch (const std::exception& e) {
+                spdlog::error("Error in GET /api/v1/drones/{}: {}", matches[1].str(), e.what());
                 res = utils::HttpResponse::createInternalErrorResponse("服务器内部错误");
             }
         } else {

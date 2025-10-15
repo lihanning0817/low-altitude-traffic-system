@@ -8,131 +8,116 @@
           <p>多维度分析低空交通数据</p>
         </div>
         <div class="date-range">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
+          <input
+            v-model="dateRange[0]"
+            type="date"
+            class="date-input"
             @change="loadData"
-          />
+          >
+          <span class="date-separator">至</span>
+          <input
+            v-model="dateRange[1]"
+            type="date"
+            class="date-input"
+            @change="loadData"
+          >
         </div>
       </div>
     </div>
 
     <!-- 概览卡片 -->
     <div class="overview-cards">
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <SmartCard
-            hover-effect
-            class="card"
-          >
-            <div class="card-content">
-              <div class="card-icon">
-                <el-icon><Position /></el-icon>
-              </div>
-              <div class="card-info">
-                <div class="card-title">
-                  总飞行次数
-                </div>
-                <div class="card-value">
-                  {{ summary.totalFlights }}
-                </div>
-                <div class="card-trend">
-                  <el-icon :color="summary.flightTrend >= 0 ? '#67c23a' : '#f56c6c'">
-                    <component :is="summary.flightTrend >= 0 ? 'CaretTop' : 'CaretBottom'" />
-                  </el-icon>
-                  <span :style="{ color: summary.flightTrend >= 0 ? '#67c23a' : '#f56c6c' }">{{ summary.flightTrend }}%</span>
-                </div>
-              </div>
+      <AppleCard
+        hover-effect
+        class="stat-card"
+      >
+        <div class="card-content">
+          <div class="card-icon flight">
+            <span>✈️</span>
+          </div>
+          <div class="card-info">
+            <div class="card-title">
+              总飞行次数
             </div>
-          </SmartCard>
-        </el-col>
+            <div class="card-value">
+              {{ summary.totalFlights }}
+            </div>
+            <div class="card-trend" :class="{ positive: summary.flightTrend >= 0, negative: summary.flightTrend < 0 }">
+              <span class="trend-icon">{{ summary.flightTrend >= 0 ? '↗' : '↘' }}</span>
+              <span class="trend-value">{{ Math.abs(summary.flightTrend) }}%</span>
+            </div>
+          </div>
+        </div>
+      </AppleCard>
 
-        <el-col :span="6">
-          <SmartCard
-            hover-effect
-            class="card"
-          >
-            <div class="card-content">
-              <div class="card-icon">
-                <el-icon><Timer /></el-icon>
-              </div>
-              <div class="card-info">
-                <div class="card-title">
-                  平均飞行时长
-                </div>
-                <div class="card-value">
-                  {{ summary.avgFlightDuration }}
-                </div>
-                <div class="card-trend">
-                  <el-icon :color="summary.durationTrend >= 0 ? '#67c23a' : '#f56c6c'">
-                    <component :is="summary.durationTrend >= 0 ? 'CaretTop' : 'CaretBottom'" />
-                  </el-icon>
-                  <span :style="{ color: summary.durationTrend >= 0 ? '#67c23a' : '#f56c6c' }">{{ summary.durationTrend }}%</span>
-                </div>
-              </div>
+      <AppleCard
+        hover-effect
+        class="stat-card"
+      >
+        <div class="card-content">
+          <div class="card-icon timer">
+            <span>⏱️</span>
+          </div>
+          <div class="card-info">
+            <div class="card-title">
+              平均飞行时长
             </div>
-          </SmartCard>
-        </el-col>
+            <div class="card-value">
+              {{ summary.avgFlightDuration }}
+            </div>
+            <div class="card-trend" :class="{ positive: summary.durationTrend >= 0, negative: summary.durationTrend < 0 }">
+              <span class="trend-icon">{{ summary.durationTrend >= 0 ? '↗' : '↘' }}</span>
+              <span class="trend-value">{{ Math.abs(summary.durationTrend) }}%</span>
+            </div>
+          </div>
+        </div>
+      </AppleCard>
 
-        <el-col :span="6">
-          <SmartCard
-            hover-effect
-            class="card"
-          >
-            <div class="card-content">
-              <div class="card-icon">
-                <el-icon><Warning /></el-icon>
-              </div>
-              <div class="card-info">
-                <div class="card-title">
-                  紧急事件
-                </div>
-                <div class="card-value">
-                  {{ summary.emergencyCount }}
-                </div>
-                <div class="card-trend">
-                  <el-icon :color="summary.emergencyTrend >= 0 ? '#67c23a' : '#f56c6c'">
-                    <component :is="summary.emergencyTrend >= 0 ? 'CaretTop' : 'CaretBottom'" />
-                  </el-icon>
-                  <span :style="{ color: summary.emergencyTrend >= 0 ? '#67c23a' : '#f56c6c' }">{{ summary.emergencyTrend }}%</span>
-                </div>
-              </div>
+      <AppleCard
+        hover-effect
+        class="stat-card"
+      >
+        <div class="card-content">
+          <div class="card-icon warning">
+            <span>⚠️</span>
+          </div>
+          <div class="card-info">
+            <div class="card-title">
+              紧急事件
             </div>
-          </SmartCard>
-        </el-col>
+            <div class="card-value">
+              {{ summary.emergencyCount }}
+            </div>
+            <div class="card-trend" :class="{ positive: summary.emergencyTrend >= 0, negative: summary.emergencyTrend < 0 }">
+              <span class="trend-icon">{{ summary.emergencyTrend >= 0 ? '↗' : '↘' }}</span>
+              <span class="trend-value">{{ Math.abs(summary.emergencyTrend) }}%</span>
+            </div>
+          </div>
+        </div>
+      </AppleCard>
 
-        <el-col :span="6">
-          <SmartCard
-            hover-effect
-            class="card"
-          >
-            <div class="card-content">
-              <div class="card-icon">
-                <el-icon><DataLine /></el-icon>
-              </div>
-              <div class="card-info">
-                <div class="card-title">
-                  系统健康
-                </div>
-                <div class="card-value">
-                  {{ summary.systemHealth }}%
-                </div>
-                <div class="card-trend">
-                  <el-icon :color="summary.healthTrend >= 0 ? '#67c23a' : '#f56c6c'">
-                    <component :is="summary.healthTrend >= 0 ? 'CaretTop' : 'CaretBottom'" />
-                  </el-icon>
-                  <span :style="{ color: summary.healthTrend >= 0 ? '#67c23a' : '#f56c6c' }">{{ summary.healthTrend }}%</span>
-                </div>
-              </div>
+      <AppleCard
+        hover-effect
+        class="stat-card"
+      >
+        <div class="card-content">
+          <div class="card-icon health">
+            <span>📊</span>
+          </div>
+          <div class="card-info">
+            <div class="card-title">
+              系统健康
             </div>
-          </SmartCard>
-        </el-col>
-      </el-row>
+            <div class="card-value">
+              {{ summary.systemHealth }}%
+            </div>
+            <div class="card-trend" :class="{ positive: summary.healthTrend >= 0, negative: summary.healthTrend < 0 }">
+              <span class="trend-icon">{{ summary.healthTrend >= 0 ? '↗' : '↘' }}</span>
+              <span class="trend-value">{{ Math.abs(summary.healthTrend) }}%</span>
+            </div>
+          </div>
+        </div>
+      </AppleCard>
     </div>
 
     <!-- 主要图表区域 -->
@@ -140,203 +125,227 @@
       <!-- 左侧图表 -->
       <div class="left-charts">
         <!-- 飞行任务趋势 -->
-        <SmartCard
+        <AppleCard
           hover-effect
           class="chart-card"
         >
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">飞行任务趋势</span>
-              <el-select
+              <span class="chart-title">📈 飞行任务趋势</span>
+              <select
                 v-model="flightTrendType"
-                size="small"
-                style="width: 120px"
+                class="chart-select"
                 @change="loadData"
               >
-                <el-option
-                  label="日趋势"
-                  value="day"
-                />
-                <el-option
-                  label="周趋势"
-                  value="week"
-                />
-                <el-option
-                  label="月趋势"
-                  value="month"
-                />
-              </el-select>
+                <option value="day">
+                  日趋势
+                </option>
+                <option value="week">
+                  周趋势
+                </option>
+                <option value="month">
+                  月趋势
+                </option>
+              </select>
             </div>
           </template>
           <div
             ref="flightTrendChart"
             class="chart-container"
           />
-        </SmartCard>
+        </AppleCard>
 
         <!-- 空域使用率 -->
-        <SmartCard
+        <AppleCard
           hover-effect
           class="chart-card"
         >
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">空域使用率</span>
-              <el-select
+              <span class="chart-title">🗺️ 空域使用率</span>
+              <select
                 v-model="airspaceUsageType"
-                size="small"
-                style="width: 120px"
+                class="chart-select"
                 @change="loadData"
               >
-                <el-option
-                  label="按类型"
-                  value="type"
-                />
-                <el-option
-                  label="按区域"
-                  value="area"
-                />
-              </el-select>
+                <option value="type">
+                  按类型
+                </option>
+                <option value="area">
+                  按区域
+                </option>
+              </select>
             </div>
           </template>
           <div
             ref="airspaceUsageChart"
             class="chart-container"
           />
-        </SmartCard>
+        </AppleCard>
       </div>
 
       <!-- 右侧图表 -->
       <div class="right-charts">
         <!-- 紧急事件分布 -->
-        <SmartCard
+        <AppleCard
           hover-effect
           class="chart-card"
         >
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">紧急事件分布</span>
-              <el-select
+              <span class="chart-title">⚠️ 紧急事件分布</span>
+              <select
                 v-model="emergencyDistributionType"
-                size="small"
-                style="width: 120px"
+                class="chart-select"
                 @change="loadData"
               >
-                <el-option
-                  label="按类型"
-                  value="type"
-                />
-                <el-option
-                  label="按严重程度"
-                  value="severity"
-                />
-              </el-select>
+                <option value="type">
+                  按类型
+                </option>
+                <option value="severity">
+                  按严重程度
+                </option>
+              </select>
             </div>
           </template>
           <div
             ref="emergencyDistributionChart"
             class="chart-container"
           />
-        </SmartCard>
+        </AppleCard>
 
         <!-- 设备状态 -->
-        <SmartCard
+        <AppleCard
           hover-effect
           class="chart-card"
         >
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">设备状态</span>
-              <el-button
+              <span class="chart-title">🖥️ 设备状态</span>
+              <AppleButton
+                variant="secondary"
                 size="small"
                 @click="refreshData"
               >
-                <el-icon><Refresh /></el-icon>
-                刷新
-              </el-button>
+                🔄 刷新
+              </AppleButton>
             </div>
           </template>
           <div
             ref="deviceStatusChart"
             class="chart-container"
           />
-        </SmartCard>
+        </AppleCard>
       </div>
     </div>
 
     <!-- 详细数据表格 -->
-    <SmartCard
+    <AppleCard
       hover-effect
       class="data-table"
     >
       <template #header>
         <div class="table-header">
-          <span class="table-title">详细数据</span>
-          <el-button
+          <span class="table-title">📋 详细数据</span>
+          <AppleButton
+            variant="secondary"
             size="small"
             @click="exportData"
           >
-            <el-icon><Download /></el-icon>
-            导出
-          </el-button>
+            💾 导出
+          </AppleButton>
         </div>
       </template>
-      <el-table
-        :data="detailedData"
-        style="width: 100%"
-        stripe
+      <div class="table-wrapper">
+        <table class="data-table-content">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>飞行次数</th>
+              <th>平均时长</th>
+              <th>紧急事件</th>
+              <th>系统健康</th>
+              <th>天气</th>
+              <th>交通密度</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(item, index) in detailedData"
+              :key="index"
+            >
+              <td>{{ item.date }}</td>
+              <td>{{ item.totalFlights }}</td>
+              <td>{{ item.avgDuration }}</td>
+              <td>{{ item.emergencyCount }}</td>
+              <td>
+                <span class="health-badge" :class="getHealthClass(item.systemHealth)">
+                  {{ item.systemHealth }}%
+                </span>
+              </td>
+              <td>
+                <span class="weather-badge">{{ getWeatherEmoji(item.weatherCondition) }} {{ item.weatherCondition }}</span>
+              </td>
+              <td>
+                <span class="density-badge" :class="`density-${item.trafficDensity}`">
+                  {{ item.trafficDensity }}
+                </span>
+              </td>
+              <td class="notes-cell">{{ item.notes || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </AppleCard>
+
+    <!-- Toast 通知 UI 组件 -->
+    <div class="toast-container">
+      <div
+        v-for="toast in toastNotifications"
+        :key="toast.id"
+        :class="['toast-notification', `toast-${toast.type}`, { 'toast-show': toast.show }]"
       >
-        <el-table-column
-          prop="date"
-          label="日期"
-          width="120"
-        />
-        <el-table-column
-          prop="totalFlights"
-          label="飞行次数"
-          width="100"
-        />
-        <el-table-column
-          prop="avgDuration"
-          label="平均时长"
-          width="100"
-        />
-        <el-table-column
-          prop="emergencyCount"
-          label="紧急事件"
-          width="100"
-        />
-        <el-table-column
-          prop="systemHealth"
-          label="系统健康"
-          width="100"
-        />
-        <el-table-column
-          prop="weatherCondition"
-          label="天气"
-          width="100"
-        />
-        <el-table-column
-          prop="trafficDensity"
-          label="交通密度"
-          width="100"
-        />
-        <el-table-column
-          prop="notes"
-          label="备注"
-        />
-      </el-table>
-    </SmartCard>
+        <div class="toast-icon">
+          <span v-if="toast.type === 'success'">✓</span>
+          <span v-else-if="toast.type === 'error'">✕</span>
+          <span v-else-if="toast.type === 'warning'">!</span>
+          <span v-else>ℹ</span>
+        </div>
+        <div class="toast-message">{{ toast.message }}</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Position, Timer, Warning, DataLine, Refresh, Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import SmartCard from '@/components/SmartCard.vue'
+import { AppleCard, AppleButton } from '@/components/apple'
 
+// Toast 通知状态管理
+const toastNotifications = ref([])
+let toastIdCounter = 0
+
+const showToastNotification = (message, type = 'success') => {
+  const id = toastIdCounter++
+  toastNotifications.value.push({
+    id,
+    message,
+    type,
+    show: true
+  })
+
+  setTimeout(() => {
+    const index = toastNotifications.value.findIndex(t => t.id === id)
+    if (index !== -1) {
+      toastNotifications.value[index].show = false
+      setTimeout(() => {
+        toastNotifications.value = toastNotifications.value.filter(t => t.id !== id)
+      }, 300)
+    }
+  }, 3000)
+}
 
 // 响应式数据
 const dateRange = ref(['2024-01-01', '2024-01-31'])
@@ -368,13 +377,32 @@ let airspaceUsageInstance = null
 let emergencyDistributionInstance = null
 let deviceStatusInstance = null
 
+// 辅助函数
+const getHealthClass = (health) => {
+  if (health >= 90) return 'health-excellent'
+  if (health >= 70) return 'health-good'
+  return 'health-warning'
+}
+
+const getWeatherEmoji = (weather) => {
+  const emojiMap = {
+    '晴': '☀️',
+    '多云': '☁️',
+    '小雨': '🌧️',
+    '阴': '☁️',
+    '雨': '🌧️',
+    '雪': '❄️'
+  }
+  return emojiMap[weather] || '🌤️'
+}
+
 // 方法
 const loadData = () => {
   // 模拟加载数据
   loadSummaryData()
   loadDetailedData()
   renderCharts()
-  ElMessage.success('数据已加载')
+  showToastNotification('数据已加载', 'success')
 }
 
 const loadSummaryData = () => {
@@ -424,9 +452,31 @@ const renderCharts = () => {
     flightTrendInstance = echarts.init(flightTrendChart.value)
     flightTrendInstance.setOption({
       tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: detailedData.value.map(d => d.date) },
-      yAxis: { type: 'value' },
-      series: [{ data: detailedData.value.map(d => d.totalFlights), type: 'line', smooth: true }]
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: detailedData.value.map(d => d.date.substring(5)),
+        axisLine: { lineStyle: { color: '#D1D1D6' } },
+        axisLabel: { color: '#86868B' }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#D1D1D6' } },
+        axisLabel: { color: '#86868B' },
+        splitLine: { lineStyle: { color: '#F5F5F7' } }
+      },
+      series: [{
+        data: detailedData.value.map(d => d.totalFlights),
+        type: 'line',
+        smooth: true,
+        itemStyle: { color: '#0071E3' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(0, 113, 227, 0.2)' },
+            { offset: 1, color: 'rgba(0, 113, 227, 0)' }
+          ])
+        }
+      }]
     })
   }
 
@@ -435,20 +485,24 @@ const renderCharts = () => {
     airspaceUsageInstance = echarts.init(airspaceUsageChart.value)
     airspaceUsageInstance.setOption({
       tooltip: { trigger: 'item' },
-      legend: { top: '5%', left: 'center' },
+      legend: {
+        top: '5%',
+        left: 'center',
+        textStyle: { color: '#1D1D1F' }
+      },
       series: [{
         type: 'pie',
         radius: ['40%', '70%'],
         avoidLabelOverlap: false,
         itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
-        emphasis: { label: { show: true } },
+        emphasis: { label: { show: true, fontWeight: 'bold', fontSize: 14 } },
         data: [
-          { value: 40, name: '城区核心空域' },
-          { value: 25, name: '交通枢纽空域' },
-          { value: 15, name: '学校周边空域' },
-          { value: 10, name: '工业区空域' },
-          { value: 10, name: '公园空域' }
+          { value: 40, name: '城区核心空域', itemStyle: { color: '#0071E3' } },
+          { value: 25, name: '交通枢纽空域', itemStyle: { color: '#34C759' } },
+          { value: 15, name: '学校周边空域', itemStyle: { color: '#FF9500' } },
+          { value: 10, name: '工业区空域', itemStyle: { color: '#AF52DE' } },
+          { value: 10, name: '公园空域', itemStyle: { color: '#FF3B30' } }
         ]
       }]
     })
@@ -459,9 +513,30 @@ const renderCharts = () => {
     emergencyDistributionInstance = echarts.init(emergencyDistributionChart.value)
     emergencyDistributionInstance.setOption({
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      xAxis: { type: 'category', data: ['交通事故', '无人机异常', '气象预警', '非法飞行'] },
-      yAxis: { type: 'value' },
-      series: [{ data: [8, 5, 3, 2], type: 'bar' }]
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['交通事故', '无人机异常', '气象预警', '非法飞行'],
+        axisLine: { lineStyle: { color: '#D1D1D6' } },
+        axisLabel: { color: '#86868B' }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#D1D1D6' } },
+        axisLabel: { color: '#86868B' },
+        splitLine: { lineStyle: { color: '#F5F5F7' } }
+      },
+      series: [{
+        data: [
+          { value: 8, itemStyle: { color: '#FF3B30' } },
+          { value: 5, itemStyle: { color: '#FF9500' } },
+          { value: 3, itemStyle: { color: '#FFCC00' } },
+          { value: 2, itemStyle: { color: '#34C759' } }
+        ],
+        type: 'bar',
+        barWidth: '50%',
+        itemStyle: { borderRadius: [8, 8, 0, 0] }
+      }]
     })
   }
 
@@ -470,18 +545,22 @@ const renderCharts = () => {
     deviceStatusInstance = echarts.init(deviceStatusChart.value)
     deviceStatusInstance.setOption({
       tooltip: { trigger: 'item' },
-      legend: { top: '5%', left: 'center' },
+      legend: {
+        top: '5%',
+        left: 'center',
+        textStyle: { color: '#1D1D1F' }
+      },
       series: [{
         type: 'pie',
         radius: ['50%', '70%'],
         avoidLabelOverlap: false,
         itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
-        emphasis: { label: { show: true } },
+        emphasis: { label: { show: true, fontWeight: 'bold', fontSize: 14 } },
         data: [
-          { value: 85, name: '正常', itemStyle: { color: '#67c23a' } },
-          { value: 10, name: '警告', itemStyle: { color: '#e6a23c' } },
-          { value: 5, name: '故障', itemStyle: { color: '#f56c6c' } }
+          { value: 85, name: '正常', itemStyle: { color: '#34C759' } },
+          { value: 10, name: '警告', itemStyle: { color: '#FF9500' } },
+          { value: 5, name: '故障', itemStyle: { color: '#FF3B30' } }
         ]
       }]
     })
@@ -493,7 +572,7 @@ const refreshData = () => {
 }
 
 const exportData = () => {
-  ElMessage.success('数据导出功能正在开发中')
+  showToastNotification('数据导出功能正在开发中', 'success')
 }
 
 // 生命周期钩子
@@ -528,11 +607,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 使用 Apple 设计系统 */
 .analytics-dashboard {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  gap: 20px;
+  min-height: 100vh;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: #FFFFFF;
 }
 
 /* 页面头部 */
@@ -544,160 +626,353 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
 }
 
 .title-section h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+  margin: 0 0 var(--space-2) 0;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: #2c3e50;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .title-section p {
   margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* 日期选择器 */
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.date-input {
+  height: 36px;
+  padding: 0 var(--space-3);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: var(--transition-input);
+}
+
+.date-input:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.date-input:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
+  background-color: var(--color-bg-primary);
+}
+
+.date-separator {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 /* 概览卡片 */
 .overview-cards {
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-4);
 }
 
-.card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
-  height: 120px;
+.stat-card {
+  min-height: 140px;
   display: flex;
   align-items: center;
-  padding: 0;
 }
 
 .card-content {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 20px;
+  gap: var(--space-4);
 }
 
 .card-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 24px;
-  margin-right: 16px;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.card-icon.flight {
+  background: linear-gradient(135deg, #0071E3 0%, #005BB5 100%);
+}
+
+.card-icon.timer {
+  background: linear-gradient(135deg, #34C759 0%, #28A745 100%);
+}
+
+.card-icon.warning {
+  background: linear-gradient(135deg, #FF9500 0%, #FF8000 100%);
+}
+
+.card-icon.health {
+  background: linear-gradient(135deg, #AF52DE 0%, #9A3FCC 100%);
 }
 
 .card-info {
   flex: 1;
+  min-width: 0;
 }
 
 .card-title {
-  font-size: 14px;
-  color: #7f8c8d;
-  margin-bottom: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
 }
 
 .card-value {
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  line-height: 1.2;
 }
 
 .card-trend {
   display: flex;
   align-items: center;
-  font-size: 12px;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.card-trend.positive {
+  color: #34C759;
+}
+
+.card-trend.negative {
+  color: #FF3B30;
+}
+
+.trend-icon {
+  font-size: var(--font-size-base);
 }
 
 /* 主要图表区域 */
 .main-charts {
-  display: flex;
-  gap: 20px;
-  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
 }
 
 .left-charts,
 .right-charts {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-6);
 }
 
 .chart-card {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
   flex: 1;
+  min-height: 350px;
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--space-4);
 }
 
 .chart-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary);
+}
+
+.chart-select {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: var(--transition-input);
+  cursor: pointer;
+}
+
+.chart-select:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.chart-select:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px var(--apple-blue-alpha);
 }
 
 .chart-container {
   width: 100%;
-  height: 250px;
-  margin-top: 16px;
+  height: 280px;
 }
 
 /* 详细数据表格 */
 .data-table {
-  border-radius: 16px;
-  border: 1px solid #e8eaec;
+  margin-top: var(--space-4);
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--space-4);
 }
 
 .table-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-text-primary);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-default);
+}
+
+.data-table-content {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table-content thead {
+  background: var(--color-bg-secondary);
+}
+
+.data-table-content th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-default);
+  white-space: nowrap;
+}
+
+.data-table-content td {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.data-table-content tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table-content tbody tr:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* 表格徽章 */
+.health-badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.health-badge.health-excellent {
+  background: rgba(52, 199, 89, 0.1);
+  color: #34C759;
+}
+
+.health-badge.health-good {
+  background: rgba(255, 149, 0, 0.1);
+  color: #FF9500;
+}
+
+.health-badge.health-warning {
+  background: rgba(255, 59, 48, 0.1);
+  color: #FF3B30;
+}
+
+.weather-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.density-badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.density-badge.density-低 {
+  background: rgba(52, 199, 89, 0.1);
+  color: #34C759;
+}
+
+.density-badge.density-中 {
+  background: rgba(255, 149, 0, 0.1);
+  color: #FF9500;
+}
+
+.density-badge.density-高 {
+  background: rgba(255, 59, 48, 0.1);
+  color: #FF3B30;
+}
+
+.notes-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .main-charts {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .header-content {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+  .analytics-dashboard {
+    padding: var(--space-4);
+    gap: var(--space-4);
   }
 
-  .overview-cards .el-col {
-    margin-bottom: 12px;
+  .header-content {
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: flex-start;
   }
 
   .date-range {
     width: 100%;
+    flex-direction: column;
+  }
+
+  .date-input {
+    width: 100%;
+  }
+
+  .overview-cards {
+    grid-template-columns: 1fr;
   }
 
   .card-content {
@@ -705,22 +980,176 @@ onUnmounted(() => {
     text-align: center;
   }
 
-  .card-icon {
-    margin-right: 0;
-    margin-bottom: 12px;
-  }
-
   .card-info {
     text-align: center;
   }
+
+  .chart-header {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  .chart-select {
+    width: 100%;
+  }
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-card__body) {
-  padding: 20px;
+@media (max-width: 480px) {
+  .title-section h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  .table-wrapper {
+    border-radius: 0;
+    margin: 0 calc(-1 * var(--space-4));
+  }
 }
 
-:deep(.el-table th) {
-  background: #f8f9fa;
+/* Toast 通知样式 */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+.toast-notification {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 300px;
+  padding: var(--space-4);
+  background: #FFFFFF;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transform: translateX(100px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  border-left: 4px solid;
+}
+
+.toast-notification.toast-show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast-notification.toast-success {
+  border-left-color: #34C759;
+}
+
+.toast-notification.toast-error {
+  border-left-color: #FF3B30;
+}
+
+.toast-notification.toast-warning {
+  border-left-color: #FF9500;
+}
+
+.toast-notification.toast-info {
+  border-left-color: #0071E3;
+}
+
+.toast-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.toast-success .toast-icon {
+  background: #34C759;
+}
+
+.toast-error .toast-icon {
+  background: #FF3B30;
+}
+
+.toast-warning .toast-icon {
+  background: #FF9500;
+}
+
+.toast-info .toast-icon {
+  background: #0071E3;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .analytics-dashboard {
+    background: #000000;
+  }
+
+  .title-section h2 {
+    color: #F5F5F7;
+  }
+
+  .title-section p {
+    color: #86868B;
+  }
+
+  .date-input,
+  .chart-select {
+    background: #1C1C1E;
+    border-color: #3A3A3C;
+    color: #F5F5F7;
+  }
+
+  .date-input:hover,
+  .chart-select:hover {
+    background: #2C2C2E;
+    border-color: #48484A;
+  }
+
+  .date-input:focus,
+  .chart-select:focus {
+    border-color: #0A84FF;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+  }
+
+  .data-table-content thead {
+    background: #1C1C1E;
+  }
+
+  .data-table-content th,
+  .data-table-content td {
+    color: #F5F5F7;
+    border-color: #3A3A3C;
+  }
+
+  .data-table-content tbody tr:hover {
+    background: #1C1C1E;
+  }
+
+  .table-wrapper {
+    border-color: #3A3A3C;
+  }
+
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
 }
 </style>

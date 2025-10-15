@@ -4,70 +4,59 @@
     <header class="app-header">
       <div class="header-content">
         <div class="logo-section">
-          <div class="logo-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M12 12L12 16"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-              <path
-                d="M12 8H12.01"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
-          </div>
+          <div class="logo-icon">✈️</div>
           <h1>智能低空交通系统</h1>
         </div>
-        
+
         <div class="header-right">
           <div class="status-indicator">
             <div class="status-dot online" />
             <span>系统在线</span>
           </div>
-          
+
           <ThemeToggle />
-          
-          <el-dropdown
-            trigger="click"
-            @command="handleCommand"
+
+          <!-- 用户下拉菜单 -->
+          <div
+            class="user-menu-wrapper"
+            @click="toggleUserMenu"
           >
             <div class="user-avatar">
-              <el-icon><User /></el-icon>
+              <span class="user-icon">👤</span>
             </div>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">
-                  个人资料
-                </el-dropdown-item>
-                <el-dropdown-item command="settings">
-                  系统设置
-                </el-dropdown-item>
-                <el-dropdown-item
-                  command="logout"
-                  divided
+
+            <!-- 下拉菜单 -->
+            <Transition name="dropdown">
+              <div
+                v-if="showUserMenu"
+                class="dropdown-menu"
+                @click.stop
+              >
+                <button
+                  class="dropdown-item"
+                  @click="handleCommand('profile')"
                 >
-                  退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+                  <span class="item-icon">👤</span>
+                  <span>个人资料</span>
+                </button>
+                <button
+                  class="dropdown-item"
+                  @click="handleCommand('settings')"
+                >
+                  <span class="item-icon">⚙️</span>
+                  <span>系统设置</span>
+                </button>
+                <div class="dropdown-divider" />
+                <button
+                  class="dropdown-item danger"
+                  @click="handleCommand('logout')"
+                >
+                  <span class="item-icon">🚪</span>
+                  <span>退出登录</span>
+                </button>
+              </div>
+            </Transition>
+          </div>
         </div>
       </div>
     </header>
@@ -82,63 +71,63 @@
               :class="{ active: currentRoute === 'dashboard' }"
               @click="navigateTo('dashboard')"
             >
-              <el-icon><House /></el-icon>
+              <span class="nav-icon">🏠</span>
               <span>仪表盘</span>
             </li>
             <li
               :class="{ active: currentRoute === 'tasks' }"
               @click="navigateTo('tasks')"
             >
-              <el-icon><DataLine /></el-icon>
+              <span class="nav-icon">📋</span>
               <span>任务中心</span>
             </li>
             <li
               :class="{ active: currentRoute === 'map' }"
               @click="navigateTo('map')"
             >
-              <el-icon><MapLocation /></el-icon>
+              <span class="nav-icon">🗺️</span>
               <span>地图监控</span>
             </li>
             <li
               :class="{ active: currentRoute === 'airspace' }"
               @click="navigateTo('airspace')"
             >
-              <el-icon><Location /></el-icon>
+              <span class="nav-icon">📍</span>
               <span>空域管理</span>
             </li>
             <li
               :class="{ active: currentRoute === 'weather' }"
               @click="navigateTo('weather')"
             >
-              <el-icon><Sunny /></el-icon>
+              <span class="nav-icon">🌤️</span>
               <span>气象监测</span>
             </li>
             <li
               :class="{ active: currentRoute === 'emergency' }"
               @click="navigateTo('emergency')"
             >
-              <el-icon><Warning /></el-icon>
+              <span class="nav-icon">🚨</span>
               <span>应急响应</span>
             </li>
             <li
               :class="{ active: currentRoute === 'analytics' }"
               @click="navigateTo('analytics')"
             >
-              <el-icon><TrendCharts /></el-icon>
+              <span class="nav-icon">📊</span>
               <span>数据分析</span>
             </li>
             <li
               :class="{ active: currentRoute === 'system-monitor' }"
               @click="navigateTo('system-monitor')"
             >
-              <el-icon><Monitor /></el-icon>
+              <span class="nav-icon">🖥️</span>
               <span>系统监控</span>
             </li>
             <li
               :class="{ active: currentRoute === 'api-test' }"
               @click="navigateTo('api-test')"
             >
-              <el-icon><Connection /></el-icon>
+              <span class="nav-icon">🔌</span>
               <span>API测试</span>
             </li>
           </ul>
@@ -180,20 +169,58 @@
         </div>
       </div>
     </footer>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div v-if="showToast" :class="['toast-notification', toastType]">
+        <div class="toast-icon">{{ toastIcon }}</div>
+        <div class="toast-message">{{ toastMessage }}</div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
-import { ElMessage } from 'element-plus'
-import { User, House, DataLine, MapLocation, Location, Sunny, Warning, TrendCharts, Connection } from '@element-plus/icons-vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const store = useStore()
 const currentRoute = ref(router.currentRoute.value.name)
+const showUserMenu = ref(false)
+
+// Toast 通知状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
+
+const toastIcon = computed(() => {
+  switch (toastType.value) {
+    case 'success': return '✅'
+    case 'error': return '❌'
+    case 'warning': return '⚠️'
+    case 'info': return 'ℹ️'
+    default: return '✅'
+  }
+})
+
+// Toast 通知方法
+const showToastNotification = (message, type = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+  }
+
+  toastTimer = setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
 
 // 监听路由变化
 router.afterEach((to) => {
@@ -204,28 +231,41 @@ const navigateTo = (route) => {
   router.push(`/${route}`)
 }
 
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
+
+// 点击外部关闭菜单
+const handleClickOutside = (e) => {
+  const userMenuWrapper = document.querySelector('.user-menu-wrapper')
+  if (userMenuWrapper && !userMenuWrapper.contains(e.target)) {
+    showUserMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
 const handleCommand = async (command) => {
+  showUserMenu.value = false
+
   switch(command) {
     case 'logout':
       try {
-        // 使用 Vuex store 的 logout action，它会：
-        // 1. 调用后端 logout API
-        // 2. 清除 localStorage/sessionStorage 中的 tokens
-        // 3. 重置 store 状态
         await store.dispatch('logout')
-
-        ElMessage.success('退出登录成功')
-
-        // 重定向到登录页面
+        showToastNotification('退出登录成功', 'success')
         router.push('/login')
       } catch (error) {
         console.error('退出登录失败:', error)
-        ElMessage.error('退出登录失败，请重试')
+        showToastNotification('退出登录失败，请重试', 'error')
 
-        // 即使后端失败，也尝试清除本地状态并跳转
         try {
           store.commit('SET_USER', null)
-          // 清除API token
           if (window.apiService && window.apiService.clearToken) {
             window.apiService.clearToken()
           }
@@ -250,25 +290,26 @@ const handleCommand = async (command) => {
 </script>
 
 <style scoped>
-/* 苹果风格极简后台布局 */
+/* Apple 风格极简后台布局 */
 .app-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--bg-primary);
-  font-family: var(--font-family);
+  background-color: #F5F5F7;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 顶部导航栏 - 苹果风格极简设计 */
+/* 顶部导航栏 */
 .app-header {
-  background: var(--header-bg);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--header-border);
-  padding: 0 2rem;
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0 var(--space-8, 32px);
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all var(--transition-theme);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .header-content {
@@ -276,81 +317,161 @@ const handleCommand = async (command) => {
   justify-content: space-between;
   align-items: center;
   height: 60px;
+  max-width: 100%;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--header-text);
-  transition: all var(--transition-fast);
+  font-size: 20px;
+  line-height: 1;
 }
 
 .logo-section h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-lg, 18px);
   font-weight: 600;
-  letter-spacing: -0.3px;
-  color: var(--header-text);
+  letter-spacing: -0.02em;
+  color: var(--color-text, #1D1D1F);
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--space-6, 24px);
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: var(--space-2, 8px);
+  font-size: var(--font-size-sm, 14px);
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #6E6E73;
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background: var(--success-color);
+  border-radius: var(--radius-full, 9999px);
+  background: #34C759;
   animation: pulse 2s infinite;
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* 用户菜单 */
+.user-menu-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
 .user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full, 9999px);
+  background: #F5F5F7;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: 1px solid var(--border-color);
-  color: var(--header-text);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .user-avatar:hover {
-  background: var(--bg-tertiary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: #E8E8ED;
+  transform: scale(1.05);
 }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
+.user-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 下拉菜单 */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: #FFFFFF;
+  border-radius: var(--radius-xl, 16px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 0.5px rgba(0, 0, 0, 0.05);
+  padding: var(--space-2, 8px);
+  z-index: 1000;
+}
+
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 15px);
+  font-weight: 500;
+  color: var(--color-text, #1D1D1F);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: #F5F5F7;
+}
+
+.dropdown-item.danger {
+  color: #FF3B30;
+}
+
+.dropdown-item.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.item-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: var(--space-2, 8px) 0;
+}
+
+/* 下拉菜单动画 */
+.dropdown-enter-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdown-leave-active {
+  transition: all 0.15s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-5px) scale(0.98);
 }
 
 /* 主内容区域 */
@@ -360,88 +481,112 @@ const handleCommand = async (command) => {
   overflow: hidden;
 }
 
-/* 侧边导航栏 - 苹果风格极简设计 */
+/* 侧边导航栏 */
 .sidebar {
-  width: 220px;
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border-color);
+  width: 240px;
+  background: #FFFFFF;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: background-color var(--transition-theme);
+}
+
+.nav-menu {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .nav-menu ul {
   list-style: none;
   margin: 0;
-  padding: 1rem 0;
-  flex: 1;
+  padding: var(--space-4, 16px) var(--space-3, 12px);
 }
 
 .nav-menu li {
-  padding: 12px 24px;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--sidebar-text-secondary);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #6E6E73;
   font-weight: 500;
-  margin: 0 12px;
-  border-radius: 8px;
+  margin-bottom: var(--space-1, 4px);
+  border-radius: var(--radius-lg, 12px);
+  font-size: var(--font-size-base, 15px);
 }
 
 .nav-menu li:hover {
-  background: var(--sidebar-item-hover);
-  color: var(--sidebar-text);
+  background: #F5F5F7;
+  color: var(--color-text, #1D1D1F);
 }
 
 .nav-menu li.active {
-  background: var(--sidebar-item-hover);
-  color: var(--sidebar-item-active);
+  background: #E8E8ED;
+  color: #0071E3;
   font-weight: 600;
 }
 
-.nav-menu li .el-icon {
+.nav-icon {
   width: 20px;
   height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
+  line-height: 1;
 }
 
 .nav-menu span {
-  font-size: 14px;
-  letter-spacing: -0.1px;
+  letter-spacing: -0.01em;
 }
 
 .sidebar-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color);
+  padding: var(--space-4, 16px) var(--space-6, 24px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   text-align: center;
   font-size: 12px;
-  color: var(--text-tertiary);
-  background: var(--bg-secondary);
-  transition: all var(--transition-theme);
+  color: #86868B;
+  background: #FAFAFA;
 }
 
 /* 主内容区 */
 .main-area {
   flex: 1;
   overflow-y: auto;
-  background: var(--bg-secondary);
-  padding: 2rem;
-  transition: background-color var(--transition-theme);
+  background: #F5F5F7;
+  padding: var(--space-8, 32px);
+}
+
+/* 自定义滚动条 */
+.main-area::-webkit-scrollbar,
+.nav-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-area::-webkit-scrollbar-track,
+.nav-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-area::-webkit-scrollbar-thumb,
+.nav-menu::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-full, 9999px);
+}
+
+.main-area::-webkit-scrollbar-thumb:hover,
+.nav-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* 底部状态栏 */
 .app-footer {
-  background: var(--bg-primary);
-  padding: 1rem 2rem;
-  border-top: 1px solid var(--border-color);
-  font-size: 13px;
-  color: var(--text-secondary);
+  background: #FFFFFF;
+  padding: var(--space-4, 16px) var(--space-8, 32px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: var(--font-size-sm, 14px);
+  color: #6E6E73;
 }
 
 .footer-content {
@@ -452,113 +597,269 @@ const handleCommand = async (command) => {
 
 .footer-links {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4, 16px);
+  align-items: center;
 }
 
 .footer-links a {
-  color: var(--text-secondary);
+  color: #6E6E73;
   text-decoration: none;
   transition: color 0.2s ease;
+  font-weight: 500;
 }
 
 .footer-links a:hover {
-  color: var(--primary-color);
+  color: #0071E3;
 }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .sidebar {
-    width: 200px;
-  }
-  
-  .nav-menu span {
-    font-size: 14px;
+    width: 220px;
   }
 }
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 0 1rem;
+    padding: 0 var(--space-4, 16px);
   }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+
+  .logo-section h1 {
+    font-size: var(--font-size-base, 15px);
   }
-  
+
   .sidebar {
     position: fixed;
-    top: 64px;
+    top: 60px;
     left: -240px;
     width: 240px;
-    height: calc(100vh - 64px);
+    height: calc(100vh - 60px);
     z-index: 1000;
-    transition: left 0.3s ease;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .sidebar.show {
     left: 0;
   }
-  
+
   .main-content {
     flex-direction: column;
   }
-  
+
   .main-area {
-    padding: 1rem;
+    padding: var(--space-4, 16px);
   }
-  
+
   .footer-content {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-2, 8px);
     text-align: center;
+  }
+
+  .status-indicator span {
+    display: none;
   }
 }
 
-/* Element Plus 样式覆盖 */
-:deep(.el-dropdown) {
-  cursor: pointer;
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .app-layout {
+    background-color: #000000;
+  }
+
+  .app-header {
+    background: rgba(28, 28, 30, 0.8);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .logo-section h1 {
+    color: #F5F5F7;
+  }
+
+  .status-indicator {
+    color: #98989D;
+  }
+
+  .user-avatar {
+    background: #2C2C2E;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .user-avatar:hover {
+    background: #3A3A3C;
+  }
+
+  .dropdown-menu {
+    background: #1C1C1E;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  }
+
+  .dropdown-item {
+    color: #F5F5F7;
+  }
+
+  .dropdown-item:hover {
+    background: #2C2C2E;
+  }
+
+  .dropdown-item.danger {
+    color: #FF453A;
+  }
+
+  .dropdown-item.danger:hover {
+    background: rgba(255, 69, 58, 0.15);
+  }
+
+  .dropdown-divider {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar {
+    background: #1C1C1E;
+    border-right-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-menu li {
+    color: #98989D;
+  }
+
+  .nav-menu li:hover {
+    background: #2C2C2E;
+    color: #F5F5F7;
+  }
+
+  .nav-menu li.active {
+    background: #2C2C2E;
+    color: #0A84FF;
+  }
+
+  .sidebar-footer {
+    background: #2C2C2E;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    color: #8E8E93;
+  }
+
+  .main-area {
+    background: #000000;
+  }
+
+  .app-footer {
+    background: #1C1C1E;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    color: #98989D;
+  }
+
+  .footer-links a {
+    color: #98989D;
+  }
+
+  .footer-links a:hover {
+    color: #0A84FF;
+  }
+
+  .main-area::-webkit-scrollbar-thumb,
+  .nav-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .main-area::-webkit-scrollbar-thumb:hover,
+  .nav-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
 }
 
-:deep(.el-dropdown-menu) {
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+/* Toast 通知样式 */
+.toast-notification {
+  position: fixed;
+  top: var(--space-8, 32px);
+  right: var(--space-6, 24px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-4, 16px) var(--space-5, 20px);
+  background: var(--color-bg-primary, #FFFFFF);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 280px;
+  max-width: 400px;
 }
 
-:deep(.el-dropdown-menu__item) {
-  border-radius: 8px;
-  margin: 4px 8px;
-  transition: all 0.2s ease;
+.toast-notification.success {
+  border-left: 4px solid #34C759;
 }
 
-:deep(.el-dropdown-menu__item:hover) {
-  background: var(--bg-tertiary);
-  color: var(--primary-color);
+.toast-notification.error {
+  border-left: 4px solid #FF3B30;
 }
 
-:deep(.el-dropdown-menu__item.divided) {
-  border-top: 1px solid var(--border-color);
-  margin-top: 8px;
+.toast-notification.warning {
+  border-left: 4px solid #FF9500;
 }
 
-/* 全局滚动条样式 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.toast-notification.info {
+  border-left: 4px solid #007AFF;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.toast-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 113, 227, 0.3);
-  border-radius: 3px;
+.toast-message {
+  flex: 1;
+  font-size: var(--font-size-base, 16px);
+  font-weight: 500;
+  color: var(--color-text-primary, #1D1D1F);
+  line-height: 1.5;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 113, 227, 0.5);
+/* Toast 动画 */
+.toast-enter-active {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-leave-active {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Toast 深色模式 */
+@media (prefers-color-scheme: dark) {
+  .toast-notification {
+    background: #1C1C1E;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .toast-message {
+    color: #F5F5F7;
+  }
 }
 </style>

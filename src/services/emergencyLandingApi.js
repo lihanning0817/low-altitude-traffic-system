@@ -7,8 +7,9 @@ import axios from 'axios'
 import { getAuthToken } from './authApi'
 
 // 创建 axios 实例
+// 使用相对路径，通过Vue开发服务器代理转发
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8081/api/v1/emergency-landing-points',
+  baseURL: '/api/v1/emergency-landing-points',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
